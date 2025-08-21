@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aurora | Colecciones</title>
+  <link rel="stylesheet" href="../Public/Css/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <a href="../src/main.html" class="logo">AURORA</a>
+
+        
+
+
+        <ul class="nav-links">
+          <li><a href="../src/colecciones.html" class="active">Colecciones</a></li>
+          <li><a href="../src/productos.html">Productos</a></li>
+          <li><a href="../src/ofertas.html">Ofertas</a></li>
+        </ul>
+
+        <div class="header-actions">
+          <a href="#carrito" class="icon-btn" aria-label="Carrito">
+                  <img src="../Public/imagenes/bolsa.jpg" alt="Carrito">
+                </a>
+          <div class="login-icon">
+            <a href="../src/login.html" class="icon-btn" aria-label="Login">
+            <img src="../Public/imagenes/sssss.png" alt="Login">
+            </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="container">
+      <div class="section-title">
+        <h2>Colecciones Aurora</h2>
+        <p>Filtra por estación para ver los estilos de la temporada</p>
+      </div>
+
+      <!-- categoria -->
+      <div class="filters">
+        <button class="filter-btn active" data-season="all">Todas</button>
+        <button class="filter-btn" data-season="verano">Verano</button>
+        <button class="filter-btn" data-season="otonio">Otoño</button>
+        <button class="filter-btn" data-season="invierno">Invierno</button>
+        <button class="filter-btn" data-season="primavera">Primavera</button>
+      </div>
+
+      <!-- Grid -->
+      <div class="colecciones-grid">
+        <article class="coleccion-card" data-season="primavera">
+          <img class="coleccion-img" src="../Public/imagenes/primavera.jpg" alt="Primavera">
+          <div class="coleccion-overlay"><h3>Primavera </h3><p>Tonos suaves</p></div>
+        </article>
+
+        <article class="coleccion-card" data-season="verano">
+          <img class="coleccion-img" src="../Public/imagenes/verano.webp" alt="Verano">
+          <div class="coleccion-overlay"><h3>Verano </h3><p>Ligeras y coloridas</p></div>
+        </article>
+
+        <article class="coleccion-card" data-season="otonio">
+          <img class="coleccion-img" src="../Public/imagenes/otoño.jpg" alt="Otoño">
+          <div class="coleccion-overlay"><h3>Otoño </h3><p>Texturas cálidas</p></div>
+        </article>
+
+        <article class="coleccion-card" data-season="invierno">
+          <img class="coleccion-img" src="../Public/imagenes/invierno.jpg" alt="Invierno">
+          <div class="coleccion-overlay"><h3>Invierno </h3><p>Lana y abrigo</p></div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+
+
+ <footer class="footer">
+    <div class="container">
+      <nav class="footer-top">
+        <ul class="footer-menu">
+          <li><a href="#about">Sobre Nosotros</a></li>
+          <li><a href="#envios">Envíos</a></li>
+          <li><a href="#cambios">Cambios y Devoluciones</a></li>
+          <li><a href="#contacto">Contacto</a></li>
+          <li><a href="#sucursales">Sucursales</a></li>
+        </ul>
+      </nav>
+
+
+    </div>
+
+    <div class="footer-divider"></div>
+
+    <div class="container">
+      <div class="footer-bottom">
+        <p>© 2025, Aurora-chile· Moda y Belleza</p>
+      </div>
+    </div>
+  </footer>
+
+
+ <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const btns  = document.querySelectorAll('.filter-btn'); 
+  const cards = document.querySelectorAll('.colecciones-grid [data-season]');
+
+  btns.forEach(btn => {
+    btn.type = 'button'; // evita problemas si están dentro de un form
+    btn.addEventListener('click', () => {
+      // quitar "active" de todos
+      btns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // mantener en la temporada seleccionada
+      const s = btn.dataset.season;
+
+      // ocultar tarjetas no seleccionadas
+      cards.forEach(card => {
+        card.style.display = (s === 'all' || card.dataset.season === s) ? '' : 'none';
+      });
+    });
+  });
+});
+</script>
+
+</body>
+</html>

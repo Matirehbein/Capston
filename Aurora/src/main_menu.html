@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora | Main Menu</title>
+    <link rel="stylesheet" href="../Public/Css/style.css">
+</head>
+<body>
+<header>
+    <div class="container">
+        <div class="header-content">
+            <a href="../src/main.html" class="logo">AURORA</a>
+            <ul class="nav-links">
+                <li><a href="../src/colecciones.html">Colecciones</a></li>
+                <li><a href="../src/productos.html">Productos</a></li>
+                <li><a href="../src/ofertas.html">Ofertas</a></li>
+            </ul>
+        </div>
+    </div>
+</header>
+
+
+    <div class="menu">
+        <a href="../src/inventario.html" onclick="mostrarSeccion('inventario')">Inventario</a>
+        <a href="../src/pedidos.html" onclick="mostrarSeccion('pedido')">Pedido</a>
+    </div>
+
+    <script>
+        function mostrarSeccion(id) {
+        document.querySelectorAll('.section').forEach(section => {
+            section.classList.remove('active');
+        });
+        document.getElementById(id).classList.add('active');
+        }
+    </script>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-divider"></div>
+        <div class="container">
+        <div class="footer-bottom">
+            <p>© 2025, Aurora · Tecnología de Shopify</p>
+        </div>
+        </div>
+    </footer>
+</body>
+</html>

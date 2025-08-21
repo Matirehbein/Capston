@@ -1,0 +1,99 @@
+/*Estilo para el login*/
+body {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #000, #2c3e50);
+}
+
+.box {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 320px;
+  box-shadow: 0 8px 25px rgba(0,0,0,.25);
+  animation: fadeIn .4s ease;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 1.2rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+
+.tabs button {
+  flex: 1;
+  padding: .6rem;
+  border: none;
+  cursor: pointer;
+  background: #f1f1f1;
+  font-weight: 600;
+  transition: background .3s;
+}
+
+.tabs button.active {
+  background: #000;
+  color: #fff;
+}
+
+form {
+  display: none;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+form.active { display: flex; }
+
+input {
+  padding: .7rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: .95rem;
+  transition: border .3s;
+}
+
+input:focus {
+  border-color: #000;
+  outline: none;
+}
+
+button[type="submit"] {
+  background: #000;
+  color: #fff;
+  padding: .7rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .3s, transform .2s;
+}
+
+button[type="submit"]:hover {
+  background: #444;
+  transform: translateY(-2px);
+}
+
+.back {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.back a {
+  color: #000;
+  text-decoration: none;
+  font-size: .9rem;
+}
+
+.back a:hover {
+  text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(-20px);}
+  to {opacity: 1; transform: translateY(0);}
+}

@@ -1,0 +1,23 @@
+{
+  "name": "aurora",
+  "version": "1.0.0",
+  "description": "Aurora | Moda Elegante",
+  "main": "src/main.html",
+ "scripts": {
+  "start": "serve .",
+  "dev": "serve -l 3000 ."
+},
+  "keywords": [
+    "aurora",
+    "moda",
+    "static",
+    "html",
+    "css",
+    "javascript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
