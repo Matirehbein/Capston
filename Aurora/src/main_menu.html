@@ -1,48 +1,147 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aurora | Main Menu</title>
-    <link rel="stylesheet" href="../Public/Css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aurora | Admin</title>
+  <link rel="stylesheet" href="/Public/Css/style.css"/>
 </head>
 <body>
-<header>
-    <div class="container">
-        <div class="header-content">
-            <a href="../src/main.html" class="logo">AURORA</a>
-            <ul class="nav-links">
-                <li><a href="../src/colecciones.html">Colecciones</a></li>
-                <li><a href="../src/productos.html">Productos</a></li>
-                <li><a href="../src/ofertas.html">Ofertas</a></li>
-            </ul>
+
+  <!-- Layout Admin -->
+  <div class="admin-layout">
+
+    <!-- Sidebar -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>AURORA</span>
+      </div>
+
+      <nav class="menu">
+        <a class="menu-link active" href="#">
+          <!-- Dashboard -->
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span>Panel</span>
+        </a>
+        <a class="menu-link" href="../src/pedidos.html">
+          <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM7.82 12h8.68l1.72-6H6.1L5.21 2H2v2h2l3.6 7.59L5.25 17h13.5v-2H7.82z"/></svg>
+          <span>Pedidos</span>
+        </a>
+        <a class="menu-link" href="../src/Productos_admin.html">
+          <svg viewBox="0 0 24 24"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5zM12 4.15L18.53 8 12 11.85 5.47 8 12 4.15zM4 9.2l7 3.89v6.76L4 15.96V9.2zm9 10.65V13.1l7-3.9v6.77l-7 3.88z"/></svg>
+          <span>Productos</span>
+        </a>
+        <a class="menu-link" href="../src/clientes_admin.html">
+          <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V20h14v-3.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V20h6v-3.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+          <span>Clientes</span>
+        </a>
+        <a class="menu-link" href="../src/reportes_admin.html">
+          <svg viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm4 14H5v-4h2v4zm4 0H9V7h2v10zm4 0h-2V11h2v6zm4 0h-2V9h2v8z"/></svg>
+          <span>Reportes</span>
+        </a>
+      
+        <div class="menu-sep"></div>
+        <a class="menu-link" href="./config_admin.html">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62-.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+          <span>Configuración</span>
+        </a>
+        <a class="menu-link" href="/src/login.html">
+          <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
+          <span>Salir</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Contenido principal -->
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir/cerrar menú">☰</button>
+        <h1>Panel de administración</h1>
+        <div class="admin-actions">
+          <input class="admin-search" type="search" placeholder="Buscar…" />
+          <div class="admin-user">
+            <span class="user-dot"></span>
+            <span>Admin</span>
+          </div>
         </div>
-    </div>
-</header>
+      </header>
 
+      <!-- KPIs -->
+  <!-- ===== KPIs ===== -->
+<section class="kpi-grid">
+  <div class="kpi-card">
+    <h3>Ventas hoy</h3>
+    <p class="kpi-number">
+      <span id="kpi-ventas">$ 1.562.000</span>
+    </p>
+    <span class="kpi-trend up" id="kpi-ventas-trend">+12%</span>
+  </div>
 
-    <div class="menu">
-        <a href="../src/inventario.html" onclick="mostrarSeccion('inventario')">Inventario</a>
-        <a href="../src/pedidos.html" onclick="mostrarSeccion('pedido')">Pedido</a>
-    </div>
+  <div class="kpi-card">
+    <h3>Pedidos pendientes</h3>
+    <p class="kpi-number"><span id="kpi-pendientes">34</span></p>
+    <span class="kpi-trend" id="kpi-pendientes-sub">-3</span>
+  </div>
 
-    <script>
-        function mostrarSeccion(id) {
-        document.querySelectorAll('.section').forEach(section => {
-            section.classList.remove('active');
-        });
-        document.getElementById(id).classList.add('active');
-        }
-    </script>
+  <div class="kpi-card">
+    <h3>Productos con bajo stock</h3>
+    <p class="kpi-number"><span id="kpi-bajostock">18</span></p>
+    <span class="kpi-trend warn" id="kpi-bajostock-note">Revisar</span>
+  </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-divider"></div>
-        <div class="container">
-        <div class="footer-bottom">
-            <p>© 2025, Aurora · Tecnología de Shopify</p>
-        </div>
-        </div>
-    </footer>
+  <div class="kpi-card">
+    <h3>Nuevos clientes</h3>
+    <p class="kpi-number"><span id="kpi-clientes">27</span></p>
+    <span class="kpi-trend up" id="kpi-clientes-trend">+7</span>
+  </div>
+</section>
+
+<!-- ===== Quick actions (deja tus textos originales) ===== -->
+<section class="quick-grid">
+  <a href="./pedidos.html" class="quick-card">
+    <h4>Gestionar pedidos</h4>
+    <p>Aprueba, prepara y despacha.</p>
+  </a>
+  <a href="./productos.html" class="quick-card">
+    <h4>Nuevo producto</h4>
+    <p>Crea y publica en un paso.</p>
+  </a>
+  <a href="./reportes.html" class="quick-card">
+    <h4>Ver reportes</h4>
+    <p>Ventas, clientes y márgenes.</p>
+  </a>
+  <a href="./config.html" class="quick-card">
+    <h4>Configuración</h4>
+    <p>Pagos, envíos y branding.</p>
+  </a>
+</section>
+
+<!-- ===== Pedidos recientes ===== -->
+<section class="admin-section">
+  <div class="section-head">
+    <h2>Pedidos recientes</h2>
+    <a href="./pedidos.html" class="link-inline">Ver todos →</a>
+  </div>
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Cliente</th>
+          <th>Fecha</th>
+          <th>Estado</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="recent-orders-tbody">
+        <!-- El JS insertará hasta 3 filas aquí -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+  <script type="module" src="../Public/js/dashboard.js"></script>
+  <script type="module" src="../Public/js/colores.js"></script>
 </body>
 </html>

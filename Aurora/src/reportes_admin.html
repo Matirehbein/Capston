@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aurora | Reportes</title>
+
+  <!-- Tu hoja global -->
+  <link rel="stylesheet" href="../Public/Css/style.css" />
+
+  <!-- Estilos mínimos extra (solo para esta página) -->
+  <style>
+    /* --------- Normalizar íconos del sidebar (mismo tamaño y grosor) --------- */
+    .admin-sidebar .menu .menu-link{display:flex;align-items:center;gap:10px}
+    .admin-sidebar .menu .menu-link svg{
+      width:18px;height:18px;flex:0 0 18px;
+      stroke:currentColor;fill:none;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;opacity:.9;
+    }
+    .admin-sidebar .menu,.admin-sidebar .menu *{list-style:none}
+
+    /* --------- KPIs --------- */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:14px;margin:10px 0 22px}
+    .kpi-card{background:#fff;border:1px solid var(--color-borde,#e7ddd3);border-radius:14px;padding:14px;box-shadow:var(--shadow-soft,0 2px 8px rgba(0,0,0,.06))}
+    .kpi-card h3{margin:0 0 8px;color:var(--color-texto,#3b2f27)}
+    .kpi-number{font-size:1.6rem;font-weight:800;margin:6px 0;color:var(--color-texto,#3b2f27)}
+    .kpi-sub{font-size:.85rem;color:var(--color-secundario,#7c6a5d)}
+    .kpi-trend.up{color:#2e7d32;font-weight:700}
+    .kpi-trend.down{color:#c62828;font-weight:700}
+
+    /* --------- Secciones --------- */
+    .admin-section{margin:24px 0}
+    .section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .section-head h2{margin:0;color:var(--color-texto,#3b2f27)}
+    .link-inline{color:var(--color-accento,#c9a57b);text-decoration:none;font-weight:700}
+
+    /* --------- “Gráficas” CSS --------- */
+    .chart-card{background:#fff;border:1px solid var(--color-borde,#e7ddd3);border-radius:14px;box-shadow:var(--shadow-soft,0 2px 8px rgba(0,0,0,.06));padding:14px}
+    .chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+    .bars{display:flex;align-items:flex-end;gap:10px;height:180px;padding:8px 6px;border:1px dashed #eadfd6;border-radius:10px;background:#fffdfb}
+    .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:6px}
+    .bar > span{display:block;border-radius:8px 8px 0 0;background:linear-gradient(180deg,#e4c79f,#d2a772)}
+    .bar label{font-size:.8rem;text-align:center;color:#7c6a5d}
+    .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid #eadfd6;color:#7c6a5d}
+    .pill::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--dot,#d2a772)}
+
+    /* --------- Tabla --------- */
+    .table-wrap{background:#fff;border:1px solid var(--color-borde,#e7ddd3);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-soft,0 2px 8px rgba(0,0,0,.06))}
+    table.admin-table{width:100%;border-collapse:collapse}
+    .admin-table thead th{background:#f7efe7;color:#6c4a2f;font-weight:800;text-align:left;padding:12px;border-bottom:1px solid #eadfd6}
+    .admin-table tbody td{padding:12px;border-bottom:1px solid #f1e7dd;color:#3b2f27}
+    .admin-table tbody tr:nth-child(even){background:#fffaf6}
+    .badge{padding:2px 8px;border-radius:999px;border:1px solid #eadfd6;background:#fff3e0;color:#b6772e;font-weight:700;font-size:.82rem}
+
+    /* Responsive sencillo */
+    @media (max-width: 960px){ .kpi-grid{grid-template-columns:repeat(2,1fr)} .chart-grid{grid-template-columns:1fr} }
+    @media (max-width: 560px){ .kpi-grid{grid-template-columns:1fr} }
+  </style>
+</head>
+
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar unificado -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="brand"><span class="brand-dot"></span><span>AURORA</span></div>
+      <nav class="menu">
+        <a class="menu-link" href="./main_menu.html">
+          <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span>Panel</span>
+        </a>
+        <a class="menu-link" href="./pedidos.html">
+          <svg viewBox="0 0 24 24"><path d="M7.82 12h8.68l1.72-6H6.1L5.21 2H2v2h2l3.6 7.59L5.25 17h13.5v-2H7.82zM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>
+          <span>Pedidos</span>
+        </a>
+        <a class="menu-link" href="./Productos_admin.html">
+          <svg viewBox="0 0 24 24"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5zM12 4.15L18.53 8 12 11.85 5.47 8 12 4.15zM4 9.2l7 3.89v6.76L4 15.96V9.2zm9 10.65V13.1l7-3.9v6.77l-7 3.88z"/></svg>
+          <span>Productos</span>
+        </a>
+        <a class="menu-link" href="./clientes_admin.html">
+          <svg viewBox="0 0 24 24"><path d="M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 2c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4zm8 0c-.32 0-.66.02-1 .05 1.88 1.02 3 2.45 3 3.95v3h6v-3c0-2.66-5.33-4-8-4z"/></svg>
+          <span>Clientes</span>
+        </a>
+        <a class="menu-link active" href="./reportes_admin.html">
+          <svg viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm4 14H5v-4h2v4zm4 0H9V7h2v10zm4 0h-2V11h2v6zm4 0h-2V9h2v8z"/></svg>
+          <span>Reportes</span>
+        </a>
+        <div class="menu-sep"></div>
+        <a class="menu-link" href="./config.html">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62-.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58z"/></svg>
+          <span>Configuración</span>
+        </a>
+        <a class="menu-link" href="/src/login.html">
+          <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
+          <span>Salir</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Contenido -->
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        <h1>Reportes</h1>
+        <div class="admin-actions">
+          <input class="admin-search" type="search" placeholder="Buscar reporte…" />
+          <div class="admin-user"><span class="user-dot"></span><span>Admin</span></div>
+        </div>
+      </header>
+
+      <!-- KPIs -->
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <h3>Ventas (este mes)</h3>
+          <p class="kpi-number">$ 6.540.000</p>
+          <p class="kpi-sub">vs mes pasado <span class="kpi-trend up">+12%</span></p>
+        </div>
+        <div class="kpi-card">
+          <h3>Pedidos completados</h3>
+          <p class="kpi-number">184</p>
+          <p class="kpi-sub">Tasa de conversión <strong>2,8%</strong></p>
+        </div>
+        <div class="kpi-card">
+          <h3>Ticket promedio</h3>
+          <p class="kpi-number">$ 35.510</p>
+          <p class="kpi-sub">vs 30 días <span class="kpi-trend up">+6%</span></p>
+        </div>
+        <div class="kpi-card">
+          <h3>Nuevos clientes</h3>
+          <p class="kpi-number">27</p>
+          <p class="kpi-sub">Retención 60 días <span class="kpi-trend down">-3%</span></p>
+        </div>
+      </section>
+
+      <!-- Gráficas CSS -->
+      <section class="admin-section">
+        <div class="section-head">
+          <h2>Resumen de ventas</h2>
+          <a class="link-inline" href="#">Descargar PDF</a>
+        </div>
+
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h3 style="margin:0 0 10px">Ventas por semana</h3>
+            <div class="bars">
+              <div class="bar"><span style="height:48%"></span><label>Sem 1</label></div>
+              <div class="bar"><span style="height:72%"></span><label>Sem 2</label></div>
+              <div class="bar"><span style="height:65%"></span><label>Sem 3</label></div>
+              <div class="bar"><span style="height:90%"></span><label>Sem 4</label></div>
+            </div>
+            <div class="legend">
+              <div class="pill" style="--dot:#d2a772">Ventas CLP</div>
+              <div class="pill" style="--dot:#c9a57b">Meta</div>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <h3 style="margin:0 0 10px">Top categorías</h3>
+            <div class="bars" style="height:160px">
+              <div class="bar"><span style="height:90%"></span><label>Vestidos</label></div>
+              <div class="bar"><span style="height:70%"></span><label>Blusas</label></div>
+              <div class="bar"><span style="height:55%"></span><label>Pantalones</label></div>
+            </div>
+            <div class="legend">
+              <div class="pill" style="--dot:#d2a772">Participación</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tabla -->
+      <section class="admin-section">
+        <div class="section-head">
+          <h2>Pedidos recientes</h2>
+          <a class="link-inline" href="#">Ver todos →</a>
+        </div>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Cliente</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>10241</td>
+                <td>María P.</td>
+                <td>21/08</td>
+                <td><span class="badge">Despachado</span></td>
+                <td>$49.990</td>
+              </tr>
+              <tr>
+                <td>10240</td>
+                <td>Jorge S.</td>
+                <td>21/08</td>
+                <td><span class="badge">Preparando</span></td>
+                <td>$32.480</td>
+              </tr>
+              <tr>
+                <td>10239</td>
+                <td>Camila R.</td>
+                <td>20/08</td>
+                <td><span class="badge">Pendiente</span></td>
+                <td>$21.990</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Notas -->
+      <section class="admin-section">
+        <div class="section-head"><h2>Notas rápidas</h2></div>
+        <div class="chart-card" style="display:grid;gap:8px">
+          <p class="kpi-sub">• Semana 4 sobrecumplió meta en +10%.</p>
+          <p class="kpi-sub">• Categoría “Vestidos” concentra ~45% del ingreso.</p>
+          <p class="kpi-sub">• Retención 60 días bajó levemente; revisar onboarding.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+  <script type="module" src="../Public/js/colores.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aurora | Productos</title>
+  <link rel="stylesheet" href="../Public/Css/style.css" />
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar con íconos -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="brand"><span class="brand-dot"></span><span>AURORA</span></div>
+      <nav class="menu">
+        <a class="menu-link" href="./main_menu.html">
+          <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span>Panel</span>
+        </a>
+        <a class="menu-link" href="./pedidos.html">
+          <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM7.82 12h8.68l1.72-6H6.1L5.21 2H2v2h2l3.6 7.59L5.25 17h13.5v-2H7.82z"/></svg>
+          <span>Pedidos</span>
+        </a>
+        <a class="menu-link active" href="./productos.html">
+          <svg viewBox="0 0 24 24"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5zM12 4.15L18.53 8 12 11.85 5.47 8 12 4.15zM4 9.2l7 3.89v6.76L4 15.96V9.2zm9 10.65V13.1l7-3.9v6.77l-7 3.88z"/></svg>
+          <span>Productos</span>
+        </a>
+        <a class="menu-link" href="../src/clientes_admin.html">
+          <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V20h14v-3.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V20h6v-3.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+          <span>Clientes</span>
+        </a>
+        <a class="menu-link" href="../src/reportes_admin.html">
+          <svg viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm4 14H5v-4h2v4zm4 0H9V7h2v10zm4 0h-2V11h2v6zm4 0h-2V9h2v8z"/></svg>
+          <span>Reportes</span>
+        </a>
+        <div class="menu-sep"></div>
+        <a class="menu-link" href="./config.html">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62-.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+          <span>Configuración</span>
+        </a>
+        <a class="menu-link" href="/src/login.html">
+          <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
+          <span>Salir</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Contenido principal -->
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        <h1>Productos</h1>
+        <div class="admin-actions">
+          <input class="admin-search" type="search" id="searchInput" placeholder="Buscar por nombre, SKU…" />
+          <div class="admin-user"><span class="user-dot"></span><span>Admin</span></div>
+        </div>
+      </header>
+
+      <div class="admin-subtop">
+        <div class="filter-row">
+          <button class="chip active" data-cat="todas">Todas</button>
+          <button class="chip" data-cat="Vestidos">Vestidos</button>
+          <button class="chip" data-cat="Blusas">Blusas</button>
+          <button class="chip" data-cat="Pantalones">Pantalones</button>
+        </div>
+        <button id="newProdBtn" class="btn-sm">+ Nuevo producto</button>
+      </div>
+
+      <div class="bulk-row">
+        <button id="deleteProdBulk" class="btn-sm alt">Eliminar seleccionados</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="admin-table" id="productsTable">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAllProd"></th>
+              <th>SKU</th><th>Nombre</th><th>Categoría</th><th>Stock</th><th>Precio</th>
+            </tr>
+          </thead>
+          <tbody><!-- se llena por JS --></tbody>
+        </table>
+      </div>
+
+      <!-- Modal: nuevo producto -->
+      <div class="modal" id="newProdModal">
+        <div class="modal-card">
+          <div class="modal-head">
+            <h3>Nuevo producto</h3>
+            <button class="close-x" id="closeNewProd">×</button>
+          </div>
+          <div class="modal-body">
+            <form id="newProdForm" class="detail-grid">
+              <div>
+                <label class="muted">SKU</label>
+                <input id="pSku" type="text" required />
+              </div>
+              <div>
+              <label class="muted">Imagen (URL) — opcional</label>
+              <input id="pImagen" type="url" placeholder="https://.../foto.jpg" />
+              </div>
+
+              <div>
+                <label class="muted">Nombre</label>
+                <input id="pNombre" type="text" required />
+              </div>
+              <div>
+                <label class="muted">Categoría</label>
+                <input id="pCategoria" type="text" placeholder="Vestidos / Blusas / ..." required />
+              </div>
+              <div>
+                <label class="muted">Stock</label>
+                <input id="pStock" type="number" min="0" required />
+              </div>
+              <div>
+                <label class="muted">Precio (CLP)</label>
+                <input id="pPrecio" type="number" min="0" step="100" required />
+              </div>
+              <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" id="cancelNewProd" class="btn-sm alt">Cancelar</button>
+                <button type="submit" class="btn-sm">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="../Public/js/productos.js"></script>
+  <script type="module" src="../Public/js/colores.js"></script>
+</body>
+</html>
