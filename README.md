@@ -1,4 +1,4 @@
-#  Aurora - E-comeers
+#  Aurora - E-commerce
 
 Aurora es un proyecto web de moda y belleza.  
 Incluye páginas de **colecciones**, **productos**, **ofertas**, **login** y más, con un diseño responsivo y simple de ejecutar.
