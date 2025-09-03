@@ -21,6 +21,7 @@
       {% endif %}
     {% endwith %}
 
+    <!-- Tabla de Productos -->
     <table class="table table-striped table-bordered">
         <thead class="table-dark">
             <tr>
@@ -29,35 +30,28 @@
                 <th>Precio</th>
                 <th>Stock</th>
                 <th>Acciones Producto</th>
-                <th>Acciones Stock</th>
             </tr>
         </thead>
         <tbody>
             {% for p in productos %}
             <tr>
-                <td>{{ p.id }}</td>
+                <td>{{ p.id_producto }}</td>
                 <td>{{ p.nombre_producto }}</td>
                 <td>${{ "%.2f"|format(p.precio_producto) }}</td>
-                <td>{{ p.cantidad }}</td>
+                <td>{{ p.stock if p.stock else 0 }}</td>
                 <td>
-                    <!-- Editar Producto -->
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editProductoModal{{p.id}}">Editar</button>
-
-                    <!-- Eliminar Producto -->
-                    <form action="{{ url_for('delete_producto', id=p.id) }}" method="post" style="display:inline;">
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editProductoModal{{p.id_producto}}">Editar</button>
+                    <form action="{{ url_for('delete_producto', id=p.id_producto) }}" method="post" style="display:inline;">
                         <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
                     </form>
-                </td>
-                <td>
-
                 </td>
             </tr>
 
             <!-- Modal Editar Producto -->
-            <div class="modal fade" id="editProductoModal{{p.id}}" tabindex="-1">
+            <div class="modal fade" id="editProductoModal{{p.id_producto}}" tabindex="-1">
               <div class="modal-dialog">
                 <div class="modal-content">
-                  <form action="{{ url_for('edit_producto', id=p.id) }}" method="post">
+                  <form action="{{ url_for('edit_producto', id=p.id_producto) }}" method="post">
                     <div class="modal-header">
                       <h5 class="modal-title">Editar Producto</h5>
                       <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -74,7 +68,6 @@
                 </div>
               </div>
             </div>
-
 
             {% endfor %}
         </tbody>
@@ -93,6 +86,77 @@
             <button type="submit" class="btn btn-success w-100">Agregar</button>
         </div>
     </form>
+
+    <!-- Tabla de Sucursales -->
+    <h2 class="mt-5">Sucursales</h2>
+    <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Región</th>
+                <th>Comuna</th>
+                <th>Dirección</th>
+                <th>Latitud</th>
+                <th>Longitud</th>
+                <th>Horario</th>
+                <th>Teléfono</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sucursales %}
+            <tr>
+                <td>{{ s.id_sucursal }}</td>
+                <td>{{ s.nombre_sucursal }}</td>
+                <td>{{ s.region_sucursal }}</td>
+                <td>{{ s.comuna_sucursal }}</td>
+                <td>{{ s.direccion_sucursal }}</td>
+                <td>{{ s.latitud_sucursal }}</td>
+                <td>{{ s.longitud_sucursal }}</td>
+                <td>{{ s.horario_json }}</td>
+                <td>{{ s.telefono_sucursal }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Formulario Agregar Sucursal -->
+    <div class="card mt-5 mb-5">
+      <div class="card-header">
+        <h2>Agregar Sucursal</h2>
+      </div>
+      <div class="card-body">
+        <form action="{{ url_for('add_sucursal') }}" method="post" class="row g-3">
+          <div class="col-md-4">
+            <input type="text" class="form-control" name="nombre" placeholder="Nombre sucursal" required>
+          </div>
+          <div class="col-md-4">
+            <input type="text" class="form-control" name="region" placeholder="Región" required>
+          </div>
+          <div class="col-md-4">
+            <input type="text" class="form-control" name="comuna" placeholder="Comuna" required>
+          </div>
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="direccion" placeholder="Dirección" required>
+          </div>
+          <div class="col-md-3">
+            <input type="number" step="0.000001" class="form-control" name="latitud" placeholder="Latitud (-90 a 90)">
+          </div>
+          <div class="col-md-3">
+            <input type="number" step="0.000001" class="form-control" name="longitud" placeholder="Longitud (-180 a 180)">
+          </div>
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="horario" placeholder='Horario JSON, ej: {"lunes":"9-18"}'>
+          </div>
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="telefono" placeholder="Teléfono">
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-success w-100">Agregar Sucursal</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
 </div>
 

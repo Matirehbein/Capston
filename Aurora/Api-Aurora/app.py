@@ -1,37 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash
 import psycopg2
 import psycopg2.extras
 import os
-from flask import Flask, render_template
-
-template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
-app = Flask(__name__, template_folder=template_dir)
-
-import os
-print(os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates/index.html")))
-
-# Obtiene la ruta absoluta donde está app.py
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Fuerza a Flask a buscar templates en la carpeta 'templates' dentro de BASE_DIR
-app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'))
-
-# Conexión global
-conn = psycopg2.connect(
-    dbname="aurora",
-    user="postgres",
-    password="duoc",
-    host="localhost",
-    port="5432"
-)
-
-
-
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# Configuración conexión PostgreSQL
+# Configuración PostgreSQL
 app.config['PG_HOST'] = "localhost"
 app.config['PG_DATABASE'] = "aurora"
 app.config['PG_USER'] = "postgres"
@@ -48,17 +23,31 @@ def get_db_connection():
 # ===========================
 # RUTAS
 # ===========================
-
 @app.route("/")
 def index():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cur.execute("SELECT * FROM producto_simple ORDER BY id;")
+
+    # Productos
+    cur.execute("""
+        SELECT p.*, COALESCE(i.stock,0) as stock
+        FROM producto p
+        LEFT JOIN inventario_sucursal i ON i.id_variacion = p.id_producto
+        ORDER BY p.id_producto;
+    """)
     productos = cur.fetchall()
+
+    # Sucursales
+    cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
+    sucursales = cur.fetchall()
+
     cur.close()
     conn.close()
-    return render_template("index.html", productos=productos)
+    return render_template("index.html", productos=productos, sucursales=sucursales)
 
+# ---------------------------
+# Productos
+# ---------------------------
 @app.route("/add", methods=["POST"])
 def add_producto():
     nombre = request.form["nombre"]
@@ -66,13 +55,10 @@ def add_producto():
 
     conn = get_db_connection()
     cur = conn.cursor()
-
-    # Insertamos en producto (variaciones e inventario los manejarías aparte)
     cur.execute("""
         INSERT INTO producto (sku, nombre_producto, precio_producto)
         VALUES (%s, %s, %s)
     """, ("SKU_" + nombre, nombre, precio))
-
     conn.commit()
     cur.close()
     conn.close()
@@ -108,11 +94,35 @@ def delete_producto(id):
     flash("Producto eliminado")
     return redirect(url_for("index"))
 
+# ---------------------------
+# Sucursales
+# ---------------------------
+@app.route("/add_sucursal", methods=["POST"])
+def add_sucursal():
+    nombre = request.form["nombre"]
+    region = request.form["region"]
+    comuna = request.form["comuna"]
+    direccion = request.form["direccion"]
+    latitud = request.form.get("latitud") or None
+    longitud = request.form.get("longitud") or None
+    horario = request.form.get("horario") or '{}'
+    telefono = request.form.get("telefono") or None
 
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO sucursal 
+        (nombre_sucursal, region_sucursal, comuna_sucursal, direccion_sucursal, latitud_sucursal, longitud_sucursal, horario_json, telefono_sucursal)
+        VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+    """, (nombre, region, comuna, direccion, latitud, longitud, horario, telefono))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Sucursal agregada con éxito")
+    return redirect(url_for("index"))
 
 # ===========================
 # RUN
 # ===========================
-if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=3000, debug=True)
-
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=3000, debug=True)
