@@ -1,0 +1,32 @@
+<!--<div class="col-md-4 offset-md-4">
+    <div class="card card-body">
+        <form action="/update/{{Product.0}}" method ="POST">
+
+            <div class="form-group">
+                <input type="text" name="nombre_producto" placeholder="Nombre del Producto" value="{{ Product.1}}" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <input type="text" name="precio_producto" placeholder="Precio" value="{{ Product.2}}" class="form-control">
+            </div>
+            <table>
+                {% for tipo in tipo_producto %}
+                <tr>{{tipo.0}} - {{ tipo.1 }}</tr><br>
+                {% endfor %}
+        </table>
+            <div class="form-group">
+                <input type="number" name="tipo_producto" placeholder="Tipo" value="{{ Product.3}}" class="form-control">
+            </div>
+            <div class="form-group">
+                <input type="number" name="cantidad" placeholder="Cantidad" value="{{ Product.4}}" class="form-control">
+            </div>
+        
+            <div class="form-group">
+                <button type="submit" class="btn btn-success btn-block">
+                    Guardar
+                </button>
+            </div>
+            
+        </form>
+    </div>
+</div>
