@@ -55,7 +55,7 @@
                 <td>{{ p.stock if p.stock else 0 }}</td>
                 <td>
                     <!-- Botón Editar -->
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editProductoModal{{p.id_producto}}">Editar</button>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editProductoModal{{p.id_producto}}">Editar Producto</button>
                     
                     <!-- Botón Eliminar -->
                     <form action="{{ url_for('delete_producto', id=p.id_producto) }}" method="post" style="display:inline;">
@@ -136,9 +136,25 @@
         <div class="col-md-2">
             <input type="number" step="0.01" class="form-control" name="precio" placeholder="Precio" required>
         </div>
-        <div class="col-md-4">
-            <input type="text" class="form-control" name="categoria" placeholder="Categoría">
+        <div class="form-group">
+          <label for="categoria_producto">Categoría:</label>
+          <select name="categoria_producto" id="categoria_producto" required>
+            <option value="">Selecciona una categoría</option>
+            <option value="Abrigos">Abrigos</option>
+            <option value="Accesorios">Accesorios</option>
+            <option value="Calzado">Calzado</option>
+            <option value="Chaquetas">Chaquetas</option>
+            <option value="Joyas">Joyas</option>
+            <option value="Pantalones">Pantalones</option>
+            <option value="Parkas">Parkas</option>
+            <option value="Polerones">Polerones</option>
+            <option value="Poleras">Poleras</option>
+            <option value="Ropa interior">Ropa interior</option>
+            <option value="Top">Top</option>
+            <option value="Traje de baño">Traje de baño</option>
+          </select>
         </div>
+
         <div class="col-md-12">
             <textarea class="form-control" name="descripcion" placeholder="Descripción del producto"></textarea>
         </div>
