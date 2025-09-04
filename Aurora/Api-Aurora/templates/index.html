@@ -77,13 +77,37 @@
                       <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                      <input type="text" class="form-control mb-2" name="sku" value="{{ p.sku }}" required>
-                      <input type="text" class="form-control mb-2" name="nombre" value="{{ p.nombre_producto }}" required>
-                      <input type="number" step="0.01" class="form-control mb-2" name="precio" value="{{ p.precio_producto }}" required>
-                      <textarea class="form-control mb-2" name="descripcion" placeholder="Descripción">{{ p.descripcion_producto }}</textarea>
-                      <input type="text" class="form-control mb-2" name="categoria" value="{{ p.categoria_producto }}">
-                      <input type="text" class="form-control mb-2" name="imagen_url" value="{{ p.imagen_url }}" placeholder="URL de la imagen">
-                    </div>
+            <div class="mb-2">
+              <label class="form-label">SKU</label>
+              <input type="text" class="form-control" name="sku" value="{{ p.sku }}" required>
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label">Nombre del Producto</label>
+              <input type="text" class="form-control" name="nombre" value="{{ p.nombre_producto }}" required>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">Precio</label>
+                <input type="number" step="0.01" class="form-control" name="precio" value="{{ p.precio_producto }}" required>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">Descripción</label>
+                <textarea class="form-control" name="descripcion" placeholder="Descripción">{{ p.descripcion_producto }}</textarea>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">Categoría</label>
+                <input type="text" class="form-control" name="categoria" value="{{ p.categoria_producto }}">
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">URL de la imagen</label>
+                <input type="text" class="form-control" name="imagen_url" value="{{ p.imagen_url }}" placeholder="URL de la imagen">
+            </div>
+          </div>
+
                     <div class="modal-footer">
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                       <button type="submit" class="btn btn-primary">Guardar</button>
@@ -166,38 +190,96 @@
     </div>
 </form>
 
-    <!-- Tabla de Sucursales -->
-    <h2 class="mt-5">Sucursales</h2>
-    <table class="table table-striped table-bordered">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Región</th>
-                <th>Comuna</th>
-                <th>Dirección</th>
-                <th>Latitud</th>
-                <th>Longitud</th>
-                <th>Horario</th>
-                <th>Teléfono</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for s in sucursales %}
-            <tr>
-                <td>{{ s.id_sucursal }}</td>
-                <td>{{ s.nombre_sucursal }}</td>
-                <td>{{ s.region_sucursal }}</td>
-                <td>{{ s.comuna_sucursal }}</td>
-                <td>{{ s.direccion_sucursal }}</td>
-                <td>{{ s.latitud_sucursal }}</td>
-                <td>{{ s.longitud_sucursal }}</td>
-                <td>{{ s.horario_json }}</td>
-                <td>{{ s.telefono_sucursal }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+      <!-- Tabla de Sucursales (EDITAR SUCURSALES!!!!) -->
+<h2 class="mt-5">Sucursales</h2>
+<table class="table table-striped table-bordered">
+  <thead class="table-dark">
+    <tr>
+      <th>ID</th>
+      <th>Nombre</th>
+      <th>Región</th>
+      <th>Comuna</th>
+      <th>Dirección</th>
+      <th>Latitud</th>
+      <th>Longitud</th>
+      <th>Horario</th>
+      <th>Teléfono</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in sucursales %}
+    <tr>
+      <td>{{ s.id_sucursal }}</td>
+      <td>{{ s.nombre_sucursal }}</td>
+      <td>{{ s.region_sucursal }}</td>
+      <td>{{ s.comuna_sucursal }}</td>
+      <td>{{ s.direccion_sucursal }}</td>
+      <td>{{ s.latitud_sucursal }}</td>
+      <td>{{ s.longitud_sucursal }}</td>
+      <td>{{ s.horario_json }}</td>
+      <td>{{ s.telefono_sucursal }}</td>
+      <td>
+        <!-- Botón Editar (abre modal) -->
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editSucursalModal{{ s.id_sucursal }}">
+          Editar
+        </button>
+
+        <!-- Botón Eliminar -->
+        <form action="{{ url_for('eliminar_sucursal', id_sucursal=s.id_sucursal) }}" method="post" style="display:inline;">
+          <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar esta sucursal?')">
+            Eliminar
+          </button>
+        </form>
+      </td>
+    </tr>
+
+    <!-- Modal Editar Sucursal -->
+    <div class="modal fade" id="editSucursalModal{{ s.id_sucursal }}" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <form action="{{ url_for('editar_sucursal', id_sucursal=s.id_sucursal) }}" method="post">
+            <div class="modal-header">
+              <h5 class="modal-title">Editar Sucursal</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body row g-3">
+              <div class="col-md-4">
+                <input type="text" class="form-control" name="nombre_sucursal" value="{{ s.nombre_sucursal }}" required>
+              </div>
+              <div class="col-md-4">
+                <input type="text" class="form-control" name="region_sucursal" value="{{ s.region_sucursal }}" required>
+              </div>
+              <div class="col-md-4">
+                <input type="text" class="form-control" name="comuna_sucursal" value="{{ s.comuna_sucursal }}" required>
+              </div>
+              <div class="col-md-6">
+                <input type="text" class="form-control" name="direccion_sucursal" value="{{ s.direccion_sucursal }}" required>
+              </div>
+              <div class="col-md-3">
+                <input type="number" step="0.000001" class="form-control" name="latitud_sucursal" value="{{ s.latitud_sucursal }}">
+              </div>
+              <div class="col-md-3">
+                <input type="number" step="0.000001" class="form-control" name="longitud_sucursal" value="{{ s.longitud_sucursal }}">
+              </div>
+              <div class="col-md-6">
+                <textarea class="form-control" name="horario_json">{{ s.horario_json }}</textarea>
+              </div>
+              <div class="col-md-6">
+                <input type="text" class="form-control" name="telefono_sucursal" value="{{ s.telefono_sucursal }}">
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </tbody>
+</table>
 
     <!-- Formulario Agregar Sucursal -->
     <div class="card mt-5 mb-5">

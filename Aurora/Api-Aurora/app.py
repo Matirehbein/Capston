@@ -163,6 +163,47 @@ def add_sucursal():
     flash("Sucursal agregada con éxito")
     return redirect(url_for("index"))
 
+
+# Editar sucursal
+@app.route("/editar_sucursal/<int:id_sucursal>", methods=["POST"])
+def editar_sucursal(id_sucursal):
+    nombre = request.form["nombre_sucursal"]
+    region = request.form["region_sucursal"]
+    comuna = request.form["comuna_sucursal"]
+    direccion = request.form["direccion_sucursal"]
+    latitud = request.form.get("latitud_sucursal") or None
+    longitud = request.form.get("longitud_sucursal") or None
+    horario = request.form.get("horario_json") or "{}"
+    telefono = request.form.get("telefono_sucursal") or None
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE sucursal
+        SET nombre_sucursal=%s, region_sucursal=%s, comuna_sucursal=%s,
+            direccion_sucursal=%s, latitud_sucursal=%s, longitud_sucursal=%s,
+            horario_json=%s::jsonb, telefono_sucursal=%s
+        WHERE id_sucursal=%s
+    """, (nombre, region, comuna, direccion, latitud, longitud, horario, telefono, id_sucursal))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Sucursal actualizada con éxito")
+    return redirect(url_for("index"))
+
+
+# Eliminar sucursal
+@app.route("/eliminar_sucursal/<int:id_sucursal>", methods=["POST"])
+def eliminar_sucursal(id_sucursal):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM sucursal WHERE id_sucursal = %s", (id_sucursal,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Sucursal eliminada con éxito")
+    return redirect(url_for("index"))
+
 # ===========================
 # RUN
 # ===========================
