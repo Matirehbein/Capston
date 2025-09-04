@@ -126,19 +126,19 @@
 
     <!-- Formulario Agregar Producto -->
     <h2 class="mt-5">Agregar Producto</h2>
-    <form action="{{ url_for('add_producto') }}" method="post" class="row g-3">
-        <div class="col-md-3">
-            <input type="text" class="form-control" name="sku" placeholder="SKU" required>
-        </div>
-        <div class="col-md-3">
-            <input type="text" class="form-control" name="nombre" placeholder="Nombre producto" required>
-        </div>
-        <div class="col-md-2">
-            <input type="number" step="0.01" class="form-control" name="precio" placeholder="Precio" required>
-        </div>
-        <div class="form-group">
-          <label for="categoria_producto">Categoría:</label>
-          <select name="categoria_producto" id="categoria_producto" required>
+<form action="{{ url_for('add_producto') }}" method="post" class="row g-3">
+    <div class="col-md-3">
+        <input type="text" class="form-control" name="sku" placeholder="SKU" required>
+    </div>
+    <div class="col-md-3">
+        <input type="text" class="form-control" name="nombre" placeholder="Nombre producto" required>
+    </div>
+    <div class="col-md-2">
+        <input type="number" step="0.01" class="form-control" name="precio" placeholder="Precio" required>
+    </div>
+    <div class="col-md-4">
+        <label for="categoria_producto" class="form-label visually-hidden">Categoría:</label>
+        <select name="categoria" id="categoria_producto" class="form-select" required>
             <option value="">Selecciona una categoría</option>
             <option value="Abrigos">Abrigos</option>
             <option value="Accesorios">Accesorios</option>
@@ -152,19 +152,19 @@
             <option value="Ropa interior">Ropa interior</option>
             <option value="Top">Top</option>
             <option value="Traje de baño">Traje de baño</option>
-          </select>
-        </div>
+        </select>
+    </div>
 
-        <div class="col-md-12">
-            <textarea class="form-control" name="descripcion" placeholder="Descripción del producto"></textarea>
-        </div>
-        <div class="col-md-12">
-            <input type="text" class="form-control" name="imagen_url" placeholder="URL de la imagen">
-        </div>
-        <div class="col-md-12">
-            <button type="submit" class="btn btn-success w-100">Agregar</button>
-        </div>
-    </form>
+    <div class="col-md-12">
+        <textarea class="form-control" name="descripcion" placeholder="Descripción del producto"></textarea>
+    </div>
+    <div class="col-md-12">
+        <input type="text" class="form-control" name="imagen_url" placeholder="URL de la imagen">
+    </div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-success w-100">Agregar</button>
+    </div>
+</form>
 
     <!-- Tabla de Sucursales -->
     <h2 class="mt-5">Sucursales</h2>
