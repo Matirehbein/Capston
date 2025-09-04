@@ -235,48 +235,57 @@
     </tr>
 
     <!-- Modal Editar Sucursal -->
-    <div class="modal fade" id="editSucursalModal{{ s.id_sucursal }}" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <form action="{{ url_for('editar_sucursal', id_sucursal=s.id_sucursal) }}" method="post">
-            <div class="modal-header">
-              <h5 class="modal-title">Editar Sucursal</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body row g-3">
-              <div class="col-md-4">
-                <input type="text" class="form-control" name="nombre_sucursal" value="{{ s.nombre_sucursal }}" required>
-              </div>
-              <div class="col-md-4">
-                <input type="text" class="form-control" name="region_sucursal" value="{{ s.region_sucursal }}" required>
-              </div>
-              <div class="col-md-4">
-                <input type="text" class="form-control" name="comuna_sucursal" value="{{ s.comuna_sucursal }}" required>
-              </div>
-              <div class="col-md-6">
-                <input type="text" class="form-control" name="direccion_sucursal" value="{{ s.direccion_sucursal }}" required>
-              </div>
-              <div class="col-md-3">
-                <input type="number" step="0.000001" class="form-control" name="latitud_sucursal" value="{{ s.latitud_sucursal }}">
-              </div>
-              <div class="col-md-3">
-                <input type="number" step="0.000001" class="form-control" name="longitud_sucursal" value="{{ s.longitud_sucursal }}">
-              </div>
-              <div class="col-md-6">
-                <textarea class="form-control" name="horario_json">{{ s.horario_json }}</textarea>
-              </div>
-              <div class="col-md-6">
-                <input type="text" class="form-control" name="telefono_sucursal" value="{{ s.telefono_sucursal }}">
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-              <button type="submit" class="btn btn-primary">Guardar cambios</button>
-            </div>
-          </form>
+<div class="modal fade" id="editSucursalModal{{ s.id_sucursal }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form action="{{ url_for('editar_sucursal', id_sucursal=s.id_sucursal) }}" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Sucursal</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-      </div>
+        <div class="modal-body row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Nombre de la Sucursal</label>
+            <input type="text" class="form-control" name="nombre_sucursal" value="{{ s.nombre_sucursal }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Región</label>
+            <input type="text" class="form-control" name="region_sucursal" value="{{ s.region_sucursal }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Comuna</label>
+            <input type="text" class="form-control" name="comuna_sucursal" value="{{ s.comuna_sucursal }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Dirección</label>
+            <input type="text" class="form-control" name="direccion_sucursal" value="{{ s.direccion_sucursal }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Latitud</label>
+            <input type="number" step="0.000001" class="form-control" name="latitud_sucursal" value="{{ s.latitud_sucursal }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Longitud</label>
+            <input type="number" step="0.000001" class="form-control" name="longitud_sucursal" value="{{ s.longitud_sucursal }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Horario (JSON)</label>
+            <textarea class="form-control" name="horario_json">{{ s.horario_json }}</textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Teléfono</label>
+            <input type="text" class="form-control" name="telefono_sucursal" value="{{ s.telefono_sucursal }}">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </div>
+      </form>
     </div>
+  </div>
+</div>
+
     {% endfor %}
   </tbody>
 </table>
