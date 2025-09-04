@@ -12,6 +12,7 @@ app.config['PG_DATABASE'] = "aurora"
 app.config['PG_USER'] = "postgres"
 app.config['PG_PASSWORD'] = "duoc"
 
+#Función para abrir la conexión con la Base de dats
 def get_db_connection():
     return psycopg2.connect(
         host=app.config['PG_HOST'],
@@ -23,6 +24,16 @@ def get_db_connection():
 # ===========================
 # RUTAS
 # ===========================
+
+# Obtengo datos de la BDD para los productos y sucursales
+
+
+# Esta ruta alimenta las tablas de la interfaz
+
+# 1.- Me conecto a la BDD
+# 2.- TRaigo todos los productos y sucursales
+# 3.- Renderizo el template "index.html" con los daots
+# 4.- Finalmente, el usuario ve la página con el resultado esperado, que es ver la tabla de productos y sucursales
 @app.route("/")
 def index():
     conn = get_db_connection()
@@ -50,6 +61,15 @@ def index():
 # ---------------------------
 # Productos
 # ---------------------------
+
+#########################
+### Agregar Producto: ###
+#########################
+
+# - Recibo datos del formulario
+# - Inserto un nuevo producto en la BDD
+# - Genero un "mensaje flash" para informar al usuario al momento de añadir un producto nuevo
+
 @app.route("/add", methods=["POST"])
 def add_producto():
     sku = request.form["sku"]
@@ -71,6 +91,13 @@ def add_producto():
     flash("Producto agregado con éxito")
     return redirect(url_for("index"))
 
+###########################
+### Editar Producto: ###
+###########################
+
+# Actualiza un producto existente en la BDD según el ID
+# Recibo los datos del modal de edición
+# - 
 @app.route("/edit/<int:id>", methods=["POST"])
 def edit_producto(id):
     sku = request.form["sku"]
@@ -94,6 +121,13 @@ def edit_producto(id):
     flash("Producto actualizado")
     return redirect(url_for("index"))
 
+
+
+###########################
+### Eliminar Producto: ###
+###########################
+
+# - Borra un producto según su id
 @app.route("/delete/<int:id>", methods=["POST"])
 def delete_producto(id):
     conn = get_db_connection()
@@ -104,6 +138,19 @@ def delete_producto(id):
     conn.close()
     flash("Producto eliminado")
     return redirect(url_for("index"))
+
+# ---------------------------
+# Productos
+# ---------------------------
+
+
+###########################
+### Editar Stock: ###
+###########################
+
+# Permite cambiar la cantidad de stock de un producto en una sucursal
+# - Crea una "variación del producto si no existe"
+
 
 @app.route("/edit_stock/<int:id>", methods=["POST"])
 def edit_stock(id):
@@ -139,6 +186,9 @@ def edit_stock(id):
 # ---------------------------
 # Sucursales
 # ---------------------------
+
+# AÑADIR SUCURSAL: Inserta una nueva sucursal
+
 @app.route("/add_sucursal", methods=["POST"])
 def add_sucursal():
     nombre = request.form["nombre"]
@@ -164,7 +214,8 @@ def add_sucursal():
     return redirect(url_for("index"))
 
 
-# Editar sucursal
+# EDITAR SUCURSAL: Actualiza los datos de la sucursal ya creada
+
 @app.route("/editar_sucursal/<int:id_sucursal>", methods=["POST"])
 def editar_sucursal(id_sucursal):
     nombre = request.form["nombre_sucursal"]
@@ -192,7 +243,8 @@ def editar_sucursal(id_sucursal):
     return redirect(url_for("index"))
 
 
-# Eliminar sucursal
+# ELIMINAR SUCURSAL: Elimina una sucursal creada según ID.
+
 @app.route("/eliminar_sucursal/<int:id_sucursal>", methods=["POST"])
 def eliminar_sucursal(id_sucursal):
     conn = get_db_connection()
