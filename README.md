@@ -37,19 +37,25 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
 ## Instalación en un entorno externo de la app de Flask (CRUD)
 
 1. Ir a la ruta del proyecto:
+    ```bash
     cd "ruta_de_mi_proyecto"
 
 2. Crear un entorno virtual:
+    ```bash
     python -m venv venv
 
 3. Activar el entorno virtual:
+    ```bash
     .\venv\Scripts\Activate
 
 4. Instalar Flask y psycopg2:
+    ```bash
     pip install flask psycopg2-binary
 
 5. (OPCIONAL) Guardar dependencias en un archivo:
+    ```bash
     pip freeze > requeriments.txt
 
 6. Ejecutar el servidor Flask:
+    ```bash
     Python app.py 
