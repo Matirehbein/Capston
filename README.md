@@ -32,3 +32,24 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
 4. Abrir el servidor 
     http://localhost:3000/src/index.html
     
+---
+
+## Instalación en un entorno externo de la app de Flask (CRUD)
+
+1. Ir a la ruta del proyecto:
+    cd "ruta_de_mi_proyecto"
+
+2. Crear un entorno virtual:
+    python -m venv venv
+
+3. Activar el entorno virtual:
+    .\venv\Scripts\Activate
+
+4. Instalar Flask y psycopg2:
+    pip install flask psycopg2-binary
+
+5. (OPCIONAL) Guardar dependencias en un archivo:
+    pip freeze > requeriments.txt
+
+6. Ejecutar el servidor Flask:
+    Python app.py 
