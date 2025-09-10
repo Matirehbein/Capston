@@ -38,7 +38,7 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
 
 1. Ir a la ruta del proyecto:
     ```bash
-    cd "ruta_de_mi_proyecto"
+    cd "ruta_de_mi_proyecto\Aurora\Api-Aurora"
 
 2. Crear un entorno virtual:
     ```bash
