@@ -58,4 +58,4 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
 
 6. Ejecutar el servidor Flask:
     ```bash
-    Python app.py 
+    python app.py 
