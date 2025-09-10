@@ -64,8 +64,8 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
 
 7. O también, en vez de instalar todas las dependencias anteriores hasta el punto 4, se puede ejecutar lo siguiente en la terminal:
    ```bash
-   pip install -r requirements.txt 
-
-8.- Luego, ejecutar el servidor Flask:
+   pip install -r requirements.txt
+   
+8. Luego, ejecutar el servidor Flask:
    ```bash
     python app.py
