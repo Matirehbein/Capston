@@ -31,7 +31,7 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
 4. Abrir el servidor 
    │    - Local:    http://localhost:3000      │
    │   - Network:  http://192.168.1.40:3000    │
-   │                                           │
+                                              
     
 ---
 
