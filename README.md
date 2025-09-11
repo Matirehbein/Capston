@@ -27,7 +27,6 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
     cd C:\Users\mati\Desktop\Aurora-main\Aurora
 
     npm run dev
-    npm start
 
 4. Abrir el servidor 
     http://localhost:3000/src/index.html
