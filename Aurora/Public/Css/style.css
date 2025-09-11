@@ -259,8 +259,104 @@ background-color: var(--color-primario-dark);
     margin-bottom: 0.5rem;
 }
 
+/* Botón general para íconos */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--accent); /* se adapta al tema */
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.icon-btn:hover {
+  background: var(--bg-50);
+  transform: scale(1.05);
+}
+
+/* === Icono de carrito === */
+.icon-cart::before {
+  content: "🛒"; /* emoji carrito */
+  font-size: 18px;
+}
+
+/* === Icono de login === */
+.icon-login::before {
+  content: "👤"; /* emoji usuario */
+  font-size: 18px;
+}
 
 .producto-precio { color: var(--color-primario-dark); }
+
+/* ==== Pasos de compra ==== */
+.cart-steps {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 25px 0;
+}
+
+.cart-steps .step {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--card, #fff);
+  border: 1px solid var(--color-borde, #ddd);
+  color: var(--muted, #777);
+}
+
+.cart-steps .step.active {
+  background: var(--accent, #c9a57b);
+  color: #fff;
+  border: none;
+}
+
+/* ==== Caja carrito vacío ==== */
+.cart-empty-box {
+  margin: 30px auto;
+  padding: 50px 20px;
+  max-width: 600px;
+  background: var(--card, #fff);
+  border: 1px solid var(--color-borde, #ddd);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft, 0 2px 8px rgba(0,0,0,.1));
+  text-align: center;
+}
+
+.cart-empty-box p {
+  font-size: 1.2rem;
+  color: var(--color-texto, #333);
+  margin-bottom: 20px;
+}
+
+.cart-empty-box .btn-lg {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: var(--accent, #c9a57b);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .2s ease;
+}
+
+.cart-empty-box .btn-lg:hover {
+  background: var(--accent-dark, #a07b50);
+}
+
+/* ==== Footer ==== */
+.site-footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 0.9rem;
+  color: var(--muted, #777);
+}
 
 /* Sobre Nosotros */
 .about-section {
@@ -285,11 +381,6 @@ background-color: var(--color-primario-dark);
 .about-content p {
     margin-bottom: 1.5rem;
 }
-
-
-
-
-
 
 
 
@@ -491,6 +582,16 @@ tbody td {
 }
 
 
+/* Estilos globales para íconos del sidebar */
+.admin-sidebar .menu .menu-link svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  stroke: currentColor;   /* hace que tome el color del texto */
+  fill: currentColor;             /* quita el fondo blanco */
+  stroke-width: 1.8;
+  opacity: .9;
+}
 
 
 
@@ -553,6 +654,62 @@ tbody td {
   object-fit: contain; 
   border-radius: 50%;  
 }
+/* Grid de temas */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* Tarjeta de cada tema */
+.theme-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 2px solid #e5e5e5;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.theme-option:hover {
+  border-color: var(--color-accento, #c9a57b);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+/* Esconde radio nativo */
+.theme-option input[type="radio"] {
+  display: none;
+}
+
+/* Estado seleccionado */
+.theme-option input[type="radio"]:checked + div strong,
+.theme-option input[type="radio"]:checked + div + .swatches {
+  color: var(--color-accento, #c9a57b);
+}
+
+.theme-option input[type="radio"]:checked ~ .theme-option {
+  border-color: var(--color-accento, #c9a57b);
+}
+
+/* Dots de colores */
+.swatches {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+}
+
 
 .chat-fab img{ pointer-events:none; }  /* muy importante */
 
@@ -735,25 +892,45 @@ tbody td {
 .client-fields .muted{ display:block; margin-bottom:2px; }
 
 
-/* Alias: rose => sunset */
-:root[data-theme="rose"]{
-  --bg-900:#221315; --bg-50:#fff6f2; --card:#ffffff;
-  --text:#31191c; --muted:#8b6a6f; --accent:#ff7e5f; --btn-fg:#fff; --border:#f4ddd8;
-  --hero-overlay:rgba(34,19,21,.44);
-  --shadow-soft:0 2px 8px rgba(124,46,46,.10);
-  --shadow-hover:0 10px 24px rgba(124,46,46,.20);
-  --sidebar-fg:#fdecea; --sidebar-bg:#221315;
+/* Alias: olive => reemplazo de blossom */
+:root[data-theme="olive"] {
+  --bg-900: #344e41;     /* verde oliva profundo */
+  --bg-50: #fafaf5;      /* fondo claro con tono neutro */
+  --card: #ffffff;       /* tarjetas blancas */
+  --text: #2d2a26;       /* texto oscuro */
+  --muted: #6b705c;      /* verde grisáceo apagado */
+  --accent: #a3b18a;     /* verde oliva suave */
+  --btn-fg: #fff;        /* texto botones */
+  --border: #dce2d1;     /* bordes claros */
+
+  --hero-overlay: rgba(52, 78, 65, .5); /* overlay oliva */
+
+  --shadow-soft: 0 2px 8px rgba(163, 177, 138, .15);
+  --shadow-hover: 0 10px 24px rgba(163, 177, 138, .25);
+
+  --sidebar-fg: #a3b18a;
+  --sidebar-bg: #fafaf5;
 }
 
-/* Alias: emerald => forest */
-:root[data-theme="emerald"]{
-  --bg-900:#0f1a15; --bg-50:#f3faf6; --card:#ffffff;
-  --text:#1d2f25; --muted:#5f7a6c; --accent:#2ecc71; --btn-fg:#0f1a15; --border:#d8eee5;
-  --hero-overlay:rgba(15,26,21,.40);
-  --shadow-soft:0 2px 8px rgba(20,85,56,.10);
-  --shadow-hover:0 10px 24px rgba(20,85,56,.22);
-  --sidebar-fg:#e6f6ee; --sidebar-bg:#0f1a15;
+
+
+/* Alias: noir => reemplazo de forest/midnight */
+/* 🖤 Tema Noir (oscuro elegante) */
+:root[data-theme="noir"] {
+  --bg-900:#18181b; --bg-50:#27272a; --card:#1f1f23;
+  --text:#e4e4e7; --muted:#a1a1aa;
+  --accent:#c084fc; --accent-contrast:#ffffff; --border:#3f3f46;
+  
+  --btn-fg:#ffffff;
+  --hero-overlay:rgba(24,24,27,.6);
+
+  --shadow-soft:0 2px 8px rgba(192,132,252,.15);
+  --shadow-hover:0 10px 24px rgba(192,132,252,.25);
+
+  --sidebar-bg:#18181b; --sidebar-fg:#c084fc;
 }
+
+
 
 /* 🌊 Tema 3: Ocean (vibrante frío) */
 :root[data-theme="ocean"]{
@@ -809,9 +986,27 @@ input, select, textarea {
   border: 1px solid var(--border);
 }
 
-/* Accentos pequeños (chips/pills) si los usas */
-.badge, .pill {
-  border-color: var(--color-borde);
+/* === Pills (filtros de estados) === */
+.pill {
+  background: var(--card);          /* fondo igual que las tarjetas */
+  color: var(--text);               /* texto visible siempre */
+  border: 1px solid var(--border);  /* borde según tema */
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all .25s ease;
+}
+
+.pill:hover {
+  background: var(--bg-50);   /* un poco más claro al pasar el mouse */
+}
+
+.pill.active {
+  background: var(--accent);  /* pill seleccionada toma el color del acento */
+  color: var(--btn-fg);       /* texto en contraste (normalmente blanco) */
+  border-color: var(--accent);
 }
 
 /* Header (si tienes una barra superior oscura) */
@@ -893,7 +1088,7 @@ main, .page, .section, .productos, .colecciones, .ofertas {
   box-shadow: var(--shadow-soft) !important;
 }
 
-/* === Tema ORIGINAL -> 'aurora' (usa tus variables base) === */
+/* === color ORIGINAL -> 'aurora' === */
 :root[data-theme="aurora"]{
   /* barras oscuras */
   --bg-900: var(--color-espresso);
@@ -917,6 +1112,117 @@ main, .page, .section, .productos, .colecciones, .ofertas {
   --sidebar-bg: var(--color-espresso);
   --sidebar-fg: var(--color-champagne);
 }
+
+
+/* --------- reportes-Admin --------- */
+.admin-sidebar .menu .menu-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.admin-sidebar .menu .menu-link svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .9;
+}
+.admin-sidebar .menu,
+.admin-sidebar .menu * {
+  list-style: none;
+}
+
+/* --------- Indicadoress(kpi)s --------- */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 10px 0 22px;
+}
+.kpi-card {
+  background: #fff;
+  border: 1px solid var(--color-borde, #e7ddd3);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow-soft, 0 2px 8px rgba(0,0,0,.06));
+}
+.kpi-card h3 {
+  margin: 0 0 8px;
+  color: var(--color-texto, #3b2f27);
+}
+.kpi-number {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 6px 0;
+  color: var(--color-texto, #3b2f27);
+}
+.kpi-sub {
+  font-size: .85rem;
+  color: var(--color-secundario, #7c6a5d);
+}
+.kpi-trend {
+  font-weight: 700;
+  color: #999;
+}
+
+/* --------- Tabla --------- */
+.table-wrap {
+  background: #fff;
+  border: 1px solid var(--color-borde, #e7ddd3);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft, 0 2px 8px rgba(0,0,0,.06));
+}
+table.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.admin-table thead th {
+  background: #f7efe7;
+  color: #6c4a2f;
+  font-weight: 800;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #eadfd6;
+}
+.admin-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid #f1e7dd;
+  color: #3b2f27;
+}
+.admin-table tbody tr:nth-child(even) {
+  background: #fffaf6;
+}
+.admin-table .no-data {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+.badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #eadfd6;
+  background: #fff3e0;
+  color: #b6772e;
+  font-weight: 700;
+  font-size: .82rem;
+}
+
+/* --------- Notas --------- */
+.notas-vacias {
+  display: grid;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--color-borde, #e7ddd3);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow-soft, 0 2px 8px rgba(0,0,0,.06));
+}
+
 
 
 

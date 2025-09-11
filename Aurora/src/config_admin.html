@@ -5,16 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Aurora | Configuración</title>
   <link rel="stylesheet" href="../Public/Css/style.css" />
-  <style>
-    .settings-wrap{max-width:980px;margin:0 auto;padding:16px}
-    .setting-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:var(--shadow-soft)}
-    .theme-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:12px}
-    .theme-option{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:12px;cursor:pointer;background:#fff}
-    .theme-option:hover{box-shadow:var(--shadow-hover)}
-    .theme-option input{accent-color:var(--accent); transform:scale(1.1)}
-    .swatches{display:flex;gap:6px;margin-left:auto}
-    .dot{width:16px;height:16px;border-radius:50%;border:1px solid #e1d8cf}
-  </style>
 </head>
 <body>
   <div class="admin-layout">
@@ -24,10 +14,13 @@
       <nav class="menu">
         <a class="menu-link" href="./main_menu.html"><span>Panel</span></a>
         <a class="menu-link" href="./pedidos.html"><span>Pedidos</span></a>
-        <a class="menu-link" href="./productos.html"><span>Productos</span></a>
-        <a class="menu-link" href="./clientes.html"><span>Clientes</span></a>
-        <a class="menu-link" href="./reportes.html"><span>Reportes</span></a>
-        <a class="menu-link active" href="./config.html"><span>Configuración</span></a>
+        <a class="menu-link" href="./Productos_admin.html"><span>Productos</span></a>
+        <a class="menu-link" href="./clientes_admin.html"><span>Clientes</span></a>
+        <a class="menu-link" href="./reportes_admin.html"><span>Reportes</span></a>
+        <div class="menu-sep"></div>
+        <a class="menu-link" href="./config_admin.html"><span>Configuración</span></a>
+        <a class="menu-link" href="/src/login.html"><span>Salir</span></a>
+        <a class="menu-link" href="http://127.0.0.1:5000/"><span>CRUD</span></a>
       </nav>
     </aside>
 
@@ -38,42 +31,48 @@
       <div class="settings-wrap">
         <div class="setting-card">
           <h2 style="margin:0 0 6px">Colores del sitio</h2>
-          <p class="muted" style="margin:0 0 12px">Elige una paleta. El cambio es global (admin y clientes) y queda guardado.</p>
+          <p class="muted" style="margin:0 0 12px">
+            cambio de color de la pagina 
+          </p>
 
           <div class="theme-grid" data-theme-picker>
             <!-- Tema Aurora -->
-           <label class="theme-option">
-            <input type="radio" name="theme" value="aurora" />
-            <div>
-            <strong>Color Base</strong><br>
-            <span class="muted">Predeterminado</span>
-            </div>
-            <div class="swatches">
-            <span class="dot" style="background:#FAFFF2"></span> <!-- fondo -->
-            <span class="dot" style="background:#C7AA5B"></span> <!-- dorado -->
-            <span class="dot" style="background:#1B1613"></span> <!-- espresso -->
-            </div>
-          </label>
-
-            <!-- Tema Sunset -->
             <label class="theme-option">
-              <input type="radio" name="theme" value="sunset" />
-              <div><strong>Sunset</strong><br><span class="muted">Cálido y vivo</span></div>
+              <input type="radio" name="theme" value="aurora" />
+              <div>
+                <strong>Color Base</strong><br>
+                <span class="muted">Predeterminado</span>
+              </div>
               <div class="swatches">
-                <span class="dot" style="background:#221315"></span>
-                <span class="dot" style="background:#ff7e5f"></span>
-                <span class="dot" style="background:#fff6f2"></span>
+                <span class="dot" style="background:#FAFFF2"></span>
+                <span class="dot" style="background:#C7AA5B"></span>
+                <span class="dot" style="background:#1B1613"></span>
               </div>
             </label>
 
-            <!-- Tema Forest -->
-            <label class="theme-option">
-              <input type="radio" name="theme" value="forest" />
-              <div><strong>Forest</strong><br><span class="muted">Natural y fresco</span></div>
+             <!-- Tema Olive -->
+              <label class="theme-option">
+              <input type="radio" name="theme" value="olive" />
+              <div>
+               <strong>Olive</strong><br>
+                <span class="muted">Natural y elegante</span>
+              </div>
               <div class="swatches">
-                <span class="dot" style="background:#0f1a15"></span>
-                <span class="dot" style="background:#2ecc71"></span>
-                <span class="dot" style="background:#f3faf6"></span>
+                <span class="dot" style="background:#fafaf5"></span> <!-- fondo claro -->
+                <span class="dot" style="background:#a3b18a"></span> <!-- acento -->
+                <span class="dot" style="background:#344e41"></span> <!-- oscuro -->
+              </div>
+            </label>
+
+
+            <!-- Tema Noir -->
+            <label class="theme-option">
+              <input type="radio" name="theme" value="noir" />
+              <div><strong>Noir</strong><br><span class="muted">Oscuro y elegante</span></div>
+              <div class="swatches">
+                <span class="dot" style="background:#18181b"></span>
+                <span class="dot" style="background:#27272a"></span>
+                <span class="dot" style="background:#c084fc"></span>
               </div>
             </label>
 
