@@ -24,13 +24,14 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
     npm install
 
 3. Ejecutar en la Terminal
-    cd C:\Users\mati\Desktop\Aurora-main\Aurora
+    cd "ruta_de_mi_proyecto\Aurora\Api-Aurora"
 
     npm run dev
-    npm start
 
 4. Abrir el servidor 
-    http://localhost:3000/src/index.html
+   │    - Local:    http://localhost:3000      │
+   │   - Network:  http://192.168.1.40:3000    │
+                                              
     
 ---
 
