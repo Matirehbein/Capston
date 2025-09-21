@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import psycopg2
 import psycopg2.extras
 import os
@@ -261,3 +261,17 @@ def eliminar_sucursal(id_sucursal):
 # ===========================
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=3000, debug=True)
+
+# ==================
+#Sesion
+#==================
+
+@app.route('/login', methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        session['username'] = request.form['correo_login']
+        return render_template('../index.html')
+
+#    if 'username' in session:
+#        return f'el usuario inicio sesion  {session["nombre_usuario"]}'
+#    return 'no inicio sesion'
