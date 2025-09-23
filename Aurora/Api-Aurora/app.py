@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
+import json
 import psycopg2
 import psycopg2.extras
 import os
@@ -12,7 +13,7 @@ app.config['PG_DATABASE'] = "aurora"
 app.config['PG_USER'] = "postgres"
 app.config['PG_PASSWORD'] = "duoc"
 
-#Función para abrir la conexión con la Base de dats
+#Función para abrir la conexión con la Base de datos
 def get_db_connection():
     return psycopg2.connect(
         host=app.config['PG_HOST'],
@@ -25,17 +26,23 @@ def get_db_connection():
 # RUTAS
 # ===========================
 
-# Obtengo datos de la BDD para los productos y sucursales
+# ---------------------------
+# Página Principal (Menú)
+# ---------------------------
+@app.route('/')
+def menu_principal():
+    return render_template("index_options.html")
 
+@app.route("/index_options")
+def index_options():
+    return render_template("index_options.html")
 
-# Esta ruta alimenta las tablas de la interfaz
+# ---------------------------
+# CRUD Productos
+# ---------------------------
 
-# 1.- Me conecto a la BDD
-# 2.- TRaigo todos los productos y sucursales
-# 3.- Renderizo el template "index.html" con los daots
-# 4.- Finalmente, el usuario ve la página con el resultado esperado, que es ver la tabla de productos y sucursales
-@app.route("/")
-def index():
+@app.route('/productos')
+def crud_productos():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
@@ -50,25 +57,36 @@ def index():
     """)
     productos = cur.fetchall()
 
+    # Sucursales (para el modal de stock)
+    cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
+    sucursales = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    return render_template("productos/crud_productos.html", productos=productos, sucursales=sucursales)
+
+
+# ---------------------------
+# CRUD Sucursales
+# ---------------------------
+
+@app.route('/sucursales')
+def crud_sucursales():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
     # Sucursales
     cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
     sucursales = cur.fetchall()
 
     cur.close()
     conn.close()
-    return render_template("index.html", productos=productos, sucursales=sucursales)
+    return render_template("sucursales/crud_sucursales.html", sucursales=sucursales)
+
 
 # ---------------------------
-# Productos
+# Rutas de Productos
 # ---------------------------
-
-#########################
-### Agregar Producto: ###
-#########################
-
-# - Recibo datos del formulario
-# - Inserto un nuevo producto en la BDD
-# - Genero un "mensaje flash" para informar al usuario al momento de añadir un producto nuevo
 
 @app.route("/add", methods=["POST"])
 def add_producto():
@@ -89,15 +107,8 @@ def add_producto():
     cur.close()
     conn.close()
     flash("Producto agregado con éxito")
-    return redirect(url_for("index"))
+    return redirect(url_for("crud_productos"))
 
-###########################
-### Editar Producto: ###
-###########################
-
-# Actualiza un producto existente en la BDD según el ID
-# Recibo los datos del modal de edición
-# - 
 @app.route("/edit/<int:id>", methods=["POST"])
 def edit_producto(id):
     sku = request.form["sku"]
@@ -119,15 +130,8 @@ def edit_producto(id):
     cur.close()
     conn.close()
     flash("Producto actualizado")
-    return redirect(url_for("index"))
+    return redirect(url_for("crud_productos"))
 
-
-
-###########################
-### Eliminar Producto: ###
-###########################
-
-# - Borra un producto según su id
 @app.route("/delete/<int:id>", methods=["POST"])
 def delete_producto(id):
     conn = get_db_connection()
@@ -137,20 +141,7 @@ def delete_producto(id):
     cur.close()
     conn.close()
     flash("Producto eliminado")
-    return redirect(url_for("index"))
-
-# ---------------------------
-# Productos
-# ---------------------------
-
-
-###########################
-### Editar Stock: ###
-###########################
-
-# Permite cambiar la cantidad de stock de un producto en una sucursal
-# - Crea una "variación del producto si no existe"
-
+    return redirect(url_for("crud_productos"))
 
 @app.route("/edit_stock/<int:id>", methods=["POST"])
 def edit_stock(id):
@@ -181,13 +172,12 @@ def edit_stock(id):
     cur.close()
     conn.close()
     flash("Stock actualizado")
-    return redirect(url_for("index"))
+    return redirect(url_for("crud_productos"))
+
 
 # ---------------------------
-# Sucursales
+# Rutas de Sucursales
 # ---------------------------
-
-# AÑADIR SUCURSAL: Inserta una nueva sucursal
 
 @app.route("/add_sucursal", methods=["POST"])
 def add_sucursal():
@@ -211,10 +201,7 @@ def add_sucursal():
     cur.close()
     conn.close()
     flash("Sucursal agregada con éxito")
-    return redirect(url_for("index"))
-
-
-# EDITAR SUCURSAL: Actualiza los datos de la sucursal ya creada
+    return redirect(url_for("crud_sucursales"))
 
 @app.route("/editar_sucursal/<int:id_sucursal>", methods=["POST"])
 def editar_sucursal(id_sucursal):
@@ -240,10 +227,7 @@ def editar_sucursal(id_sucursal):
     cur.close()
     conn.close()
     flash("Sucursal actualizada con éxito")
-    return redirect(url_for("index"))
-
-
-# ELIMINAR SUCURSAL: Elimina una sucursal creada según ID.
+    return redirect(url_for("crud_sucursales"))
 
 @app.route("/eliminar_sucursal/<int:id_sucursal>", methods=["POST"])
 def eliminar_sucursal(id_sucursal):
@@ -254,7 +238,8 @@ def eliminar_sucursal(id_sucursal):
     cur.close()
     conn.close()
     flash("Sucursal eliminada con éxito")
-    return redirect(url_for("index"))
+    return redirect(url_for("crud_sucursales"))
+
 
 # ===========================
 # RUN

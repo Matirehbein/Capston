@@ -1,0 +1,60 @@
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 220px;
+    height: 100%;
+    background-color: #DEC19B; /* Color café pálido */
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.sidebar-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 30px;
+    color: #3c3c3c;
+    text-align: center;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar-menu li {
+    margin-bottom: 15px;
+}
+
+.sidebar-menu li a {
+    text-decoration: none;
+    color: #3c3c3c;
+    font-weight: 500;
+    display: block;
+    padding: 10px 15px;
+    border-radius: 8px;
+    transition: background 0.3s, color 0.3s;
+}
+
+.sidebar-menu li a:hover {
+    background-color: rgba(0,0,0,0.1);
+    color: #000;
+}
+
+/* Contenido principal */
+.main-content {
+    margin-left: 240px; /* espacio para la sidebar */
+    padding: 40px;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+
+.sidebar-top {
+    /* opcional: espacio entre los botones de arriba */
+}
+
+.sidebar-bottom {
+    /* el botón siempre estará abajo */
+}
