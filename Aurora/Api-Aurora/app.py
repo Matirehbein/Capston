@@ -266,12 +266,17 @@ if __name__ == "__main__":
 #Sesion
 #==================
 
-@app.route('/login', methods=["GET", "POST"])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == "POST":
-        session['username'] = request.form['correo_login']
-        return render_template('../index.html')
+        correo = (request.form.get('correo_login')or "").strip().lower()
+        password = request.form.get('password_login')or ""
+        user = usuario.query.filter_by(correo=correo)
+    return render_template('../index.html')
 
+@app.route('logout')
+def logout():
+    session.pop('username')
 #    if 'username' in session:
 #        return f'el usuario inicio sesion  {session["nombre_usuario"]}'
 #    return 'no inicio sesion'
