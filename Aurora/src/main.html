@@ -23,14 +23,17 @@
         </ul>
 
         <div class="header-actions">
-             <div class="header-actions">
+            <div class="header-actions">
             <div class="header-actions">
             <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
             <a href="../src/login.html" class="icon-btn icon-login" aria-label="Login"></a>
         </div>
 
       </div>
-          <li><a href="../src/main_menu.html">Admin</a></li>
+          <li id="admin-menu-btn" style="display:none;">
+            <a href="../src/main_menu.html">Admin</a>
+          </li>
+
         </div>
       </div>
     </div>
@@ -63,7 +66,6 @@
               <p>Tonos suaves y diseños fluidos</p>
             </div>
           </div>
-       
         </div>
       </div>
     </section>
@@ -115,5 +117,34 @@
   </footer>
   <script type="module" src="../Public/js/colores.js"></script>
 
+<script>
+  (async function checkUserRole() {
+    try {
+      // IMPORTANTE: usa el mismo host que usaste para iniciar sesión.
+      // Lo más simple es usar 127.0.0.1 en ambos (frontend y backend).
+      const res = await fetch("http://127.0.0.1:5000/api/session_info", {
+        credentials: "include" // envía la cookie de sesión
+      });
+
+      if (!res.ok) {
+        console.error("Fallo consultando sesión:", res.status, await res.text());
+        return;
+      }
+
+      const data = await res.json();
+      console.log("session_info:", data); // <-- déjalo mientras pruebas
+
+      if (data.logged_in && (data.rol === "admin" || data.rol === "soporte")) {
+        const btn = document.getElementById("admin-menu-btn");
+        if (btn) btn.style.display = "block";
+      }
+    } catch (err) {
+      console.error("Error verificando sesión:", err);
+    }
+  })();
+</script>
+
+
 </body>
+
 </html>

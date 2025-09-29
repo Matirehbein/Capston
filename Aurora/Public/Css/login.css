@@ -93,6 +93,20 @@ button[type="submit"]:hover {
   text-decoration: underline;
 }
 
+/* evita saltos feos de layout */
+.field { display: flex; flex-direction: column; }
+
+.error-msg{
+  max-height:0; opacity:0; overflow:hidden;
+  color:#e53935; font-size:0.875rem; line-height:1.25rem; margin-top:0;
+  transition:max-height .25s ease, opacity .2s ease, margin-top .2s ease;
+}
+.error-msg.show{
+  max-height:48px; opacity:1; margin-top:4px;
+}
+
+
+
 @keyframes fadeIn {
   from {opacity: 0; transform: translateY(-20px);}
   to {opacity: 1; transform: translateY(0);}
