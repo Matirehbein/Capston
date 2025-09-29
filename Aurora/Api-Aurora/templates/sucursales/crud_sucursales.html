@@ -144,6 +144,7 @@
               <td>{{ s.horario_json }}</td>
               <td>{{ s.telefono_sucursal }}</td>
               <td>
+                 <!-- Acciones -->
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editSucursalModal{{ s.id_sucursal }}">
                   Editar
                 </button>
@@ -151,6 +152,7 @@
                   <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar esta sucursal?')">
                     Eliminar
                   </button>
+                  <a href="{{ url_for('detalle_sucursal', id_sucursal=s.id_sucursal) }}" class="btn btn-info mb-3">Ver Stock por Sucursal</a>
                 </form>
               </td>
             </tr>

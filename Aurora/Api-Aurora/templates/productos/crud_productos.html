@@ -138,6 +138,8 @@
                             <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
                         </form>
                         <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#stockModal{{p.id_producto}}">Editar Stock</button>
+                        <a href="{{ url_for('ver_stock', id_producto=p.id_producto) }}" class="btn btn-sm btn-info">Ver Stock</a>
+
                     </td>
                 </tr>
 

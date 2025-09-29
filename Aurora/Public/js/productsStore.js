@@ -1,39 +1,45 @@
 // Public/js/productsStore.js
-const PRODUCTS_KEY = 'aurora_products';
 const PRODUCTS_EVT = 'products:changed';
 
-function read() {
-  try { return JSON.parse(localStorage.getItem(PRODUCTS_KEY) || '[]'); }
-  catch { return []; }
+async function fetchProducts() {
+  try {
+    const res = await fetch('/api/productos');
+    return await res.json();
+  } catch (e) {
+    console.error('Error al cargar productos', e);
+    return [];
+  }
 }
-function write(list) {
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list));
-  window.dispatchEvent(new CustomEvent(PRODUCTS_EVT, { detail: { products: list } }));
+
+async function saveProduct(p) {
+  const res = await fetch('/api/productos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(p)
+  });
+  return await res.json();
+}
+
+async function deleteProducts(ids) {
+  await fetch('/api/productos', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
 }
 
 export const ProductsStore = {
-  getAll() { return read(); },
-  add(p) {
-    const list = read();
-    list.unshift(p);
-    write(list);
+  async getAll() { return await fetchProducts(); },
+  async add(p) { 
+    const saved = await saveProduct(p);
+    window.dispatchEvent(new CustomEvent(PRODUCTS_EVT, { detail: { products: await fetchProducts() } }));
+    return saved;
   },
-  removeByIds(ids = []) {
-    const set = new Set(ids.map(x => String(x)));
-    write(read().filter(p => !set.has(String(p.id))));
+  async removeByIds(ids=[]) {
+    await deleteProducts(ids);
+    window.dispatchEvent(new CustomEvent(PRODUCTS_EVT, { detail: { products: await fetchProducts() } }));
   },
   onChange(handler) {
     window.addEventListener(PRODUCTS_EVT, (e) => handler(e.detail.products));
-    window.addEventListener('storage', (e) => {
-      if (e.key === PRODUCTS_KEY) handler(read());
-    });
-  },
-  seedIfEmpty() {
-    if (read().length) return;
-    write([
-      { id: 'SKU-1001', nombre: 'Vestido Seda', categoria: 'Vestidos', stock: 3,  precio: 19990 },
-      { id: 'SKU-1002', nombre: 'Blusa Drapeada', categoria: 'Blusas', stock: 12, precio: 29990 },
-      { id: 'SKU-1003', nombre: 'Pantalón Palazzo', categoria: 'Pantalones', stock: 2, precio: 34990 },
-    ]);
   }
 };
