@@ -4,42 +4,133 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aurora | Login</title>
-  <link rel="stylesheet" href="../Public/Css/login.css">
+  <link rel="stylesheet" href="/Public/Css/login.css">
 </head>
 <body>
   <div class="box">
     <div class="tabs">
-      <button class="tab-btn active" onclick="openTab('login')">Login</button>
-      <button class="tab-btn" onclick="openTab('register')">Registro</button>
+      <button class="tab-btn active" onclick="openTab('login', this)">Login</button>
+      <button class="tab-btn" onclick="openTab('register', this)">Registro</button>
     </div>
 
-    <!-- Formulario de Login -->
-    <form id="login" class="active">
-      <input type="text" placeholder="Usuario" required>
-      <input type="password" placeholder="Contraseña" required>
+
+        <!-- Formulario de Login -->
+    <form id="login" class="active" method="POST" action="http://127.0.0.1:5000/login">
+      <div class="field">
+        <input type="email" name="email_usuario" placeholder="Correo" required>
+        <div id="login-email-error" class="error-msg" aria-live="polite"></div>
+      </div>
+
+      <div class="field">
+        <input type="password" name="password" placeholder="Contraseña" required>
+        <div id="login-password-error" class="error-msg" aria-live="polite"></div>
+      </div>
+
       <button type="submit">Entrar</button>
     </form>
 
-    <!-- Formulario de Registro -->
-    <form id="register">
-      <input type="text" placeholder="Nombre" required>
-      <input type="email" placeholder="Correo" required>
-      <input type="password" placeholder="Contraseña" required>
-      <button type="submit">Registrar</button>
+
+        <!-- Formulario de Registro -->
+    <form id="register" method="POST" action="http://127.0.0.1:5000/register">
+      <input type="text" name="nombre_usuario" placeholder="Nombre" required>
+
+      <div class="field">
+        <input type="email" id="email_registro" name="email_usuario" placeholder="Correo" required>
+        <div id="email-error" class="error-msg" aria-live="polite"></div>
+      </div>
+
+      <input type="password" name="password" placeholder="Contraseña" required>
+      <button type="submit" name="registrar">Registrar</button>
     </form>
+
 
     <div class="back">
       <a href="../src/main.html">← Volver</a>
     </div>
   </div>
 
-  <script>
-    function openTab(tabId) {
-      document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      document.getElementById(tabId).classList.add("active");
-      event.target.classList.add("active");
+<script>
+function openTab(tabId, clickedBtn) {
+    // ocultar todos los forms
+    document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
+    // desmarcar botones
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+
+    // mostrar solo el form correcto
+    document.getElementById(tabId)?.classList.add("active");
+    // marcar el botón correcto
+    clickedBtn?.classList.add("active");
+  }
+
+/* login*/
+document.addEventListener("DOMContentLoaded", function () {
+  function activateTab(tabId) {
+    document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById(tabId)?.classList.add("active");
+    const btn = tabId === "register" ? document.querySelector(".tab-btn:nth-child(2)")
+                                    : document.querySelector(".tab-btn:nth-child(1)");
+    btn?.classList?.add("active");
+  }
+
+  const params = new URLSearchParams(window.location.search);
+
+  // Mantener tab si viene en query
+  if (params.get("tab") === "register") activateTab("register");
+  if (params.get("tab") === "login")    activateTab("login");
+
+  // Mostrar errores SOLO si vienen del flujo de login
+  if (params.get("src") === "login") {
+    const emailErrBox = document.getElementById("login-email-error");
+    const passErrBox  = document.getElementById("login-password-error");
+
+    if (params.get("error") === "user_not_found" && emailErrBox) {
+      activateTab("login");
+      emailErrBox.textContent = "El usuario (correo) no existe.";
+      emailErrBox.classList.add("show");
     }
-  </script>
+
+    if (params.get("error") === "bad_password" && passErrBox) {
+      activateTab("login");
+      passErrBox.textContent = "La contraseña es incorrecta.";
+      passErrBox.classList.add("show");
+    }
+
+    if (params.get("error") === "missing" && emailErrBox) {
+      activateTab("login");
+      emailErrBox.textContent = "Ingresa correo y contraseña.";
+      emailErrBox.classList.add("show");
+    }
+
+    // Limpia la URL para que el error no se repita al refrescar
+    const newUrl = window.location.pathname + "?tab=login";
+    window.history.replaceState(null, "", newUrl);
+  }
+});
+/* registro*/
+document.addEventListener("DOMContentLoaded", function () {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("tab") === "register") {
+    document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("register")?.classList.add("active");
+    document.querySelector(".tab-btn:nth-child(2)")?.classList?.add("active");
+  }
+
+  if (params.get("src") === "register" && params.get("error") === "email") {
+    const box = document.getElementById("email-error");
+    if (box) { box.textContent = "El correo ya está registrado."; box.classList.add("show"); }
+    const newUrl = window.location.pathname + "?tab=register";
+    window.history.replaceState(null, "", newUrl);
+  } else if (params.get("src") === "register" && params.get("error") === "missing") {
+    const box = document.getElementById("email-error");
+    if (box) { box.textContent = "Completa nombre, correo y contraseña."; box.classList.add("show"); }
+    const newUrl = window.location.pathname + "?tab=register";
+    window.history.replaceState(null, "", newUrl);
+  }
+});
+</script>
+
 </body>
 </html>
