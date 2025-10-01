@@ -7,8 +7,7 @@ import psycopg2.extras
 from psycopg2 import errors
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
-
-
+import json
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -51,8 +50,24 @@ def public_files(filename):
 # 2.- TRaigo todos los productos y sucursales
 # 3.- Renderizo el template "index.html" con los daots
 # 4.- Finalmente, el usuario ve la página con el resultado esperado, que es ver la tabla de productos y sucursales
-@app.route("/")
-def index():
+
+# ---------------------------
+# Página Principal (Menú)
+# ---------------------------
+@app.route('/')
+def menu_principal():
+    return render_template("index_options.html")
+
+@app.route("/index_options")
+def index_options():
+    return render_template("index_options.html")
+
+# ---------------------------
+# CRUD Productos
+# ---------------------------
+
+@app.route('/productos')
+def crud_productos():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
@@ -414,7 +429,7 @@ def detalle_sucursal(id_sucursal):
     # Traer productos con stock en esta sucursal
     cur.execute("""
         SELECT p.id_producto, p.nombre_producto, p.imagen_url, p.precio_producto,
-               COALESCE(i.stock, 0) as stock
+            COALESCE(i.stock, 0) as stock
         FROM producto p
         LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
         LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion AND i.id_sucursal = %s
@@ -425,17 +440,6 @@ def detalle_sucursal(id_sucursal):
     cur.close()
     conn.close()
     return render_template("sucursales/detalle_sucursal.html", sucursal=sucursal, productos=productos)
-
-
-
-
-
-# ===========================
-# Paths para servir login.html y assets
-# ===========================
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))                     # ...\Capston\Aurora\Api-Aurora
-SRC_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "src"))            # ...\Capston\Aurora\src
-PUBLIC_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "Public"))      # ...\Capston\Aurora\Public
 
 # ===========================
 # HELPERS
