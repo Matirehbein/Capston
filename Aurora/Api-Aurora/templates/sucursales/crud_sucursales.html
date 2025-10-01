@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Sucursales</title>
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/crud_sucursales.css') }}" rel="stylesheet">
+
+    <style>
+        /* Marco y fondo piel para formularios y tablas */
+        .marco-piel {
+            border: 2px solid #ffdbc4;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #ffdbc4;
+        }
+        .marco-piel h2 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+<!-- Sidebar -->
+    <div class="sidebar">
+        <h2 class="sidebar-title">Aurora Admin</h2>
+        <ul class="sidebar-menu">
+            <li><a href="{{ url_for('crud_sucursales') }}">Crud Sucursales</a></li>
+            <li><a href="{{ url_for('crud_productos') }}">Crud Productos</a></li>
+            <li><a href="#">Reportes</a></li>
+            <li><a href="#">Configuración</a></li>
+        </ul>
+
+        <!-- Botón para volver al menú principal -->
+        <div class="sidebar-footer">
+          <a href="{{ url_for('index_options') }}" class="btn btn-secondary w-100">Menú Principal</a>
+        </div>
+
+    </div>
+
+<div class="container mt-5">
+    <h1 class="mb-4">Sucursales</h1>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="alert alert-success">
+            {% for message in messages %}
+                {{ message }}<br>
+            {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Formulario Agregar Sucursal -->
+    <div class="card mt-4 mb-3 p-3">
+        <h2>Agregar Sucursal</h2>
+        <div id="alertContainer"></div>
+
+        <form id="sucursalForm" action="{{ url_for('add_sucursal') }}" method="post" class="row g-3">
+          <div class="col-md-4">
+            <input type="text" class="form-control" name="nombre" placeholder="Nombre sucursal" required>
+          </div>
+          <div class="col-md-4">
+            <input type="text" class="form-control" name="region" placeholder="Región" required>
+          </div>
+          <div class="col-md-4">
+            <input type="text" class="form-control" name="comuna" placeholder="Comuna" required>
+          </div>
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="direccion" placeholder="Dirección" required>
+          </div>
+          <div class="col-md-3">
+            <input type="number" step="0.000001" class="form-control" name="latitud" placeholder="Latitud (-90 a 90)">
+          </div>
+          <div class="col-md-3">
+            <input type="number" step="0.000001" class="form-control" name="longitud" placeholder="Longitud (-180 a 180)">
+          </div>
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="horario" id="horarioInput" placeholder='Horario JSON, ej: {"lunes":"9-18"}'>
+          </div>
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="telefono" placeholder="Teléfono">
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-success w-100">Agregar Sucursal</button>
+          </div>
+        </form>
+    </div>
+
+    <script>
+    // Validación del horario JSON antes de enviar
+    document.getElementById("sucursalForm").addEventListener("submit", function(e) {
+        const input = document.getElementById("horarioInput").value.trim();
+        if (input) {
+            try {
+                JSON.parse(input);
+            } catch (error) {
+                e.preventDefault(); // Evita que se envíe el formulario
+
+                // Crear alerta de Bootstrap
+                const alertContainer = document.getElementById("alertContainer");
+                alertContainer.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show mt-2" role="alert">
+                        Formato de horario inválido. Debe ser JSON, por ejemplo: {"lunes":"9-18"}.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                return false;
+            }
+        }
+    });
+    </script>
+
+    <!-- Tabla de Sucursales -->
+    <div class="marco-piel mb-5">
+        <h2>Listado de Sucursales</h2>
+        <table class="table table-striped table-bordered">
+          <thead class="table-dark">
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Región</th>
+              <th>Comuna</th>
+              <th>Dirección</th>
+              <th>Latitud</th>
+              <th>Longitud</th>
+              <th>Horario</th>
+              <th>Teléfono</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in sucursales %}
+            <tr>
+              <td>{{ s.id_sucursal }}</td>
+              <td>{{ s.nombre_sucursal }}</td>
+              <td>{{ s.region_sucursal }}</td>
+              <td>{{ s.comuna_sucursal }}</td>
+              <td>{{ s.direccion_sucursal }}</td>
+              <td>{{ s.latitud_sucursal }}</td>
+              <td>{{ s.longitud_sucursal }}</td>
+              <td>{{ s.horario_json }}</td>
+              <td>{{ s.telefono_sucursal }}</td>
+              <td>
+                 <!-- Acciones -->
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editSucursalModal{{ s.id_sucursal }}">
+                  Editar
+                </button>
+                <form action="{{ url_for('eliminar_sucursal', id_sucursal=s.id_sucursal) }}" method="post" style="display:inline;">
+                  <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar esta sucursal?')">
+                    Eliminar
+                  </button>
+                  <a href="{{ url_for('detalle_sucursal', id_sucursal=s.id_sucursal) }}" class="btn btn-info mb-3">Ver Stock por Sucursal</a>
+                </form>
+              </td>
+            </tr>
+
+            <!-- Modal Editar Sucursal -->
+            <div class="modal fade" id="editSucursalModal{{ s.id_sucursal }}" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <form action="{{ url_for('editar_sucursal', id_sucursal=s.id_sucursal) }}" method="post">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Editar Sucursal</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body row g-3">
+                      <!-- Alerta dinámica de horario -->
+                      <div id="alertaHorario{{ s.id_sucursal }}"></div>
+
+                      <div class="col-md-4">
+                        <label class="form-label">Nombre de la Sucursal</label>
+                        <input type="text" class="form-control" name="nombre_sucursal" value="{{ s.nombre_sucursal }}" required>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Región</label>
+                        <input type="text" class="form-control" name="region_sucursal" value="{{ s.region_sucursal }}" required>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Comuna</label>
+                        <input type="text" class="form-control" name="comuna_sucursal" value="{{ s.comuna_sucursal }}" required>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Dirección</label>
+                        <input type="text" class="form-control" name="direccion_sucursal" value="{{ s.direccion_sucursal }}" required>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label">Latitud</label>
+                        <input type="number" step="0.000001" class="form-control" name="latitud_sucursal" value="{{ s.latitud_sucursal }}">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label">Longitud</label>
+                        <input type="number" step="0.000001" class="form-control" name="longitud_sucursal" value="{{ s.longitud_sucursal }}">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Horario (JSON)</label>
+                        <textarea class="form-control" name="horario_json" id="horarioInput{{ s.id_sucursal }}">{{ s.horario_json }}</textarea>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" name="telefono_sucursal" value="{{ s.telefono_sucursal }}">
+                      </div>
+                    </div>
+
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="submit" class="btn btn-primary" id="guardarBtn{{ s.id_sucursal }}">Guardar cambios</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <script>
+            document.addEventListener("DOMContentLoaded", () => {
+              const modalId = "{{ s.id_sucursal }}";
+              const form = document.querySelector("#editSucursalModal" + modalId + " form");
+              const horarioInput = document.querySelector("#horarioInput" + modalId);
+              const alertaDiv = document.querySelector("#alertaHorario" + modalId);
+              const guardarBtn = document.querySelector("#guardarBtn" + modalId);
+
+              const validarJSON = () => {
+                const valor = horarioInput.value.trim();
+                if (!valor) {
+                  alertaDiv.innerHTML = "";
+                  guardarBtn.disabled = false;
+                  return;
+                }
+                try {
+                  JSON.parse(valor);
+                  alertaDiv.innerHTML = "";
+                  guardarBtn.disabled = false;
+                } catch {
+                  alertaDiv.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show">
+                      Formato de horario inválido. Debe ser JSON, ej: {"lunes":"9-18"}.
+                    </div>`;
+                  guardarBtn.disabled = true;
+                }
+              };
+
+              horarioInput.addEventListener("input", validarJSON);
+              form.addEventListener("submit", validarJSON);
+            });
+            </script>
+
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+
+    
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

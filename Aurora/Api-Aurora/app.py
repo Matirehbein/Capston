@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 
 
+
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
@@ -18,7 +19,7 @@ app.config['PG_DATABASE'] = "aurora"
 app.config['PG_USER'] = "postgres"
 app.config['PG_PASSWORD'] = "duoc"
 
-#Función para abrir la conexión con la Base de dats
+#Función para abrir la conexión con la Base de datos
 def get_db_connection():
     return psycopg2.connect(
         host=app.config['PG_HOST'],
@@ -66,25 +67,36 @@ def index():
     """)
     productos = cur.fetchall()
 
+    # Sucursales (para el modal de stock)
+    cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
+    sucursales = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    return render_template("productos/crud_productos.html", productos=productos, sucursales=sucursales)
+
+
+# ---------------------------
+# CRUD Sucursales
+# ---------------------------
+
+@app.route('/sucursales')
+def crud_sucursales():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
     # Sucursales
     cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
     sucursales = cur.fetchall()
 
     cur.close()
     conn.close()
-    return render_template("index.html", productos=productos, sucursales=sucursales)
+    return render_template("sucursales/crud_sucursales.html", sucursales=sucursales)
+
 
 # ---------------------------
-# Productos
+# Rutas de Productos
 # ---------------------------
-
-#########################
-### Agregar Producto: ###
-#########################
-
-# - Recibo datos del formulario
-# - Inserto un nuevo producto en la BDD
-# - Genero un "mensaje flash" para informar al usuario al momento de añadir un producto nuevo
 
 @app.route("/add", methods=["POST"])
 def add_producto():
@@ -105,15 +117,8 @@ def add_producto():
     cur.close()
     conn.close()
     flash("Producto agregado con éxito")
-    return redirect(url_for("index"))
+    return redirect(url_for("crud_productos"))
 
-###########################
-### Editar Producto: ###
-###########################
-
-# Actualiza un producto existente en la BDD según el ID
-# Recibo los datos del modal de edición
-# - 
 @app.route("/edit/<int:id>", methods=["POST"])
 def edit_producto(id):
     sku = request.form["sku"]
@@ -135,15 +140,8 @@ def edit_producto(id):
     cur.close()
     conn.close()
     flash("Producto actualizado")
-    return redirect(url_for("index"))
+    return redirect(url_for("crud_productos"))
 
-
-
-###########################
-### Eliminar Producto: ###
-###########################
-
-# - Borra un producto según su id
 @app.route("/delete/<int:id>", methods=["POST"])
 def delete_producto(id):
     conn = get_db_connection()
@@ -153,20 +151,7 @@ def delete_producto(id):
     cur.close()
     conn.close()
     flash("Producto eliminado")
-    return redirect(url_for("index"))
-
-# ---------------------------
-# Productos
-# ---------------------------
-
-
-###########################
-### Editar Stock: ###
-###########################
-
-# Permite cambiar la cantidad de stock de un producto en una sucursal
-# - Crea una "variación del producto si no existe"
-
+    return redirect(url_for("crud_productos"))
 
 @app.route("/edit_stock/<int:id>", methods=["POST"])
 def edit_stock(id):
@@ -197,13 +182,142 @@ def edit_stock(id):
     cur.close()
     conn.close()
     flash("Stock actualizado")
-    return redirect(url_for("index"))
+    return redirect(url_for("crud_productos"))
 
 # ---------------------------
-# Sucursales
+# Ver stock del Listado de Productos
 # ---------------------------
 
-# AÑADIR SUCURSAL: Inserta una nueva sucursal
+@app.route("/ver_stock/<int:id_producto>")
+def ver_stock(id_producto):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    # Traer el producto
+    cur.execute("SELECT * FROM producto WHERE id_producto = %s", (id_producto,))
+    producto = cur.fetchone()
+
+    # Traer sucursales + stock de este producto
+    cur.execute("""
+        SELECT s.id_sucursal, s.nombre_sucursal, COALESCE(i.stock, 0) as stock
+        FROM sucursal s
+        LEFT JOIN inventario_sucursal i 
+            ON s.id_sucursal = i.id_sucursal
+        LEFT JOIN variacion_producto v
+            ON i.id_variacion = v.id_variacion
+        WHERE v.id_producto = %s OR v.id_producto IS NULL
+        ORDER BY s.id_sucursal
+    """, (id_producto,))
+    sucursales = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    return render_template("productos/ver_stock.html", producto=producto, sucursales=sucursales)
+
+
+# ---------------------------
+# Botón "Ver Stock" del CRUD de Productos (Listado de Productos): Guardar Stock en las sucursales.
+# ---------------------------
+
+@app.route("/guardar_stock_sucursales/<int:id_producto>", methods=["POST"])
+def guardar_stock_sucursales(id_producto):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    # Variación
+    cur.execute("SELECT id_variacion FROM variacion_producto WHERE id_producto = %s", (id_producto,))
+    variacion_id = cur.fetchone()[0]
+
+    # Stock total del producto
+    cur.execute("""
+        SELECT COALESCE(SUM(stock),0) as total_stock
+        FROM inventario_sucursal
+        WHERE id_variacion = %s
+    """, (variacion_id,))
+    stock_actual = cur.fetchone()[0]
+
+    # Stock definido en producto
+    cur.execute("""
+    SELECT COALESCE(SUM(i.stock),0)
+    FROM producto p
+    LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
+    LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
+    WHERE p.id_producto = %s
+                """, (id,))
+    stock_total = cur.fetchone()[0]
+
+
+    # Calcular nuevo total propuesto
+    total_nuevo = 0
+    for key, val in request.form.items():
+        if key.startswith("stock_"):
+            total_nuevo += int(val)
+
+    if total_nuevo > stock_max:
+        flash(f"No puedes asignar {total_nuevo} unidades. El máximo permitido es {stock_max}.")
+        conn.close()
+        return redirect(url_for("ver_stock", id_producto=id_producto))
+
+    # Guardar stocks
+    for key, val in request.form.items():
+        if key.startswith("stock_"):
+            id_sucursal = int(key.split("_")[1])
+            stock_val = int(val)
+
+            cur.execute("""
+                INSERT INTO inventario_sucursal (id_sucursal, id_variacion, stock)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (id_sucursal, id_variacion)
+                DO UPDATE SET stock = EXCLUDED.stock
+            """, (id_sucursal, variacion_id, stock_val))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Stock por sucursal actualizado correctamente.")
+    return redirect(url_for("ver_stock", id_producto=id_producto))
+
+# ---------------------------
+# Actualizar Stock en las sucursales (CRUD de Productos)
+# ---------------------------
+
+@app.route("/update_stock/<int:id_producto>/<int:id_sucursal>", methods=["POST"])
+def update_stock_sucursal(id_producto, id_sucursal):
+    nuevo_stock = int(request.form["stock"])
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Verificar la variación del producto
+    cur.execute("SELECT id_variacion FROM variacion_producto WHERE id_producto = %s", (id_producto,))
+    variacion = cur.fetchone()
+    if not variacion:
+        cur.execute("INSERT INTO variacion_producto (id_producto, sku_variacion) VALUES (%s, %s) RETURNING id_variacion",
+                    (id_producto, f"VAR-{id_producto}"))
+        id_variacion = cur.fetchone()[0]
+    else:
+        id_variacion = variacion[0]
+
+    # Insertar/Actualizar stock en esta sucursal
+    cur.execute("""
+        INSERT INTO inventario_sucursal (id_sucursal, id_variacion, stock)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (id_sucursal, id_variacion)
+        DO UPDATE SET stock = EXCLUDED.stock
+    """, (id_sucursal, id_variacion, nuevo_stock))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash("Stock actualizado en la sucursal")
+    return redirect(url_for("ver_stock", id_producto=id_producto))
+
+
+
+# ---------------------------
+# Rutas de Sucursales
+# ---------------------------
 
 @app.route("/add_sucursal", methods=["POST"])
 def add_sucursal():
@@ -227,10 +341,7 @@ def add_sucursal():
     cur.close()
     conn.close()
     flash("Sucursal agregada con éxito")
-    return redirect(url_for("index"))
-
-
-# EDITAR SUCURSAL: Actualiza los datos de la sucursal ya creada
+    return redirect(url_for("crud_sucursales"))
 
 @app.route("/editar_sucursal/<int:id_sucursal>", methods=["POST"])
 def editar_sucursal(id_sucursal):
@@ -256,10 +367,7 @@ def editar_sucursal(id_sucursal):
     cur.close()
     conn.close()
     flash("Sucursal actualizada con éxito")
-    return redirect(url_for("index"))
-
-
-# ELIMINAR SUCURSAL: Elimina una sucursal creada según ID.
+    return redirect(url_for("crud_sucursales"))
 
 @app.route("/eliminar_sucursal/<int:id_sucursal>", methods=["POST"])
 def eliminar_sucursal(id_sucursal):
@@ -270,7 +378,56 @@ def eliminar_sucursal(id_sucursal):
     cur.close()
     conn.close()
     flash("Sucursal eliminada con éxito")
-    return redirect(url_for("index"))
+    return redirect(url_for("crud_sucursales"))
+
+# ===========================
+# CRUD Sucursales: Botón de ver Stock por Sucursales
+# ===========================
+
+@app.route("/stock_sucursales")
+def stock_sucursales():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    # Traer solo sucursales
+    cur.execute("SELECT id_sucursal, nombre_sucursal FROM sucursal ORDER BY id_sucursal;")
+    sucursales = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    return render_template("sucursales/stock_sucursales.html", sucursales=sucursales)
+
+
+# ===========================
+# CRUD Sucursales: Ruta para el detalle por Sucursal
+# ===========================
+
+@app.route("/stock_sucursal/<int:id_sucursal>")
+def detalle_sucursal(id_sucursal):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    # Traer sucursal
+    cur.execute("SELECT * FROM sucursal WHERE id_sucursal = %s", (id_sucursal,))
+    sucursal = cur.fetchone()
+
+    # Traer productos con stock en esta sucursal
+    cur.execute("""
+        SELECT p.id_producto, p.nombre_producto, p.imagen_url, p.precio_producto,
+               COALESCE(i.stock, 0) as stock
+        FROM producto p
+        LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
+        LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion AND i.id_sucursal = %s
+        ORDER BY p.id_producto;
+    """, (id_sucursal,))
+    productos = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    return render_template("sucursales/detalle_sucursal.html", sucursal=sucursal, productos=productos)
+
+
+
 
 
 # ===========================

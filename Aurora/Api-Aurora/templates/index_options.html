@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu Principal CRUD</title>
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/css_index.css') }}" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .menu-container {
+            height: 80vh; /* Ajustamos para dejar espacio al título */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .menu-box {
+            text-align: center;
+            padding: 40px;
+            background: #ffdbc4;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .menu-box .btn {
+            width: 250px;
+            margin: 10px;
+            font-size: 1.2rem;
+        }
+        .main-title {
+            text-align: center;
+            margin: 50px 0 20px 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2 class="sidebar-title">Aurora Admin</h2>
+        <ul class="sidebar-menu">
+            <li><a href="#">Reportes</a></li>
+            <li><a href="#">Configuración</a></li>
+        </ul>
+
+    </div>
+
+    <!-- Título principal fuera del container -->
+    <div class="main-title">
+        Bienvenido al panel de gestión de la administración de Aurora
+    </div>
+
+    <div class="container menu-container">
+        <div class="menu-box">
+            <!-- Subtítulo / Instrucción -->
+            <h2>Seleccione una opción</h2>
+
+            <!-- Botones -->
+            <a href="{{ url_for('crud_productos') }}" class="btn btn-primary">CRUD de Productos</a>
+            <a href="{{ url_for('crud_sucursales') }}" class="btn btn-success">CRUD de Sucursales</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

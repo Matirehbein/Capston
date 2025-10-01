@@ -24,7 +24,7 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
     npm install
 
 3. Ejecutar en la Terminal
-    cd "ruta_de_mi_proyecto\Aurora\Api-Aurora"
+    cd "ruta_de_mi_proyecto\Aurora\"
 
     npm run dev
 
