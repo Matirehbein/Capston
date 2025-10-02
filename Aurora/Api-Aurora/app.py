@@ -17,7 +17,11 @@ app.secret_key = "supersecretkey"
 # SESSION INFO
 # ===========================
 @app.route("/api/session_info")
-def session_info():
+def api_session_info():
+    """
+    Devuelve la información de sesión del usuario logueado.
+    Incluye credenciales (cookies) para que el frontend pueda acceder.
+    """
     if "user_id" not in session:
         return jsonify({"logged_in": False})
 
@@ -28,7 +32,7 @@ def session_info():
         "apellido_paterno": session.get("apellido_paterno"),
         "apellido_materno": session.get("apellido_materno"),
         "email": session.get("email_usuario"),
-        "rol": session.get("rol_usuario"),
+        "rol": session.get("rol_usuario")
     })
 
 
