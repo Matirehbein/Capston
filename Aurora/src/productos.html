@@ -20,13 +20,9 @@
           <li><a href="../src/ofertas.html">Ofertas</a></li>
         </ul>
 
-         <div class="header-actions">
-            <div class="header-actions">
-            <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
-            <a href="../src/login.html" class="icon-btn icon-login" aria-label="Login"></a>
-        </div>
-
-      </div>
+        <div class="header-actions">
+          <a href="../src/carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+          <a href="../src/login.html" class="icon-btn icon-login" aria-label="Login"></a>
         </div>
       </div>
     </div>
@@ -40,10 +36,10 @@
         <p>Lo más vendido</p>
       </div>
 
-      <!-- Grid dinámica desde el admin -->
+      <!-- Grid dinámica (se llena por JS) -->
       <section id="store-products-grid" class="productos-grid"></section>
 
-      <!-- Fallback por si el navegador no ejecuta JS -->
+      <!-- Fallback si JS está deshabilitado -->
       <noscript>
         <div class="productos-grid">
           <article class="producto">
@@ -63,33 +59,30 @@
     </section>
   </main>
 
- <!-- Footer -->
+  <!-- Footer -->
   <footer class="footer">
     <div class="container">
       <nav class="footer-top">
         <ul class="footer-menu">
-          <li><a href="./sobre_nosotros.html">Sobre Nosotros</a></li>
-          <li><a href="./envios.html">Envíos</a></li>
-          <li><a href="./cambios_devoluciones.html">Cambios y Devoluciones</a></li>
-          <li><a href="./contacto.html">Contacto</a></li>
-          <li><a href="./sucursales.html">Sucursales</a></li>
+          <li><a href="../src/sobre_nosotros.html">Sobre Nosotros</a></li>
+          <li><a href="../src/envios.html">Envíos</a></li>
+          <li><a href="../src/cambios_devoluciones.html">Cambios y Devoluciones</a></li>
+          <li><a href="../src/contacto.html">Contacto</a></li>
+          <li><a href="../src/sucursales.html">Sucursales</a></li>
         </ul>
       </nav>
-
-
     </div>
 
     <div class="footer-divider"></div>
 
     <div class="container">
       <div class="footer-bottom">
-        <p>© 2025, Aurora-chile· Moda y Belleza</p>
+        <p>© 2025, Aurora-Chile · Moda y Belleza</p>
       </div>
     </div>
   </footer>
 
-
-  <!-- Carga la lógica de la tienda (se conecta al ProductsStore que usa el admin) -->
+  <!-- JS -->
   <script type="module" src="../Public/js/productosclientes.js"></script>
   <script type="module" src="../Public/js/colores.js"></script>
 </body>

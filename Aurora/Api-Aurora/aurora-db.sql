@@ -138,7 +138,6 @@ CREATE TABLE oferta_producto (
   PRIMARY KEY (id_oferta, id_producto)
 );
 
--- La agregaremos como id_producto en la sección de FKs (según tu preferencia).
 CREATE TABLE variacion_producto (
   id_variacion SERIAL PRIMARY KEY,
   talla VARCHAR(20),
