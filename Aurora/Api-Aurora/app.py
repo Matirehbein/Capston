@@ -13,13 +13,36 @@ import json
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
+# ===========================
+# SESSION INFO
+# ===========================
+@app.route("/api/session_info")
+def session_info():
+    if "user_id" not in session:
+        return jsonify({"logged_in": False})
+
+    return jsonify({
+        "logged_in": True,
+        "id": session.get("user_id"),
+        "nombre": session.get("nombre_usuario"),
+        "apellido_paterno": session.get("apellido_paterno"),
+        "apellido_materno": session.get("apellido_materno"),
+        "email": session.get("email_usuario"),
+        "rol": session.get("rol_usuario"),
+    })
+
+
 # Configuración PostgreSQL
 app.config['PG_HOST'] = "localhost"
 app.config['PG_DATABASE'] = "aurora"
 app.config['PG_USER'] = "postgres"
 app.config['PG_PASSWORD'] = "duoc"
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SECURE"] = False  # True si usas HTTPS
 
-#Función para abrir la conexión con la Base de datos
+
+
+# Función para abrir la conexión con la Base de datos
 def get_db_connection():
     return psycopg2.connect(
         host=app.config['PG_HOST'],
@@ -28,8 +51,8 @@ def get_db_connection():
         password=app.config['PG_PASSWORD']
     )
 
+# Decoradores
 def login_required(fn):
-    """Decorador para rutas que requieren login."""
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
@@ -37,6 +60,15 @@ def login_required(fn):
             return redirect(url_for("login"))
         return fn(*args, **kwargs)
     return wrapper
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "rol_usuario" not in session or session["rol_usuario"] not in ["admin", "soporte"]:
+            return redirect(url_for("menu_principal"))
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 
 # ===========================
@@ -692,7 +724,7 @@ def do_login(email, password):
     session["apellido_paterno"] = user["apellido_paterno"]
     session["apellido_materno"] = user["apellido_materno"]
     session["email_usuario"] = user["email_usuario"]
-    session["rol_usuario"] = user["rol_usuario"]
+    session["rol_usuario"] = user["rol_usuario"].strip().lower()
     return True, None
 
 
@@ -830,20 +862,6 @@ def perfil():
     </ul>
     """
 
-
-@app.route("/api/session_info")
-def session_info():
-    if "user_id" not in session:
-        return {"logged_in": False}, 200
-    return {
-        "logged_in": True,
-        "id": session.get("user_id"),
-        "nombre": session.get("nombre_usuario"),
-        "apellido_paterno": session.get("apellido_paterno"),
-        "apellido_materno": session.get("apellido_materno"),
-        "email": session.get("email_usuario"),
-        "rol": session.get("rol_usuario"),
-    }, 200
 
 
 # ===========================

@@ -12,28 +12,21 @@
   <header>
     <div class="container">
       <div class="header-content">
-          <a href="/src/main.html" class="logo">AURORA</a>
-
+        <a href="/src/main.html" class="logo">AURORA</a>
 
         <ul class="nav-links">
           <li><a href="/src/colecciones.html">Colecciones</a></li>
           <li><a href="/src/productos.html">Productos</a></li>
           <li><a href="/src/ofertas.html">Ofertas</a></li>
-          
         </ul>
 
         <div class="header-actions">
-            <div class="header-actions">
-            <div class="header-actions">
-            <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
-            <a href="../src/login.html" class="icon-btn icon-login" aria-label="Login"></a>
-        </div>
-
-      </div>
-          <li id="admin-menu-btn" style="display:none;">
+          <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+          <a href="../src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
+          <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
+          <li id="admin-menu-btn" style="display:inline;">
             <a href="../src/main_menu.html">Admin</a>
           </li>
-
         </div>
       </div>
     </div>
@@ -70,26 +63,25 @@
       </div>
     </section>
   </main>
-<!-- Botón flotante -->
-<button id="chat-open" class="chat-fab" aria-label="Abrir chat">
-  <img src="/Public/imagenes/Carinabot.png" alt="">
-</button>
 
-<div id="chat-panel" class="chat-panel" hidden>
-  <header class="chat-header">
-    <strong>Asistente Aurora</strong>
-    <button id="chat-close" class="chat-close" aria-label="Cerrar">✕</button>
-  </header>
+  <!-- Botón flotante -->
+  <button id="chat-open" class="chat-fab" aria-label="Abrir chat">
+    <img src="/Public/imagenes/Carinabot.png" alt="">
+  </button>
 
-  <div id="chat-log" class="chat-log" aria-live="polite"></div>
+  <div id="chat-panel" class="chat-panel" hidden>
+    <header class="chat-header">
+      <strong>Asistente Aurora</strong>
+      <button id="chat-close" class="chat-close" aria-label="Cerrar">✕</button>
+    </header>
 
-  <form id="chat-form" class="chat-form" autocomplete="off">
-    <input id="chat-input" type="text" placeholder="En que te podemos ayudar...." required />
-    <button class="chat-send" type="submit">Enviar</button>
-  </form>
-</div>
+    <div id="chat-log" class="chat-log" aria-live="polite"></div>
 
-
+    <form id="chat-form" class="chat-form" autocomplete="off">
+      <input id="chat-input" type="text" placeholder="En que te podemos ayudar...." required />
+      <button class="chat-send" type="submit">Enviar</button>
+    </form>
+  </div>
 
   <!-- Footer -->
   <footer class="footer">
@@ -103,8 +95,6 @@
           <li><a href="./sucursales.html">Sucursales</a></li>
         </ul>
       </nav>
-
-
     </div>
 
     <div class="footer-divider"></div>
@@ -115,36 +105,45 @@
       </div>
     </div>
   </footer>
+
   <script type="module" src="../Public/js/colores.js"></script>
 
-<script>
-  (async function checkUserRole() {
-    try {
-      // IMPORTANTE: usa el mismo host que usaste para iniciar sesión.
-      // Lo más simple es usar 127.0.0.1 en ambos (frontend y backend).
-      const res = await fetch("http://127.0.0.1:5000/api/session_info", {
-        credentials: "include" // envía la cookie de sesión
-      });
+  <script>
+    (async function checkUserRole() {
+      try {
+        const res = await fetch("http://127.0.0.1:5000/api/session_info", {
+          method: "GET",
+          credentials: "include"
+        });
 
-      if (!res.ok) {
-        console.error("Fallo consultando sesión:", res.status, await res.text());
-        return;
+        if (!res.ok) {
+          console.error("Fallo consultando sesión:", res.status, await res.text());
+          return;
+        }
+
+        const data = await res.json();
+        console.log("session_info:", data);
+
+        if (data.logged_in& (data.rol === "admin" || data.rol === "soporte")) {
+    const btn = document.getElementById("admin-menu-btn");
+            if (btn) btn.style.display = "block";
+
+          // Mostrar mensaje de bienvenida
+          const welcome = document.getElementById("welcome-msg");
+          if (welcome) {
+            welcome.textContent = `Hola, ${data.nombre} ${data.apellido_paterno}`;
+            welcome.style.display = "inline";
+          }
+
+          // Ocultar login si está logueado
+          const loginBtn = document.getElementById("login-btn");
+          if (loginBtn) loginBtn.style.display = "none";
+        }
+      } catch (err) {
+        console.error("Error verificando sesión:", err);
       }
-
-      const data = await res.json();
-      console.log("session_info:", data); // <-- déjalo mientras pruebas
-
-      if (data.logged_in && (data.rol === "admin" || data.rol === "soporte")) {
-        const btn = document.getElementById("admin-menu-btn");
-        if (btn) btn.style.display = "block";
-      }
-    } catch (err) {
-      console.error("Error verificando sesión:", err);
-    }
-  })();
-</script>
-
+    })();
+  </script>
 
 </body>
-
 </html>
