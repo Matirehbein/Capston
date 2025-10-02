@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
 import psycopg2
 import psycopg2.extras
 from psycopg2 import errors
@@ -637,7 +637,356 @@ def session_info():
         "rol": session.get("rol_usuario"),
     }, 200
 
+#Productos para admin producto
 
+
+# ===========================
+# API Productos (JSON)
+# ===========================
+
+@app.route("/api/productos", methods=["GET"])
+def api_list_productos():
+    """Lista productos con stock agregado (como en tu index) + búsqueda + filtro de categoría."""
+    q = (request.args.get("q") or "").strip()
+    categoria = (request.args.get("categoria") or "").strip()
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    base_sql = """
+        SELECT p.id_producto, p.sku, p.nombre_producto, p.descripcion_producto,
+               p.categoria_producto, p.precio_producto, p.imagen_url,
+               COALESCE(SUM(i.stock),0) as stock
+        FROM producto p
+        LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
+        LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
+    """
+    where = []
+    params = []
+
+    if q:
+        where.append("(p.sku ILIKE %s OR p.nombre_producto ILIKE %s)")
+        params += [f"%{q}%", f"%{q}%"]
+    if categoria and categoria.lower() != "todas":
+        where.append("p.categoria_producto ILIKE %s")
+        params.append(categoria)
+
+    if where:
+        base_sql += " WHERE " + " AND ".join(where)
+
+    base_sql += " GROUP BY p.id_producto ORDER BY p.id_producto;"
+
+    cur.execute(base_sql, params)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    data = [dict(r) for r in rows]
+    return jsonify(data), 200
+
+
+@app.route("/api/productos", methods=["POST"])
+def api_create_producto():
+    """Crea un producto (usa JSON o form-data)."""
+    payload = request.get_json(silent=True) or request.form
+    sku = (payload.get("sku") or "").strip()
+    nombre = (payload.get("nombre_producto") or "").strip()
+    precio = payload.get("precio_producto")
+    descripcion = payload.get("descripcion_producto") or None
+    categoria = payload.get("categoria_producto") or None
+    imagen_url = payload.get("imagen_url") or None
+
+    # Validaciones mínimas
+    if not sku or not nombre or not precio:
+        return jsonify({"error": "sku, nombre_producto y precio_producto son obligatorios."}), 400
+
+    try:
+        precio = float(precio)
+    except:
+        return jsonify({"error": "precio_producto debe ser numérico."}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO producto (sku, nombre_producto, precio_producto, descripcion_producto, categoria_producto, imagen_url)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id_producto;
+        """, (sku, nombre, precio, descripcion, categoria, imagen_url))
+        new_id = cur.fetchone()[0]
+        conn.commit()
+        return jsonify({"ok": True, "id_producto": new_id}), 201
+    except errors.UniqueViolation:
+        conn.rollback()
+        return jsonify({"error": "El SKU ya existe."}), 409
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route("/api/productos/<int:id_producto>", methods=["PUT", "PATCH"])
+def api_update_producto(id_producto):
+    """Actualiza un producto."""
+    payload = request.get_json(silent=True) or request.form
+    sku = payload.get("sku")
+    nombre = payload.get("nombre_producto")
+    precio = payload.get("precio_producto")
+    descripcion = payload.get("descripcion_producto")
+    categoria = payload.get("categoria_producto")
+    imagen_url = payload.get("imagen_url")
+
+    # construir update dinámico
+    sets, params = [], []
+    if sku is not None:           sets += ["sku=%s"];                   params.append(sku)
+    if nombre is not None:        sets += ["nombre_producto=%s"];       params.append(nombre)
+    if precio is not None:        sets += ["precio_producto=%s"];       params.append(precio)
+    if descripcion is not None:   sets += ["descripcion_producto=%s"];  params.append(descripcion)
+    if categoria is not None:     sets += ["categoria_producto=%s"];    params.append(categoria)
+    if imagen_url is not None:    sets += ["imagen_url=%s"];            params.append(imagen_url)
+
+    if not sets:
+        return jsonify({"error": "Nada que actualizar."}), 400
+
+    sql = f"UPDATE producto SET {', '.join(sets)} WHERE id_producto=%s"
+    params.append(id_producto)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, params)
+        if cur.rowcount == 0:
+            conn.rollback()
+            return jsonify({"error": "Producto no encontrado."}), 404
+        conn.commit()
+        return jsonify({"ok": True}), 200
+    except errors.UniqueViolation:
+        conn.rollback()
+        return jsonify({"error": "El SKU ya existe."}), 409
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route("/api/productos/<int:id_producto>", methods=["DELETE"])
+def api_delete_producto(id_producto):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM producto WHERE id_producto=%s", (id_producto,))
+        if cur.rowcount == 0:
+            conn.rollback()
+            return jsonify({"error": "Producto no encontrado."}), 404
+        conn.commit()
+        return jsonify({"ok": True}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route("/api/productos/bulk_delete", methods=["POST"])
+def api_bulk_delete_productos():
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"error": "Debes enviar lista 'ids'."}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM producto WHERE id_producto = ANY(%s::int[])", (ids,))
+        conn.commit()
+        return jsonify({"ok": True, "deleted": cur.rowcount}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+#productos para la pag principal
+
+# ===========================
+# API Productos (JSON - PUBLIC)
+# ===========================
+
+@app.route("/api/productos_public", methods=["GET"])
+def api_list_productos_public():
+    """Lista productos con stock agregado (como en tu index) + búsqueda + filtro de categoría (versión pública)."""
+    q = (request.args.get("q") or "").strip()
+    categoria = (request.args.get("categoria") or "").strip()
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    base_sql = """
+        SELECT p.id_producto, p.sku, p.nombre_producto, p.descripcion_producto,
+            p.categoria_producto, p.precio_producto, p.imagen_url,
+            COALESCE(SUM(i.stock),0) as stock
+        FROM producto p
+        LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
+        LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
+    """
+    where = []
+    params = []
+
+    if q:
+        where.append("(p.sku ILIKE %s OR p.nombre_producto ILIKE %s)")
+        params += [f"%{q}%", f"%{q}%"]
+    if categoria and categoria.lower() != "todas":
+        where.append("p.categoria_producto ILIKE %s")
+        params.append(categoria)
+
+    if where:
+        base_sql += " WHERE " + " AND ".join(where)
+
+    base_sql += " GROUP BY p.id_producto ORDER BY p.id_producto;"
+
+    cur.execute(base_sql, params)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    data = [dict(r) for r in rows]
+    return jsonify(data), 200
+
+
+@app.route("/api/productos_public", methods=["POST"])
+def api_create_producto_public():
+    """Crea un producto (usa JSON o form-data)."""
+    payload = request.get_json(silent=True) or request.form
+    sku = (payload.get("sku") or "").strip()
+    nombre = (payload.get("nombre_producto") or "").strip()
+    precio = payload.get("precio_producto")
+    descripcion = payload.get("descripcion_producto") or None
+    categoria = payload.get("categoria_producto") or None
+    imagen_url = payload.get("imagen_url") or None
+
+    # Validaciones mínimas
+    if not sku or not nombre or not precio:
+        return jsonify({"error": "sku, nombre_producto y precio_producto son obligatorios."}), 400
+
+    try:
+        precio = float(precio)
+    except:
+        return jsonify({"error": "precio_producto debe ser numérico."}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO producto (sku, nombre_producto, precio_producto, descripcion_producto, categoria_producto, imagen_url)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id_producto;
+        """, (sku, nombre, precio, descripcion, categoria, imagen_url))
+        new_id = cur.fetchone()[0]
+        conn.commit()
+        return jsonify({"ok": True, "id_producto": new_id}), 201
+    except errors.UniqueViolation:
+        conn.rollback()
+        return jsonify({"error": "El SKU ya existe."}), 409
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route("/api/productos_public/<int:id_producto>", methods=["PUT", "PATCH"])
+def api_update_producto_public(id_producto):
+    """Actualiza un producto (versión pública)."""
+    payload = request.get_json(silent=True) or request.form
+    sku = payload.get("sku")
+    nombre = payload.get("nombre_producto")
+    precio = payload.get("precio_producto")
+    descripcion = payload.get("descripcion_producto")
+    categoria = payload.get("categoria_producto")
+    imagen_url = payload.get("imagen_url")
+
+    # construir update dinámico
+    sets, params = [], []
+    if sku is not None:           sets += ["sku=%s"];                   params.append(sku)
+    if nombre is not None:        sets += ["nombre_producto=%s"];       params.append(nombre)
+    if precio is not None:        sets += ["precio_producto=%s"];       params.append(precio)
+    if descripcion is not None:   sets += ["descripcion_producto=%s"];  params.append(descripcion)
+    if categoria is not None:     sets += ["categoria_producto=%s"];    params.append(categoria)
+    if imagen_url is not None:    sets += ["imagen_url=%s"];            params.append(imagen_url)
+
+    if not sets:
+        return jsonify({"error": "Nada que actualizar."}), 400
+
+    sql = f"UPDATE producto SET {', '.join(sets)} WHERE id_producto=%s"
+    params.append(id_producto)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, params)
+        if cur.rowcount == 0:
+            conn.rollback()
+            return jsonify({"error": "Producto no encontrado."}), 404
+        conn.commit()
+        return jsonify({"ok": True}), 200
+    except errors.UniqueViolation:
+        conn.rollback()
+        return jsonify({"error": "El SKU ya existe."}), 409
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route("/api/productos_public/<int:id_producto>", methods=["DELETE"])
+def api_delete_producto_public(id_producto):
+    """Elimina un producto (versión pública)."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM producto WHERE id_producto=%s", (id_producto,))
+        if cur.rowcount == 0:
+            conn.rollback()
+            return jsonify({"error": "Producto no encontrado."}), 404
+        conn.commit()
+        return jsonify({"ok": True}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route("/api/productos_public/bulk_delete", methods=["POST"])
+def api_bulk_delete_productos_public():
+    """Elimina múltiples productos por ID (versión pública)."""
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"error": "Debes enviar lista 'ids'."}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM producto WHERE id_producto = ANY(%s::int[])", (ids,))
+        conn.commit()
+        return jsonify({"ok": True, "deleted": cur.rowcount}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
 
 # ===========================
 # RUN

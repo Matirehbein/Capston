@@ -1,37 +1,92 @@
-// Public/js/productosclientes.js
-import { ProductsStore } from './productsStore.js';
+// ../Public/js/productosclientes.js
 
-const $ = (s,r=document) => r.querySelector(s);
+const API_BASE = "http://127.0.0.1:5000"; // ajusta si usas otra IP/puerto
+const $ = (s) => document.querySelector(s);
 
-function card(p){
-  const art = document.createElement('article');
-  art.className = 'product-card';
-  art.innerHTML = `
-    <img src="${p.url_imagen}" alt="${p.nombre}">
-    <h3>${p.nombre}</h3>
-    <p class="price">$${(p.precio||0).toLocaleString('es-CL')}</p>
-    <button data-id="${p.id}">Agregar al carrito</button>`;
-  return art;
+function formatCLP(value) {
+  try {
+    return Number(value).toLocaleString("es-CL", {
+      style: "currency",
+      currency: "CLP",
+      maximumFractionDigits: 0,
+    });
+  } catch {
+    return `$${value}`;
+  }
 }
 
-async function renderList(products){
-  const grid = $('#productsGrid');
-  grid.innerHTML = '';
-  products.forEach(p => grid.appendChild(card(p)));
+function productCard(p) {
+  const img = p.imagen_url || "/Public/imagenes/placeholder.jpg";
+  const nombre = p.nombre_producto || "Producto sin nombre";
+  const precio = formatCLP(p.precio_producto || 0);
+
+  // Si tienes rutas de detalle, cámbialo a un <a> con href
+  return `
+    <article class="producto">
+      <img src="${img}" alt="${nombre}" loading="lazy" onerror="this.src='/Public/imagenes/placeholder.jpg'"/>
+      <h3 title="${nombre}">${nombre}</h3>
+      <p class="producto-precio">${precio}</p>
+      <button class="btn btn-add-cart" data-id="${p.id_producto}">Añadir al carrito</button>
+    </article>
+  `;
 }
 
-function wireCart(){
-  $('#productsGrid').addEventListener('click', e=>{
-    if(e.target.tagName !== 'BUTTON') return;
-    const id = e.target.dataset.id;
-    alert(`Producto ${id} agregado al carrito (aquí iría la lógica de carrito).`);
-  });
+function skeletonCard() {
+  return `
+    <article class="producto skeleton">
+      <div class="sk-img"></div>
+      <div class="sk-line"></div>
+      <div class="sk-line sm"></div>
+      <div class="sk-btn"></div>
+    </article>
+  `;
 }
 
-document.addEventListener('DOMContentLoaded', async ()=>{
-  const products = await ProductsStore.getAll();
-  await renderList(products);
-  wireCart();
-});
+async function loadProducts() {
+  const grid = $("#store-products-grid");
+  if (!grid) return;
 
-ProductsStore.onChange(renderList);
+  // skeletons mientras carga
+  grid.innerHTML = new Array(8).fill(0).map(skeletonCard).join("");
+
+  try {
+    const res = await fetch(`${API_BASE}/api/productos`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    const data = await res.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <p>No encontramos productos disponibles por ahora.</p>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = data.map(productCard).join("");
+
+    // (Opcional) manejar clicks en “Añadir al carrito”
+    grid.addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-add-cart");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      // TODO: integrar con tu carrito (localStorage / API)
+      alert(`Producto ${id} añadido al carrito (demo).`);
+    });
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = `
+      <div class="error-state">
+        <p>Ups, no pudimos cargar los productos.</p>
+        <pre style="white-space:pre-wrap;">${String(err.message || err)}</pre>
+      </div>
+    `;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadProducts);
