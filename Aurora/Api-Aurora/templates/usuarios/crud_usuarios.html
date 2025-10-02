@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Agregar Nuevo Usuario</h2>
+<form action="{{ url_for('add_usuario') }}" method="POST">
+    <input type="text" name="nombre_usuario" placeholder="Nombre" required>
+    <input type="text" name="apellido_paterno" placeholder="Apellido Paterno" required>
+    <input type="text" name="apellido_materno" placeholder="Apellido Materno" required>
+    
+    <select name="rol_usuario" required>
+        <option value="">-- Seleccione Rol --</option>
+        <option value="cliente">Cliente</option>
+        <option value="admin">Admin</option>
+        <option value="soporte">Soporte</option>
+    </select>
+
+    <input type="email" name="email_usuario" placeholder="Correo electrónico" required>
+    <input type="password" name="password" placeholder="Contraseña" required>
+
+    <input type="text" name="region" placeholder="Región">
+    <input type="text" name="ciudad" placeholder="Ciudad">
+    <input type="text" name="calle" placeholder="Calle">
+    <input type="text" name="numero_calle" placeholder="Número de calle">
+    <input type="text" name="comuna" placeholder="Comuna">
+    <input type="text" name="telefono" placeholder="Teléfono">
+
+    <button type="submit">Agregar Usuario</button>
+</form>
+
+<hr>
+
+<h2>Listado de Usuarios</h2>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Nombre Completo</th>
+            <th>Rol</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in usuarios %}
+        <tr>
+            <td>{{ u.nombre_usuario }} {{ u.apellido_paterno }} {{ u.apellido_materno }}</td>
+            <td>{{ u.rol_usuario }}</td>
+            <td>
+                <form action="{{ url_for('edit_usuario', id_usuario=u.id_usuario) }}" method="POST" style="display:inline-block;">
+                    <button type="submit">Editar</button>
+                </form>
+                <form action="{{ url_for('delete_usuario', id_usuario=u.id_usuario) }}" method="POST" style="display:inline-block;">
+                    <button type="submit">Eliminar</button>
+                </form>
+                <a href="{{ url_for('view_usuario', id_usuario=u.id_usuario) }}">Ver</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

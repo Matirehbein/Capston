@@ -42,14 +42,24 @@ DROP TABLE IF EXISTS conversacion CASCADE;
 DROP TABLE IF EXISTS usuario CASCADE;
 
 -- Creación de tablas
-CREATE TABLE usuario (
-  id_usuario serial PRIMARY KEY,
-  nombre_usuario varchar(100) NOT NULL,
-  email_usuario varchar(150) UNIQUE NOT NULL,
-  rol_usuario varchar(20) CHECK (rol_usuario IN ('cliente','admin','soporte')),
-  password varchar(255) NOT NULL,
-  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE public.usuario (
+    id_usuario integer NOT NULL,
+    nombre_usuario character varying(100) NOT NULL,
+    email_usuario character varying(150) NOT NULL,
+    rol_usuario character varying(20),
+    password character varying(255) NOT NULL,
+    creado_en timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    apellido_paterno character varying(100) DEFAULT 'SIN APELLIDO'::character varying NOT NULL,
+    apellido_materno character varying(100) DEFAULT 'SIN APELLIDO'::character varying NOT NULL,
+    calle character varying(150),
+    numero_calle character varying(10),
+    region character varying(100),
+    ciudad character varying(100),
+    comuna character varying(100),
+    telefono character varying(20),
+    CONSTRAINT usuario_rol_usuario_check CHECK (((rol_usuario)::text = ANY ((ARRAY['cliente'::character varying, 'admin'::character varying, 'soporte'::character varying])::text[])))
 );
+
 
 CREATE TABLE conversacion (
   id_conversacion SERIAL PRIMARY KEY,
