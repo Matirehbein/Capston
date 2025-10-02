@@ -1,3 +1,4 @@
+import re
 import os
 from datetime import datetime
 from functools import wraps
@@ -26,6 +27,17 @@ def get_db_connection():
         user=app.config['PG_USER'],
         password=app.config['PG_PASSWORD']
     )
+
+def login_required(fn):
+    """Decorador para rutas que requieren login."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            flash("Debes iniciar sesión.", "warning")
+            return redirect(url_for("login"))
+        return fn(*args, **kwargs)
+    return wrapper
+
 
 # ===========================
 # RUTAS
@@ -442,6 +454,155 @@ def detalle_sucursal(id_sucursal):
     return render_template("sucursales/detalle_sucursal.html", sucursal=sucursal, productos=productos)
 
 # ===========================
+# CRUD USUARIOS
+# ===========================
+
+@app.route('/usuarios')
+@login_required
+def crud_usuarios():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur.execute("""
+        SELECT id_usuario, nombre_usuario, apellido_paterno, apellido_materno, rol_usuario, email_usuario, calle, numero_calle, region, ciudad, comuna, telefono
+        FROM usuario
+        ORDER BY id_usuario;
+    """)
+    usuarios = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("usuarios/crud_usuarios.html", usuarios=usuarios)
+
+
+@app.route("/usuarios/add", methods=["POST"])
+@login_required
+def add_usuario():
+    data = request.form
+    password_hash = generate_password_hash(data["password"])
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO usuario (nombre_usuario, apellido_paterno, apellido_materno, rol_usuario, email_usuario, password, calle, numero_calle, region, ciudad, comuna, telefono)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (
+            data.get("nombre_usuario"),
+            data.get("apellido_paterno"),
+            data.get("apellido_materno"),
+            data.get("rol_usuario"),
+            data.get("email_usuario"),
+            password_hash,
+            data.get("calle"),
+            data.get("numero_calle"),
+            data.get("region"),
+            data.get("ciudad"),
+            data.get("comuna"),
+            data.get("telefono")
+        ))
+        conn.commit()
+        flash("Usuario agregado correctamente", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+    return redirect(url_for("crud_usuarios"))
+
+
+@app.route("/usuarios/edit/<int:id_usuario>", methods=["POST"])
+@login_required
+def edit_usuario(id_usuario):
+    data = request.form
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Solo actualizar password si no está vacío
+        if data.get("password"):
+            password_hash = generate_password_hash(data["password"])
+            cur.execute("""
+                UPDATE usuario SET nombre_usuario=%s, apellido_paterno=%s, apellido_materno=%s,
+                    rol_usuario=%s, email_usuario=%s, password=%s, calle=%s, numero_calle=%s,
+                    region=%s, ciudad=%s, comuna=%s, telefono=%s
+                WHERE id_usuario=%s
+            """, (
+                data.get("nombre_usuario"),
+                data.get("apellido_paterno"),
+                data.get("apellido_materno"),
+                data.get("rol_usuario"),
+                data.get("email_usuario"),
+                password_hash,
+                data.get("calle"),
+                data.get("numero_calle"),
+                data.get("region"),
+                data.get("ciudad"),
+                data.get("comuna"),
+                data.get("telefono"),
+                id_usuario
+            ))
+        else:
+            cur.execute("""
+                UPDATE usuario SET nombre_usuario=%s, apellido_paterno=%s, apellido_materno=%s,
+                    rol_usuario=%s, email_usuario=%s, calle=%s, numero_calle=%s,
+                    region=%s, ciudad=%s, comuna=%s, telefono=%s
+                WHERE id_usuario=%s
+            """, (
+                data.get("nombre_usuario"),
+                data.get("apellido_paterno"),
+                data.get("apellido_materno"),
+                data.get("rol_usuario"),
+                data.get("email_usuario"),
+                data.get("calle"),
+                data.get("numero_calle"),
+                data.get("region"),
+                data.get("ciudad"),
+                data.get("comuna"),
+                data.get("telefono"),
+                id_usuario
+            ))
+        conn.commit()
+        flash("Usuario actualizado correctamente", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+    return redirect(url_for("crud_usuarios"))
+
+
+@app.route("/usuarios/delete/<int:id_usuario>", methods=["POST"])
+@login_required
+def delete_usuario(id_usuario):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM usuario WHERE id_usuario=%s", (id_usuario,))
+        conn.commit()
+        flash("Usuario eliminado correctamente", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+    return redirect(url_for("crud_usuarios"))
+
+
+@app.route("/usuarios/view/<int:id_usuario>")
+@login_required
+def view_usuario(id_usuario):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur.execute("""
+        SELECT * FROM usuario WHERE id_usuario=%s
+    """, (id_usuario,))
+    usuario = cur.fetchone()
+    cur.close()
+    conn.close()
+    return render_template("usuarios/view_usuario.html", usuario=usuario)
+
+
+# ===========================
 # HELPERS
 # ===========================
 def get_user_by_email(email):
@@ -449,7 +610,8 @@ def get_user_by_email(email):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cur.execute("""
-        SELECT id_usuario, nombre_usuario, email_usuario, rol_usuario, password, creado_en
+        SELECT id_usuario, nombre_usuario, apellido_paterno, apellido_materno,
+               email_usuario, rol_usuario, password, calle, numero_calle, region, ciudad, comuna, telefono, creado_en
         FROM usuario
         WHERE LOWER(email_usuario) = LOWER(%s)
         LIMIT 1;
@@ -459,35 +621,53 @@ def get_user_by_email(email):
     conn.close()
     return user
 
-def create_user(nombre, email, password_plano, rol='cliente'):
-    """Crea un usuario con password hasheada. 
-    Evita avanzar la secuencia si el email ya existe (pre-check) y
-    mantiene el UNIQUE como respaldo."""
-    email_norm = (email or "").strip().lower()
-    nombre_norm = (nombre or "").strip()
-    rol_norm = 'cliente'  # forzado por requerimiento
+
+def create_user(data):
+    """Crea un usuario con password hasheada."""
+    email_norm = (data.get("email_usuario") or "").strip().lower()
+    password_plano = data.get("password")
     password_hash = generate_password_hash(password_plano)
 
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
-        # --- PRECHECK: si ya existe, NO intentamos INSERT (la secuencia no avanza) ---
+        # Verificar si ya existe
         cur.execute("SELECT 1 FROM usuario WHERE LOWER(email_usuario)=LOWER(%s) LIMIT 1;", (email_norm,))
         if cur.fetchone():
             return False, "El correo ya está registrado."
 
-        # --- INSERT real (aquí sí avanzará la secuencia, pero solo en intentos válidos) ---
-        cur.execute("""
-            INSERT INTO usuario (nombre_usuario, email_usuario, rol_usuario, password, creado_en)
-            VALUES (%s, %s, %s, %s, %s)
-            RETURNING id_usuario;
-        """, (nombre_norm, email_norm, rol_norm, password_hash, datetime.utcnow()))
+        query = """
+        INSERT INTO usuario (
+            nombre_usuario, apellido_paterno, apellido_materno,
+            email_usuario, rol_usuario, password,
+            calle, numero_calle, region, ciudad, comuna, telefono, creado_en
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id_usuario;
+        """
+
+        values = (
+            data.get("nombre_usuario"),
+            data.get("apellido_paterno"),
+            data.get("apellido_materno"),
+            email_norm,
+            "cliente",  # rol por defecto
+            password_hash,
+            data.get("calle"),
+            data.get("numero_calle"),
+            data.get("region"),
+            data.get("ciudad"),
+            data.get("comuna"),
+            data.get("telefono"),
+            datetime.utcnow()
+        )
+
+        cur.execute(query, values)
         new_id = cur.fetchone()[0]
         conn.commit()
         return True, new_id
 
     except errors.UniqueViolation:
-        # Respaldo ante condición de carrera: otro proceso insertó el mismo email entre el precheck y el insert
         conn.rollback()
         return False, "El correo ya está registrado."
     except Exception as e:
@@ -499,7 +679,7 @@ def create_user(nombre, email, password_plano, rol='cliente'):
 
 
 def do_login(email, password):
-    """Valida credenciales y setea sesión. Retorna (True, None) o (False, 'mensaje')."""
+    """Valida credenciales y setea sesión."""
     if not email or not password:
         return False, "Debes ingresar correo y contraseña."
 
@@ -509,99 +689,121 @@ def do_login(email, password):
 
     session["user_id"] = user["id_usuario"]
     session["nombre_usuario"] = user["nombre_usuario"]
+    session["apellido_paterno"] = user["apellido_paterno"]
+    session["apellido_materno"] = user["apellido_materno"]
     session["email_usuario"] = user["email_usuario"]
     session["rol_usuario"] = user["rol_usuario"]
     return True, None
 
-def do_register(nombre, email, password):
-    """Crea usuario (rol cliente por defecto) y auto-login."""
-    if not nombre or not email or not password:
+
+def do_register(data):
+    """Crea usuario y auto-login."""
+    if not data.get("nombre_usuario") or not data.get("email_usuario") or not data.get("password"):
         return False, "Nombre, correo y contraseña son obligatorios."
 
-    ok, result = create_user(nombre, email, password, rol="cliente")
+    ok, result = create_user(data)
     if not ok:
         return False, result
 
-    # Auto-login
-    ok_l, msg = do_login(email, password)
+    ok_l, msg = do_login(data.get("email_usuario"), data.get("password"))
     if not ok_l:
         return False, msg
     return True, None
 
 # ===========================
-# RUTAS DE AUTENTICACIÓN
+# RUTAS AUTENTICACIÓN
 # ===========================
 
-# GET /login: sirve el HTML desde src/ (opción 2)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
         return send_from_directory(SRC_DIR, "login.html")
 
-    # POST (viene del form de login)
     email = (request.form.get("email_usuario") or "").strip()
     password = (request.form.get("password") or "").strip()
 
-    # Validación rápida
     if not email or not password:
-        # dejamos el tab de login activo y marcamos que viene de login
         return redirect(url_for("login") + "?error=missing&tab=login&src=login")
 
-    # Buscamos al usuario para distinguir errores
     user = get_user_by_email(email)
     if not user:
-        # usuario no existe
         return redirect(url_for("login") + "?error=user_not_found&tab=login&src=login")
 
-    # contraseña incorrecta
     if not check_password_hash(user["password"], password):
         return redirect(url_for("login") + "?error=bad_password&tab=login&src=login")
 
     session["user_id"] = user["id_usuario"]
     session["nombre_usuario"] = user["nombre_usuario"]
+    session["apellido_paterno"] = user["apellido_paterno"]
+    session["apellido_materno"] = user["apellido_materno"]
     session["email_usuario"] = user["email_usuario"]
     session["rol_usuario"] = user["rol_usuario"]
 
-
     return redirect(FRONTEND_MAIN_URL)
 
+# ===========================
+# RUTAS Registro
+# ===========================
 
-@app.route("/register", methods=["GET", "POST"])
+def validar_password(password):
+    """Valida las reglas de la contraseña."""
+    if not password:
+        return False, "Debes ingresar una contraseña."
+    if len(password) < 6 or len(password) > 24:
+        return False, "La contraseña debe tener entre 6 y 24 caracteres."
+    if not re.search(r"[A-Z]", password):
+        return False, "La contraseña debe incluir al menos una letra mayúscula."
+    if not re.search(r"\d", password):
+        return False, "La contraseña debe incluir al menos un número."
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return False, "La contraseña debe incluir al menos un carácter especial."
+    return True, None
+
+@app.route("/register", methods=["POST"])
 def register():
-    # GET: si alguien entra directo, muéstrale el tab de registro en la página de login
-    if request.method == "GET":
-        return redirect(url_for("login") + "?tab=register")
+    data = {
+        "nombre_usuario": request.form.get("nombre_usuario"),
+        "apellido_paterno": request.form.get("apellido_paterno"),
+        "apellido_materno": request.form.get("apellido_materno"),
+        "email_usuario": request.form.get("email_usuario"),
+        "email_confirm": request.form.get("email_confirm"),
+        "password": request.form.get("password"),
+        "password_confirm": request.form.get("password_confirm"),
+        "calle": request.form.get("calle"),
+        "numero_calle": request.form.get("numero_calle"),
+        "region": request.form.get("region"),
+        "ciudad": request.form.get("ciudad"),
+        "comuna": request.form.get("comuna"),
+        "telefono": request.form.get("telefono"),
+    }
 
-    # POST: procesar registro
-    nombre   = (request.form.get("nombre_usuario") or "").strip()
-    email    = (request.form.get("email_usuario")  or "").strip()
-    password = (request.form.get("password")       or "").strip()
+    # Validaciones extra
+    if data["email_usuario"].lower() != (data["email_confirm"] or "").lower():
+        return redirect(url_for("login") + "?error=email_mismatch&tab=register&src=register")
 
-    # Validación rápida: campos obligatorios
-    if not nombre or not email or not password:
-        # volvemos a /login con tab=register y codificamos el error
-        return redirect(url_for("login") + "?error=missing&tab=register&src=register")
+    if data["password"] != data["password_confirm"]:
+        return redirect(url_for("login") + "?error=password_mismatch&tab=register&src=register")
 
-    ok, msg = do_register(nombre, email, password)  # crea usuario + auto-login (sesión en Flask)
-
+    ok, msg = validar_password(data["password"])
     if not ok:
-        # si el helper detectó duplicado, msg suele contener “correo”
+        return redirect(url_for("login") + f"?error=weak_password&tab=register&src=register&msg={msg}")
+
+    ok, msg = do_register(data)
+    if not ok:
         error_code = "email" if (msg and "correo" in msg.lower()) else "unknown"
         return redirect(url_for("login") + f"?error={error_code}&tab=register&src=register")
 
-    # Éxito: usuario creado y sesión iniciada en Flask → redirigimos al main del FRONTEND (Node)
     return redirect(FRONTEND_MAIN_URL)
 
 
-@app.route("/logout", methods=["POST", "GET"])
+
+@app.route("/logout")
 def logout():
-    session.pop("user_id", None)
-    session.pop("nombre_usuario", None)
-    session.pop("email_usuario", None)
-    session.pop("rol_usuario", None)
+    session.clear()
     flash("Sesión cerrada.", "info")
     return redirect(url_for("login"))
+
 
 def login_required(fn):
     @wraps(fn)
@@ -612,6 +814,7 @@ def login_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
+
 @app.route("/perfil")
 @login_required
 def perfil():
@@ -620,10 +823,13 @@ def perfil():
     <ul>
         <li>ID: {session.get('user_id')}</li>
         <li>Nombre: {session.get('nombre_usuario')}</li>
+        <li>Apellido Paterno: {session.get('apellido_paterno')}</li>
+        <li>Apellido Materno: {session.get('apellido_materno')}</li>
         <li>Email: {session.get('email_usuario')}</li>
         <li>Rol: {session.get('rol_usuario')}</li>
     </ul>
     """
+
 
 @app.route("/api/session_info")
 def session_info():
@@ -633,12 +839,13 @@ def session_info():
         "logged_in": True,
         "id": session.get("user_id"),
         "nombre": session.get("nombre_usuario"),
+        "apellido_paterno": session.get("apellido_paterno"),
+        "apellido_materno": session.get("apellido_materno"),
         "email": session.get("email_usuario"),
         "rol": session.get("rol_usuario"),
     }, 200
 
 #Productos para admin producto
-
 
 # ===========================
 # API Productos (JSON)

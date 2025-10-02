@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aurora | Login</title>
   <link rel="stylesheet" href="/Public/Css/login.css">
+  <style>
+    .password-rules { font-size: 0.85em; margin-top: 5px; }
+    .rule { color: red; }
+    .rule.valid { color: green; }
+    .strength-bar { height: 8px; width: 100%; background: #ddd; border-radius: 4px; margin-top: 5px; }
+    .strength-fill { height: 100%; width: 0; border-radius: 4px; transition: width 0.3s; }
+    .strength-text { font-size: 0.85em; margin-top: 3px; }
+  </style>
 </head>
 <body>
   <div class="box">
@@ -13,36 +21,74 @@
       <button class="tab-btn" onclick="openTab('register', this)">Registro</button>
     </div>
 
-
-        <!-- Formulario de Login -->
+    <!-- Formulario de Login -->
     <form id="login" class="active" method="POST" action="http://127.0.0.1:5000/login">
-      <div class="field">
-        <input type="email" name="email_usuario" placeholder="Correo" required>
-        <div id="login-email-error" class="error-msg" aria-live="polite"></div>
-      </div>
-
-      <div class="field">
-        <input type="password" name="password" placeholder="Contraseña" required>
-        <div id="login-password-error" class="error-msg" aria-live="polite"></div>
-      </div>
-
+      <input type="email" name="email_usuario" placeholder="Correo" required>
+      <input type="password" name="password" placeholder="Contraseña" required>
       <button type="submit">Entrar</button>
     </form>
 
-
-        <!-- Formulario de Registro -->
+    <!-- Formulario de Registro -->
     <form id="register" method="POST" action="http://127.0.0.1:5000/register">
       <input type="text" name="nombre_usuario" placeholder="Nombre" required>
+      <input type="text" name="apellido_paterno" placeholder="Apellido Paterno" required>
+      <input type="text" name="apellido_materno" placeholder="Apellido Materno" required>
+      <input type="email" name="email_usuario" placeholder="Correo Electrónico" required>
+      <input type="email" name="email_confirm" placeholder="Confirmar Correo Electrónico" required>
 
-      <div class="field">
-        <input type="email" id="email_registro" name="email_usuario" placeholder="Correo" required>
-        <div id="email-error" class="error-msg" aria-live="polite"></div>
+      <input type="text" name="calle" placeholder="Calle">
+      <input type="text" name="numero_calle" placeholder="Número de Calle">
+
+      <!-- Región -->
+      <select id="region" name="region" required>
+      <option value="">Selecciona Región</option>
+    
+        <option value="Arica y Parinacota">Arica y Parinacota</option>
+        <option value="Tarapacá">Tarapacá</option>
+        <option value="Antofagasta">Antofagasta</option>
+        <option value="Atacama">Atacama</option>
+        <option value="Coquimbo">Coquimbo</option>
+        <option value="Valparaíso">Valparaíso</option>
+        <option value="Metropolitana">Metropolitana</option>
+        <option value="O'Higgins">O'Higgins</option>
+        <option value="Maule">Maule</option>
+        <option value="Ñuble">Ñuble</option>
+        <option value="Biobío">Biobío</option>
+        <option value="La Araucanía">La Araucanía</option>
+        <option value="Los Ríos">Los Ríos</option>
+        <option value="Los Lagos">Los Lagos</option>
+        <option value="Aysén">Aysén</option>
+        <option value="Magallanes y Antártica Chilena">Magallanes y Antártica Chilena</option>
+    
+      </select>
+
+      <!-- Ciudad -->
+      <select id="ciudad" name="ciudad" required>
+        <option value="">Selecciona Ciudad</option>
+      </select>
+
+      <!-- Comuna -->
+      <select id="comuna" name="comuna" required>
+        <option value="">Selecciona Comuna</option>
+      </select>
+
+      <input type="text" name="telefono" placeholder="Número Telefónico">
+
+      <!-- Contraseña -->
+      <input type="password" id="password" name="password" placeholder="Contraseña" required>
+      <div class="password-rules">
+        <div id="rule-length" class="rule">6–24 caracteres</div>
+        <div id="rule-uppercase" class="rule">Al menos una mayúscula</div>
+        <div id="rule-number" class="rule">Al menos un número</div>
+        <div id="rule-special" class="rule">Al menos un carácter especial</div>
       </div>
+      <div class="strength-bar"><div id="strength-fill" class="strength-fill"></div></div>
+      <div id="strength-text" class="strength-text">Débil</div>
 
-      <input type="password" name="password" placeholder="Contraseña" required>
-      <button type="submit" name="registrar">Registrar</button>
+      <input type="password" name="password_confirm" placeholder="Confirmar Contraseña" required>
+
+      <button type="submit" name="registrar">Terminar Registro de Cuenta</button>
     </form>
-
 
     <div class="back">
       <a href="../src/main.html">← Volver</a>
@@ -51,86 +97,170 @@
 
 <script>
 function openTab(tabId, clickedBtn) {
-    // ocultar todos los forms
-    document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
-    // desmarcar botones
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById(tabId)?.classList.add("active");
+  clickedBtn?.classList.add("active");
+}
 
-    // mostrar solo el form correcto
-    document.getElementById(tabId)?.classList.add("active");
-    // marcar el botón correcto
-    clickedBtn?.classList.add("active");
-  }
+// ==========================
+// VALIDACIÓN CONTRASEÑA
+// ==========================
+const passwordInput = document.getElementById("password");
+const ruleLength = document.getElementById("rule-length");
+const ruleUppercase = document.getElementById("rule-uppercase");
+const ruleNumber = document.getElementById("rule-number");
+const ruleSpecial = document.getElementById("rule-special");
+const strengthFill = document.getElementById("strength-fill");
+const strengthText = document.getElementById("strength-text");
 
-/* login*/
-document.addEventListener("DOMContentLoaded", function () {
-  function activateTab(tabId) {
-    document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.getElementById(tabId)?.classList.add("active");
-    const btn = tabId === "register" ? document.querySelector(".tab-btn:nth-child(2)")
-                                    : document.querySelector(".tab-btn:nth-child(1)");
-    btn?.classList?.add("active");
-  }
+passwordInput.addEventListener("input", () => {
+  const val = passwordInput.value;
+  let score = 0;
 
-  const params = new URLSearchParams(window.location.search);
+  // Validaciones
+  if (val.length >= 6 && val.length <= 24) { ruleLength.classList.add("valid"); score++; }
+  else { ruleLength.classList.remove("valid"); }
 
-  // Mantener tab si viene en query
-  if (params.get("tab") === "register") activateTab("register");
-  if (params.get("tab") === "login")    activateTab("login");
+  if (/[A-Z]/.test(val)) { ruleUppercase.classList.add("valid"); score++; }
+  else { ruleUppercase.classList.remove("valid"); }
 
-  // Mostrar errores SOLO si vienen del flujo de login
-  if (params.get("src") === "login") {
-    const emailErrBox = document.getElementById("login-email-error");
-    const passErrBox  = document.getElementById("login-password-error");
+  if (/\d/.test(val)) { ruleNumber.classList.add("valid"); score++; }
+  else { ruleNumber.classList.remove("valid"); }
 
-    if (params.get("error") === "user_not_found" && emailErrBox) {
-      activateTab("login");
-      emailErrBox.textContent = "El usuario (correo) no existe.";
-      emailErrBox.classList.add("show");
-    }
+  if (/[^A-Za-z0-9]/.test(val)) { ruleSpecial.classList.add("valid"); score++; }
+  else { ruleSpecial.classList.remove("valid"); }
 
-    if (params.get("error") === "bad_password" && passErrBox) {
-      activateTab("login");
-      passErrBox.textContent = "La contraseña es incorrecta.";
-      passErrBox.classList.add("show");
-    }
+  // Barra de fuerza
+  let width = (score / 4) * 100;
+  strengthFill.style.width = width + "%";
 
-    if (params.get("error") === "missing" && emailErrBox) {
-      activateTab("login");
-      emailErrBox.textContent = "Ingresa correo y contraseña.";
-      emailErrBox.classList.add("show");
-    }
-
-    // Limpia la URL para que el error no se repita al refrescar
-    const newUrl = window.location.pathname + "?tab=login";
-    window.history.replaceState(null, "", newUrl);
+  if (score <= 1) {
+    strengthFill.style.background = "red";
+    strengthText.textContent = "Débil";
+  } else if (score === 2 || score === 3) {
+    strengthFill.style.background = "orange";
+    strengthText.textContent = "Buena";
+  } else if (score === 4) {
+    strengthFill.style.background = "green";
+    strengthText.textContent = "Fuerte";
   }
 });
-/* registro*/
-document.addEventListener("DOMContentLoaded", function () {
-  const params = new URLSearchParams(window.location.search);
 
-  if (params.get("tab") === "register") {
-    document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.getElementById("register")?.classList.add("active");
-    document.querySelector(".tab-btn:nth-child(2)")?.classList?.add("active");
+// ==========================
+// REGIÓN - CIUDAD - COMUNA
+// ==========================
+const ciudadesPorRegion = {
+  "Arica y Parinacota": {
+        "Arica": ["Arica Centro", "Azapa", "Chacalluta"],
+        "Putre": ["Putre Centro", "Quebrada de Acha", "Belén"],
+        "Camarones": ["Codpa", "Cuya", "Caleta Vítor"]
+    },
+    "Tarapacá": {
+        "Iquique": ["Alto Hospicio", "Iquique Centro", "Playa Brava"],
+        "Pozo Almonte": ["Pozo Almonte Urbano", "La Tirana", "Pampa del Tamarugal"],
+        "Pica": ["Matilla", "Llanos de Pica", "Valle de Quisma"]
+    },
+    "Antofagasta": {
+        "Antofagasta": ["Antofagasta Centro", "Sector Norte", "La Chimba"],
+        "Calama": ["Calama Central", "Oasis", "Chiu Chiu"],
+        "Tocopilla": ["Tocopilla Urbano", "Barriles", "María Elena"]
+    },
+    "Atacama": {
+        "Copiapó": ["Copiapó Centro", "Tierra Amarilla", "Paipote"],
+        "Vallenar": ["Vallenar Urbano", "Huasco", "Freirina"],
+        "Chañaral": ["Chañaral Central", "El Salado", "Diego de Almagro"]
+    },
+    "Coquimbo": {
+        "La Serena": ["La Serena Centro", "Las Compañías", "Coquimbo"],
+        "Ovalle": ["Ovalle Central", "Samo Alto", "Monte Patria"],
+        "Illapel": ["Illapel Urbano", "Los Vilos", "Salamanca"]
+    },
+    "Valparaíso": {
+        "Valparaíso": ["Playa Ancha", "Cerro Alegre", "Almendral"],
+        "Viña del Mar": ["Reñaca", "Centro", "Miraflores"],
+        "San Antonio": ["San Antonio Centro", "Cartagena", "Algarrobo"],
+    },
+    "Metropolitana": { 
+      "Santiago": ["Cerrillos", "Cerro Navia", "Conchalí", "El Bosque", "Estación Central", "Huechuraba",
+      "Independencia", "La Cisterna","La Florida","La Granja","La Pintana", "La Reina","Las Condes", "Lo Barnechea", "Lo Espejo",
+      "Lo Prado","Macul", "Maipú","Ñuñoa", "Pedro Aguirre Cerda","Peñalolén","Providencia","Pudahuel", "Quilicura", "Quinta Normal", "Recoleta", "Renca",
+      "San Joaquín", "San Miguel", "San Ramón", "Santiago", "Vitacura"],
+    "Cordillera": ["Puente Alto", "San José de Maipo", "Pirque"]
+  },
+  "O'Higgins": {
+        "Rancagua": ["Rancagua Centro", "Machalí", "Graneros"],
+        "San Fernando": ["San Fernando Urbano", "Chimbarongo", "Peralillo"],
+        "Rengo": ["Rengo Centro", "Requínoa", "Malloa"]
+    },
+    "Maule": {
+        "Talca": ["Talca Centro", "Maule", "San Clemente"],
+        "Curicó": ["Curicó Urbano", "Molina", "Romeral"],
+        "Linares": ["Linares Central", "Parral", "San Javier"]
+    },
+    "Ñuble": {
+        "Chillán": ["Chillán Viejo", "San Carlos", "Quillón"],
+        "Bulnes": ["Bulnes Urbano", "San Ignacio", "El Carmen"],
+        "Yungay": ["Yungay Centro", "Pemuco", "Cabrero"]
+    },
+    "Biobío": {
+        "Concepción": ["Talcahuano", "San Pedro de la Paz", "Chiguayante"],
+        "Los Ángeles": ["Los Ángeles Centro", "Mulchén", "Nacimiento"],
+        "Arauco": ["Lebu", "Cañete", "Curanipe"]
+    },
+    "La Araucanía": {
+        "Temuco": ["Padre Las Casas", "Villarrica", "Pucón"],
+        "Angol": ["Angol Urbano", "Renaico", "Collipulli"],
+        "Lautaro": ["Lautaro Central", "Carahue", "Nueva Imperial"]
+    },
+    "Los Ríos": {
+        "Valdivia": ["Valdivia Centro", "Lanco", "Panguipulli"],
+        "La Unión": ["Río Bueno", "Futrono", "Lago Ranco"],
+        "Mariquina": ["San José de la Mariquina", "Máfil", "Corral"]
+    },
+    "Los Lagos": {
+        "Puerto Montt": ["Puerto Varas", "Frutillar", "Llanquihue"],
+        "Osorno": ["Osorno Urbano", "Río Negro", "Purranque"],
+        "Castro": ["Ancud", "Chonchi", "Quellón"]
+    },
+    "Aysén": {
+        "Coyhaique": ["Coyhaique Centro", "Puerto Aysén", "Puerto Cisnes"],
+        "Chile Chico": ["Chile Chico Urbano", "Cochrane", "Villa O'Higgins"],
+        "Melinka": ["Puerto Aguirre", "Puerto Chacabuco", "Lago Verde"]
+    },
+    "Magallanes y Antártica Chilena": {
+        "Punta Arenas": ["Punta Arenas Central", "Puerto Natales", "Porvenir"],
+        "Puerto Williams": ["Puerto Williams Centro", "Cabo de Hornos", "Timaukel"],
+        "Primavera": ["Cerro Sombrero", "Pampa Guanaco", "Bahía Inútil"]
+    }
+  // Agrega más...{
+  };
+
+document.getElementById("region").addEventListener("change", e => {
+  const region = e.target.value;
+  const ciudadSelect = document.getElementById("ciudad");
+  ciudadSelect.innerHTML = "<option value=''>Selecciona Ciudad</option>";
+  document.getElementById("comuna").innerHTML = "<option value=''>Selecciona Comuna</option>";
+
+  if (ciudadesPorRegion[region]) {
+    Object.keys(ciudadesPorRegion[region]).forEach(ciudad => {
+      ciudadSelect.innerHTML += `<option value="${ciudad}">${ciudad}</option>`;
+    });
   }
+});
 
-  if (params.get("src") === "register" && params.get("error") === "email") {
-    const box = document.getElementById("email-error");
-    if (box) { box.textContent = "El correo ya está registrado."; box.classList.add("show"); }
-    const newUrl = window.location.pathname + "?tab=register";
-    window.history.replaceState(null, "", newUrl);
-  } else if (params.get("src") === "register" && params.get("error") === "missing") {
-    const box = document.getElementById("email-error");
-    if (box) { box.textContent = "Completa nombre, correo y contraseña."; box.classList.add("show"); }
-    const newUrl = window.location.pathname + "?tab=register";
-    window.history.replaceState(null, "", newUrl);
+document.getElementById("ciudad").addEventListener("change", e => {
+  const region = document.getElementById("region").value;
+  const ciudad = e.target.value;
+  const comunaSelect = document.getElementById("comuna");
+  comunaSelect.innerHTML = "<option value=''>Selecciona Comuna</option>";
+
+  if (ciudadesPorRegion[region] && ciudadesPorRegion[region][ciudad]) {
+    ciudadesPorRegion[region][ciudad].forEach(comuna => {
+      comunaSelect.innerHTML += `<option value="${comuna}">${comuna}</option>`;
+    });
   }
 });
 </script>
-
 </body>
 </html>
