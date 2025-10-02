@@ -655,8 +655,8 @@ def api_list_productos():
 
     base_sql = """
         SELECT p.id_producto, p.sku, p.nombre_producto, p.descripcion_producto,
-               p.categoria_producto, p.precio_producto, p.imagen_url,
-               COALESCE(SUM(i.stock),0) as stock
+            p.categoria_producto, p.precio_producto, p.imagen_url,
+            COALESCE(SUM(i.stock),0) as stock
         FROM producto p
         LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
         LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
