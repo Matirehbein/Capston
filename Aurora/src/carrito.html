@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="../Public/Css/style.css" />
 </head>
 <body>
-  <!-- Header -->
   <header class="site-header">
     <div class="container header-content">
       <a href="./main.html" class="logo">AURORA</a>
@@ -23,27 +22,22 @@
     </div>
   </header>
 
-  <!-- Contenido -->
-  <main class="site-main">
-    <div class="container">
-      <h1>🛍️ Carrito de Compras</h1>
+<main class="site-main">
+  <div class="container">
+    <h1>🛍️ Carrito de Compras</h1>
 
-      <!-- Pasos -->
-      <div class="cart-steps">
-        <span class="step active">Carrito</span>
-        <span class="step">Pago</span>
-        <span class="step">Confirmación</span>
-      </div>
-
-      <!-- Carrito vacío -->
-      <div class="cart-empty-box">
-        <p>Tu carrito está vacío</p>
-        <a href="./productos.html" class="btn-lg">Explorar productos</a>
-      </div>
+    <!-- Pasos -->
+    <div class="cart-steps">
+      <span class="step active">Carrito</span>
+      <span class="step">Pago</span>
+      <span class="step">Confirmación</span>
     </div>
-  </main>
 
- <!-- Footer -->
+    <!-- Carrito dinámico -->
+    <div id="cart-container"></div>
+  </div>
+</main>
+
   <footer class="footer">
     <div class="container">
       <nav class="footer-top">
@@ -55,20 +49,17 @@
           <li><a href="./sucursales.html">Sucursales</a></li>
         </ul>
       </nav>
-
-
     </div>
-
     <div class="footer-divider"></div>
-
     <div class="container">
       <div class="footer-bottom">
-        <p>© 2025, Aurora-chile· Moda y Belleza</p>
+        <p>© 2025, Aurora-chile · Moda y Belleza</p>
       </div>
     </div>
   </footer>
-  <script type="module" src="../Public/js/colores.js"></script>
 
-</body>
+  <script type="module" src="../Public/js/carrito.js"></script>
+  <script type="module" src="../Public/js/colores.js"></script>
+  
 </body>
 </html>

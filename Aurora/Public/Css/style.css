@@ -1223,6 +1223,42 @@ table.admin-table {
   box-shadow: var(--shadow-soft, 0 2px 8px rgba(0,0,0,.06));
 }
 
+.cart-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #ddd;
+  padding: 10px 0;
+}
+.cart-img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  margin-right: 15px;
+}
+.cart-info {
+  flex: 1;
+}
+.cart-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cart-subtotal {
+  font-weight: bold;
+}
+.cart-total {
+  margin-top: 20px;
+  text-align: right;
+  font-size: 1.2rem;
+}
 
 
+.producto img {
+  width: 100%;
+  aspect-ratio: 4/3;   /* o 1/1 si quieres cuadrado */
+  object-fit: contain;
+  background: #f6f8fb;
+  border-radius: 10px;
+}
 
