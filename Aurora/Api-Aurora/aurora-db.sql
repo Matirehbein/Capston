@@ -42,8 +42,9 @@ DROP TABLE IF EXISTS conversacion CASCADE;
 DROP TABLE IF EXISTS usuario CASCADE;
 
 -- Creación de tablas
+-- Creación de tablas
 CREATE TABLE public.usuario (
-    id_usuario integer NOT NULL,
+    id_usuario serial NOT NULL,
     nombre_usuario character varying(100) NOT NULL,
     email_usuario character varying(150) NOT NULL,
     rol_usuario character varying(20),

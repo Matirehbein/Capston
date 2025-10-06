@@ -91,6 +91,13 @@ CORS(app,
 def public_files(filename):
     return send_from_directory(PUBLIC_DIR, filename)
 
+FRONTEND_ORIGIN = "http://localhost:3000"   # o "http://192.168.100.9:3000"
+
+@app.route("/src/main.html")
+def redirect_main_frontend():
+    from flask import redirect
+    return redirect(f"{FRONTEND_ORIGIN}/src/main.html", code=302)
+
 # Obtengo datos de la BDD para los productos y sucursales
 # Esta ruta alimenta las tablas de la interfaz
 
@@ -656,10 +663,8 @@ def get_user_by_email(email):
     cur.close()
     conn.close()
     return user
-
-
 def create_user(data):
-    """Crea un usuario con password hasheada."""
+    """Crea un usuario con password hasheada (versión para tabla con SERIAL PRIMARY KEY)."""
     email_norm = (data.get("email_usuario") or "").strip().lower()
     password_plano = data.get("password")
     password_hash = generate_password_hash(password_plano)
@@ -667,7 +672,7 @@ def create_user(data):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
-        # Verificar si ya existe
+        # Verificar si ya existe un usuario con ese correo
         cur.execute("SELECT 1 FROM usuario WHERE LOWER(email_usuario)=LOWER(%s) LIMIT 1;", (email_norm,))
         if cur.fetchone():
             return False, "El correo ya está registrado."
@@ -678,7 +683,7 @@ def create_user(data):
             email_usuario, rol_usuario, password,
             calle, numero_calle, region, ciudad, comuna, telefono, creado_en
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id_usuario;
         """
 
@@ -712,6 +717,7 @@ def create_user(data):
     finally:
         cur.close()
         conn.close()
+
 
 
 def do_login(email, password):
@@ -866,19 +872,6 @@ def perfil():
     </ul>
     """
 
-@app.route("/api/session_info")
-def session_info():
-    if "user_id" not in session:
-        return {"logged_in": False}, 200
-    return {
-        "logged_in": True,
-        "id": session.get("user_id"),
-        "nombre": session.get("nombre_usuario"),
-        "apellido_paterno": session.get("apellido_paterno"),
-        "apellido_materno": session.get("apellido_materno"),
-        "email": session.get("email_usuario"),
-        "rol": session.get("rol_usuario"),
-    }, 200
 
 #Productos para admin producto
 
