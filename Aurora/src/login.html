@@ -33,8 +33,15 @@
       <input type="text" name="nombre_usuario" placeholder="Nombre" required>
       <input type="text" name="apellido_paterno" placeholder="Apellido Paterno" required>
       <input type="text" name="apellido_materno" placeholder="Apellido Materno" required>
-      <input type="email" name="email_usuario" placeholder="Correo Electrónico" required>
-      <input type="email" name="email_confirm" placeholder="Confirmar Correo Electrónico" required>
+      <!-- Email principal -->
+      <label for="register-email">Correo electrónico</label>
+      <input type="email" id="register-email" name="email_usuario" required>
+
+      <label for="register-email-confirm">Confirmar correo electrónico</label>
+      <input type="email" id="register-email-confirm" name="email_confirm" required>
+
+      <div id="email-error" class="error-msg" style="color:red; display:none;"></div>
+
 
       <input type="text" name="calle" placeholder="Calle">
       <input type="text" name="numero_calle" placeholder="Número de Calle">
@@ -85,7 +92,9 @@
       <div class="strength-bar"><div id="strength-fill" class="strength-fill"></div></div>
       <div id="strength-text" class="strength-text">Débil</div>
 
-      <input type="password" name="password_confirm" placeholder="Confirmar Contraseña" required>
+      <input type="password" id="password_confirm" name="password_confirm" placeholder="Confirmar Contraseña" required>
+      <div id="password-error" style="color: red; font-size: 0.85em; margin-top: 5px;"></div>
+
 
       <button type="submit" name="registrar">Terminar Registro de Cuenta</button>
     </form>
@@ -113,12 +122,37 @@ const ruleNumber = document.getElementById("rule-number");
 const ruleSpecial = document.getElementById("rule-special");
 const strengthFill = document.getElementById("strength-fill");
 const strengthText = document.getElementById("strength-text");
+const passInput = document.getElementById("password");
+const passConfirm = document.getElementById("password_confirm");
+const passError = document.getElementById("password-error");
+const registerFormPass = document.getElementById("register");
 
+// ==========================
+// FUNCIÓN: Validar coincidencia de contraseñas
+// ==========================
+function validatePasswords() {
+  if (passInput.value && passConfirm.value && passInput.value !== passConfirm.value) {
+    passError.textContent = "⚠️ Las contraseñas no coinciden.";
+    passConfirm.style.border = "2px solid red";
+    passInput.dataset.invalid = "true";
+  } else {
+    passError.textContent = "";
+    passConfirm.style.border = "";
+    delete passInput.dataset.invalid;
+  }
+}
+
+passInput.addEventListener("input", validatePasswords);
+passConfirm.addEventListener("input", validatePasswords);
+
+// ==========================
+// FUNCIÓN: Validar requisitos de contraseña en tiempo real
+// ==========================
 passwordInput.addEventListener("input", () => {
   const val = passwordInput.value;
   let score = 0;
 
-  // Validaciones
+  // Validaciones visuales
   if (val.length >= 6 && val.length <= 24) { ruleLength.classList.add("valid"); score++; }
   else { ruleLength.classList.remove("valid"); }
 
@@ -131,7 +165,7 @@ passwordInput.addEventListener("input", () => {
   if (/[^A-Za-z0-9]/.test(val)) { ruleSpecial.classList.add("valid"); score++; }
   else { ruleSpecial.classList.remove("valid"); }
 
-  // Barra de fuerza
+  // Barra de fuerza visual
   let width = (score / 4) * 100;
   strengthFill.style.width = width + "%";
 
@@ -146,6 +180,43 @@ passwordInput.addEventListener("input", () => {
     strengthText.textContent = "Fuerte";
   }
 });
+
+// ==========================
+// FUNCIÓN: Validación completa al enviar formulario
+// ==========================
+registerFormPass.addEventListener("submit", (e) => {
+  const password = passInput.value;
+  const confirmPassword = passConfirm.value;
+
+  // Requisitos mínimos
+  const hasLength = password.length >= 6 && password.length <= 24;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+  // 1.- Contraseñas coinciden
+  if (password !== confirmPassword) {
+    e.preventDefault();
+    passError.textContent = "⚠️ Las contraseñas no coinciden. Corrige antes de continuar.";
+    passConfirm.style.border = "2px solid red";
+    return;
+  }
+
+  // 2️.- Cumple los requisitos de seguridad
+  if (!hasLength || !hasUppercase || !hasNumber || !hasSpecial) {
+    e.preventDefault();
+    passError.textContent = "⚠️ La contraseña no cumple con los requisitos mínimos.";
+    passInput.style.border = "2px solid red";
+    return;
+  }
+
+  // Todo correcto
+  passError.textContent = "";
+  passInput.style.border = "";
+  passConfirm.style.border = "";
+});
+
+
 
 // ==========================
 // REGIÓN - CIUDAD - COMUNA
@@ -261,6 +332,55 @@ document.getElementById("ciudad").addEventListener("change", e => {
     });
   }
 });
+
+
 </script>
+
+<script>
+// ==========================
+// VALIDACIÓN EN TIEMPO REAL DE CORREO ELECTRÓNICO
+// ==========================
+
+// Seleccionamos los elementos del formulario
+const emailInput = document.getElementById("register-email");
+const emailConfirmInput = document.getElementById("register-email-confirm");
+const emailError = document.getElementById("email-error");
+
+// Función que valida si los correos coinciden
+function validateEmails() {
+  const email = emailInput.value.trim();
+  const emailConfirm = emailConfirmInput.value.trim();
+
+  if (email && emailConfirm && email !== emailConfirm) {
+    emailError.textContent = "⚠️ Los correos no coinciden.";
+    emailError.style.color = "red";
+    emailError.style.display = "block";
+    emailConfirmInput.style.border = "2px solid red";
+  } else {
+    emailError.textContent = "";
+    emailError.style.display = "none";
+    emailConfirmInput.style.border = "";
+  }
+}
+
+// Ejecutar validación en tiempo real
+emailInput.addEventListener("input", validateEmails);
+emailConfirmInput.addEventListener("input", validateEmails);
+
+// Evitar el envío del formulario si los correos no coinciden
+const registerForm = document.getElementById("register");
+registerForm.addEventListener("submit", (e) => {
+  const email = emailInput.value.trim();
+  const emailConfirm = emailConfirmInput.value.trim();
+
+  if (email !== emailConfirm) {
+    e.preventDefault();
+    emailError.textContent = "⚠️ Los correos no coinciden. Corrige antes de continuar.";
+    emailError.style.display = "block";
+    emailConfirmInput.style.border = "2px solid red";
+  }
+});
+</script>
+
 </body>
 </html>

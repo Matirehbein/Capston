@@ -41,8 +41,6 @@ app.config['PG_HOST'] = "localhost"
 app.config['PG_DATABASE'] = "aurora"
 app.config['PG_USER'] = "postgres"
 app.config['PG_PASSWORD'] = "duoc"
-app.config["SESSION_COOKIE_SAMESITE"] = "None"
-app.config["SESSION_COOKIE_SECURE"] = False  # True si usas HTTPS
 
 
 
@@ -837,6 +835,54 @@ def register():
         return redirect(url_for("login") + f"?error={error_code}&tab=register&src=register")
 
     return redirect(FRONTEND_MAIN_URL)
+
+
+# ===========================
+# Validar Email en registro
+# ===========================
+
+@app.route('/check_email', methods=['GET'])
+def check_email():
+    """
+    Ruta para verificar si un correo electrónico ya existe en la base de datos.
+    Llamada por JavaScript asíncronamente.
+    """
+    email = request.args.get('email')
+
+    if not email:
+        return jsonify({'exists': False}) # O podrías devolver un error 400
+
+    conn = None # Inicializar conexión
+    try:
+        # 1. CONEXIÓN A LA BASE DE DATOS
+        # Asume que tienes una función para obtener la conexión a PostgreSQL
+        # Reemplaza 'get_db_connection()' con tu método real de conexión.
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # 2. CONSULTA SQL
+        # Reemplaza 'nombre_de_tu_tabla' y 'nombre_de_la_columna_email'
+        query = "SELECT 1 FROM nombre_de_tu_tabla WHERE nombre_de_la_columna_email = %s LIMIT 1;"
+        cur.execute(query, (email,))
+        
+        # 3. VERIFICACIÓN DE RESULTADOS
+        # Si fetchone() no es None, significa que se encontró un registro.
+        email_exists = cur.fetchone() is not None
+
+        cur.close()
+        # No se hace commit porque solo es una consulta (SELECT)
+
+        # 4. RESPUESTA JSON
+        return jsonify({'exists': email_exists})
+
+    except Exception as e:
+        print(f"Error al verificar el correo en DB: {e}")
+        # En caso de error de DB, lo tratamos como que NO existe para no bloquear al usuario,
+        # pero la verificación final en /register lo atrapará.
+        return jsonify({'exists': False}), 500 # Devolver un error 500 para indicar un problema en el servidor
+    finally:
+        if conn:
+            conn.close()
 
 
 
