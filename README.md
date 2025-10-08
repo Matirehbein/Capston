@@ -70,3 +70,17 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
 8. Luego, ejecutar el servidor Flask:
    ```bash
     python app.py
+
+
+pip install flask-cors
+
+
+## webpay
+
+proyecto node:  npm init -y
+dependencias:   npm i express dotenv cors transbank-sdk
+tarjeta: 4051885600446623   
+cvc:  123
+
+Rut: 11.111.111-1   
+contraseña: 123

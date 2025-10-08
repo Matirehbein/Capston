@@ -1,0 +1,163 @@
+.chatbot-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.chatbot-btn {
+  background-color: #d2a95f;
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  transition: 0.3s;
+}
+
+.chatbot-btn:hover {
+  transform: scale(1.1);
+}
+
+.chatbot-btn img {
+  width: 40px;
+  height: 40px;
+}
+
+.chat-window {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 420px;
+  height: 540px;
+  background-color: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+  overflow: hidden;
+  position: absolute;
+  bottom: 90px;
+  right: 0;
+  transform: translateY(20px);
+  opacity: 0;
+  transition: all 0.35s ease-in-out;
+}   
+
+
+.chat-header {
+  background-color: #2e2a27;
+  color: #d2a95f;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.chat-header span {
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.chat-body {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  background-color: #f4f4f4;
+}
+
+.chat-footer {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+}
+
+.chat-footer input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  outline: none;
+}
+
+.chat-footer button {
+  background-color: #d2a95f;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 15px;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.chat-footer button:hover {
+  background-color: #b48c48;
+}
+
+/* Mensajes */
+.bot-message, .user-message {
+  margin: 8px 0;
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.bot-message {
+  background-color: #2e2a27;
+  color: #fff;
+  align-self: flex-start;
+}
+
+.user-message {
+  background-color: #d2a95f;
+  color: #fff;
+  align-self: flex-end;
+}
+
+.chat-window.show {
+  display: flex !important;
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.chat-window {
+  transform: translateY(10px);
+  opacity: 0;
+}
+/* Estado base (oculto) */
+.chat-window {
+  display: none;
+  position: absolute;
+  bottom: 90px;
+  right: 0;
+  width: 420px;
+  height: 540px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+  overflow: hidden;
+
+  /* animables */
+  transform: translateY(16px);
+  opacity: 0;
+  transition: transform .35s ease, opacity .35s ease;
+}
+
+/* Habilita layout sin animar aún */
+.chat-window.show {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Dispara la animación */
+.chat-window.show.visible {
+  transform: translateY(0);
+  opacity: 1;
+}

@@ -64,24 +64,35 @@
     </section>
   </main>
 
-  <!-- Botón flotante -->
-  <button id="chat-open" class="chat-fab" aria-label="Abrir chat">
-    <img src="/Public/imagenes/Carinabot.png" alt="">
+  <!-- Chatbot Aurora -->
+<link rel="stylesheet" href="../Public/css/chatbot.css"><!-- ajusta may/min según tus carpetas -->
+
+<div class="chatbot-container">
+  <button class="chatbot-btn" id="openChat">
+    <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" alt="Aurora" />
   </button>
 
-  <div id="chat-panel" class="chat-panel" hidden>
-    <header class="chat-header">
-      <strong>Asistente Aurora</strong>
-      <button id="chat-close" class="chat-close" aria-label="Cerrar">✕</button>
-    </header>
+  <div class="chat-window" id="chatWindow">
+    <div class="chat-header">
+      <h3>Asistente Aurora</h3>
+      <span id="closeChat">&times;</span>
+    </div>
 
-    <div id="chat-log" class="chat-log" aria-live="polite"></div>
+    <div class="chat-body" id="chatBody">
+      <div class="bot-message">
+        <p>👋 ¡Hola! Soy Aurora. ¿En qué te puedo ayudar hoy?</p>
+      </div>
+    </div>
 
-    <form id="chat-form" class="chat-form" autocomplete="off">
-      <input id="chat-input" type="text" placeholder="En que te podemos ayudar...." required />
-      <button class="chat-send" type="submit">Enviar</button>
-    </form>
+    <div class="chat-footer">
+      <input type="text" id="userInput" placeholder="Escribe tu mensaje..." />
+      <button id="sendBtn">Enviar</button>
+    </div>
   </div>
+</div>
+
+<script src="../Public/js/chatbot.js"></script> <!-- ajusta may/min -->
+
 
   <!-- Footer -->
   <footer class="footer">
@@ -107,6 +118,9 @@
   </footer>
 
   <script type="module" src="../Public/js/colores.js"></script>
+  <link rel="stylesheet" href="./Public/Css/chatbot.css">
+  <script src="./Public/Js/chatbot.js"></script>
+
 
   <script>
     (async function checkUserRole() {

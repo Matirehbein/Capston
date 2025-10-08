@@ -18,6 +18,7 @@
       <div class="header-actions">
         <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
         <a href="./login.html" class="icon-btn icon-login" aria-label="Login"></a>
+        <button id="btnPagar" class="btn-pagar">PAGAR</button>
       </div>
     </div>
   </header>
@@ -31,7 +32,15 @@
       <span class="step active">Carrito</span>
       <span class="step">Pago</span>
       <span class="step">Confirmación</span>
+      <p class="cart-total-final">
+ 
+
+
+
     </div>
+   
+
+    
 
     <!-- Carrito dinámico -->
     <div id="cart-container"></div>
@@ -60,6 +69,18 @@
 
   <script type="module" src="../Public/js/carrito.js"></script>
   <script type="module" src="../Public/js/colores.js"></script>
-  
+ <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const p = new URLSearchParams(location.search);
+  if (!p.has("success")) return;
+  if (p.get("success") === "true") {
+    alert(`✅ Pago realizado. Orden: ${p.get("buy_order")}`);
+  } else {
+    alert("❌ El pago no se completó.");
+  }
+  history.replaceState({}, "", location.pathname); // limpia la URL
+});
+</script>
+
 </body>
 </html>

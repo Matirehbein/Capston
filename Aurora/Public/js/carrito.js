@@ -80,15 +80,58 @@ function renderCart() {
     });
   });
 
+  // ...todo tu código arriba igual...
+
   // Botones globales
   $("#btn-clear")?.addEventListener("click", () => {
     saveCart([]);
     renderCart();
   });
-  $("#btn-checkout")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    alert("Checkout no implementado (demo).");
-  });
-}
 
+  // ⬇⬇⬇ REEMPLAZA este bloque por el de abajo ⬇⬇⬇
+  $("#btn-checkout")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+
+    const btn = e.currentTarget;
+    const amount = Number(totalPrice()); // <-- total dinámico (en CLP)
+
+    if (!amount || amount <= 0) {
+      alert("Tu carrito está vacío.");
+      return;
+    }
+
+    btn.setAttribute("disabled", "disabled");
+    btn.textContent = "Redirigiendo...";
+
+    try {
+      const r = await fetch("http://localhost:3010/webpay/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,                               // 👈 usa el total dinámico
+          buyOrder: "ORD-" + Date.now(),
+          sessionId: "USR-" + Date.now()
+        })
+      });
+
+      const preview = await r.clone().text();
+      if (!r.ok) throw new Error(`HTTP ${r.status} - ${preview}`);
+
+      const data = await r.json();
+      if (!data?.token || !data?.url) {
+        throw new Error("Respuesta inválida del servidor");
+      }
+
+      // Redirige al formulario de Webpay
+      window.location.href = `${data.url}?token_ws=${data.token}`;
+    } catch (err) {
+      console.error("[checkout]", err);
+      alert("No se pudo iniciar el pago. Revisa la consola.");
+      btn.removeAttribute("disabled");
+      btn.textContent = "Proceder al pago";
+    }
+  });
+// ...fin de renderCart()
+
+}
 document.addEventListener("DOMContentLoaded", renderCart);
