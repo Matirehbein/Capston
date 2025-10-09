@@ -9,6 +9,7 @@ from psycopg2 import errors
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 import json
+import datetime
 
 
 app = Flask(__name__)
@@ -1046,11 +1047,11 @@ def create_user(data):
         conn.rollback()
         return False, "El correo ya está registrado."
     except Exception as e:
-        conn.rollback()
-        return False, f"Error al registrar: {str(e)}"
-    finally:
-        cur.close()
-        conn.close()
+        import traceback
+        print("❌ Error al obtener ofertas:", e)
+        traceback.print_exc()   # 👈 mostrará línea exacta del error
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 
 
@@ -1617,6 +1618,50 @@ def api_bulk_delete_productos_public():
     finally:
         cur.close()
         conn.close()
+
+@app.route("/api/ofertas_public", methods=["GET"])
+def api_list_ofertas_public():
+    """
+    Devuelve las ofertas vigentes con su información básica y productos asociados.
+    """
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    # Filtrar ofertas vigentes por fecha y campo booleano
+    cur.execute("""
+        SELECT o.id_oferta, o.titulo, o.descripcion, o.descuento_pct, 
+               o.fecha_inicio, o.fecha_fin
+        FROM oferta o
+        WHERE o.vigente_bool = FALSE
+        AND CURRENT_DATE BETWEEN o.fecha_inicio AND o.fecha_fin
+        ORDER BY o.fecha_inicio DESC;
+    """)
+    ofertas = cur.fetchall()
+
+    data = []
+    for o in ofertas:
+        # Buscar productos asociados
+        cur.execute("""
+            SELECT p.id_producto, p.nombre_producto, p.precio_producto, p.imagen_url, p.sku
+            FROM producto p
+            INNER JOIN oferta_producto op ON op.id_producto = p.id_producto
+            WHERE op.id_oferta = %s
+        """, (o["id_oferta"],))
+        productos = cur.fetchall()
+
+        data.append({
+            "id_oferta": o["id_oferta"],
+            "titulo": o["titulo"],
+            "descripcion": o["descripcion"],
+            "descuento_pct": float(o["descuento_pct"]),
+            "fecha_inicio": o["fecha_inicio"].isoformat(),
+            "fecha_fin": o["fecha_fin"].isoformat(),
+            "productos": [dict(p) for p in productos]
+        })
+
+    cur.close()
+    conn.close()
+    return jsonify(data), 200
 
 # ===========================
 # RUN
