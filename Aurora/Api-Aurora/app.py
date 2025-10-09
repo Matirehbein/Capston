@@ -977,7 +977,7 @@ def view_oferta(id_oferta):
     oferta = cur.fetchone()
     cur.close()
     conn.close()
-    return render_template("ofertas/crud_ofertas.html", ofertas=ofertas, productos=productos, now=datetime.now)
+    return render_template("ofertas/crud_ofertas.html", ofertas=ofertas, productos=producto, now=datetime.now)
 
 
 
@@ -1160,10 +1160,10 @@ def register():
     # Validaciones
     if data["email_usuario"].lower() != (data["email_confirm"] or "").lower():
         return redirect(url_for("login") + "?error=email_mismatch&tab=register&src=register")
-
     if data["password"] != data["password_confirm"]:
         return redirect(url_for("login") + "?error=password_mismatch&tab=register&src=register")
 
+    # Validar fuerza de password
     ok, msg = validar_password(data["password"])
     if not ok:
         return redirect(url_for("login") + f"?error=weak_password&tab=register&src=register&msg={msg}")
@@ -1174,6 +1174,7 @@ def register():
         error_code = "email" if (result and "correo" in result.lower()) else "unknown"
         return redirect(url_for("login") + f"?error={error_code}&tab=register&src=register")
 
+    # Sesión ya creada en do_register, redirige al frontend
     return redirect(FRONTEND_MAIN_URL)
 
 
@@ -1224,6 +1225,10 @@ def check_email():
         if conn:
             conn.close()
 
+# Insertar usuario en DB
+    hashed_password = generate_password_hash(password)
+    cur.execute("""
+        INSERT INTO usuarios (nombre_usuario, apellido_paterno, apellido_materno, email_usuario, telefono, password)
         VALUES (%s, %s, %s, %s, %s, %s)
     """, (nombre, apellido_paterno, apellido_materno, email, telefono, hashed_password))
 
