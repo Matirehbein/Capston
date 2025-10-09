@@ -9,7 +9,7 @@ const {
 
 // URLs desde .env con defaults útiles
 const RETURN_URL = process.env.RETURN_URL || 'http://localhost:3010/webpay/return';
-const FINAL_URL  = process.env.FINAL_URL  || 'http://localhost:3000/src/carrito.html';
+const FINAL_URL  = process.env.FINAL_URL  || 'http://localhost:3000/src/resultado.html';
 
 // Instancia de Webpay en integración
 const tx = new WebpayPlus.Transaction(
@@ -41,39 +41,67 @@ router.post('/create', async (req, res) => {
   }
 });
 
-// Return (acepta POST y GET) -> commit y redirige al carrito
+// ... lo tuyo arriba igual ...
+
+// Return (acepta POST y GET) -> commit y redirige a la página de resultado
 router.post('/return', handleReturn);
 router.get('/return', handleReturn);
 
 async function handleReturn(req, res) {
+  // Webpay puede enviar token_ws (éxito) o TBK_TOKEN (aborto/cancelación)
   const token = req.body?.token_ws || req.query?.token_ws;
-  if (!token) return res.status(400).send('token_ws faltante');
+  const tbkToken = req.body?.TBK_TOKEN || req.query?.TBK_TOKEN;
+
+  // Si fue aborto/cancelación o no llegó token_ws, redirige como "abortado"
+  if (!token || tbkToken) {
+    const abortParams = new URLSearchParams({
+      estado: 'abortado'
+    }).toString();
+    return res.redirect(`${FINAL_URL}?${abortParams}`);
+  }
 
   try {
     const result = await tx.commit(token);
-    const success = result?.status === 'AUTHORIZED';
 
+    // Normaliza estado legible para UI
+    const estado =
+      result?.status === 'AUTHORIZED'
+        ? 'aprobado'
+        : ['FAILED', 'REVERSED', 'NULLIFIED'].includes(result?.status)
+          ? 'rechazado'
+          : 'pendiente';
+
+    // ¡OJO! Evita mandar datos sensibles. Puedes guardar todo en BD y que el front consulte.
     const q = new URLSearchParams({
-      success: success ? 'true' : 'false',
+      estado,                              // aprobado | rechazado | pendiente
+      buy_order: String(result?.buy_order ?? ''),
       amount: String(result?.amount ?? ''),
       authorization_code: String(result?.authorization_code ?? ''),
-      buy_order: String(result?.buy_order ?? '')
+      payment_type_code: String(result?.payment_type_code ?? ''),
+      installments_number: String(result?.installments_number ?? 0),
+      last4: String(result?.card_detail?.card_number ?? ''),
+      token_ws: token                       // útil si luego consultas /status/:token
     }).toString();
 
     return res.redirect(`${FINAL_URL}?${q}`);
   } catch (e) {
     console.error('commit error:', e?.response?.data || e.message || e);
-    return res.redirect(`${FINAL_URL}?success=false&error=commit_failed`);
+    const errParams = new URLSearchParams({
+      estado: 'error'
+    }).toString();
+    return res.redirect(`${FINAL_URL}?${errParams}`);
   }
 }
 
-// (opcional) página de debug
-router.get('/finish', (req, res) => {
-  res.send(`
-    <h2>Resultado Webpay (debug)</h2>
-    <pre>${JSON.stringify(req.query, null, 2)}</pre>
-    <a href="/">Volver</a>
-  `);
+// (opcional) endpoint de status por token para que el front valide/complete datos
+router.get('/status/:token', async (req, res) => {
+  try {
+    const status = await tx.status(req.params.token);
+    return res.json({ ok: true, status });
+  } catch (e) {
+    console.error('status error:', e?.response?.data || e.message || e);
+    return res.status(500).json({ ok: false, error: 'Error obteniendo status' });
+  }
 });
 
 module.exports = router;

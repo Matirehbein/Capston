@@ -9,6 +9,7 @@ from psycopg2 import errors
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 import json
+import datetime
 
 
 app = Flask(__name__)
@@ -183,7 +184,7 @@ def add_producto():
     conn.commit()
     cur.close()
     conn.close()
-    flash("Producto agregado con éxito")
+    flash("Producto agregado con éxito", "success")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -222,7 +223,7 @@ def edit_producto(id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Producto actualizado")
+    flash("Producto actualizado", "success")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -257,7 +258,7 @@ def edit_stock(id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Stock actualizado")
+    flash("Stock actualizado", "success")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -272,7 +273,7 @@ def delete_producto(id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Producto eliminado")
+    flash("Producto eliminado", "danger")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -401,7 +402,7 @@ def update_stock_sucursal(id_producto, id_sucursal):
     cur.close()
     conn.close()
 
-    flash("Stock actualizado en la sucursal")
+    flash("Stock actualizado en la sucursal", "success")
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 
@@ -426,9 +427,6 @@ def crud_sucursales():
 # ---------------------------
 # Rutas de Sucursales
 # ---------------------------
-
-
-
 
 # ---------------------------
 # Agregar Sucursales
@@ -455,7 +453,7 @@ def add_sucursal():
     conn.commit()
     cur.close()
     conn.close()
-    flash("Sucursal agregada con éxito")
+    flash("Sucursal agregada con éxito", "success")
     return redirect(url_for("crud_sucursales"))
 
 # ---------------------------
@@ -485,7 +483,7 @@ def editar_sucursal(id_sucursal):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Sucursal actualizada con éxito")
+    flash("Sucursal actualizada con éxito", "success")
     return redirect(url_for("crud_sucursales"))
 
 # ---------------------------
@@ -500,7 +498,7 @@ def eliminar_sucursal(id_sucursal):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Sucursal eliminada con éxito")
+    flash("Sucursal eliminada con éxito", "danger")
     return redirect(url_for("crud_sucursales"))
 
 # ===========================
@@ -814,6 +812,8 @@ def crud_ofertas():
 # Agregar OFERTAS 
 # ===========================
 
+from datetime import date
+
 @app.route("/ofertas/add", methods=["POST"])
 @login_required
 def add_oferta():
@@ -821,6 +821,15 @@ def add_oferta():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Obtener fechas desde el formulario
+        fecha_inicio = data.get("fecha_inicio")
+        fecha_fin = data.get("fecha_fin")
+
+        # Calcular si la oferta está vigente actualmente
+        hoy = date.today()
+        vigente = fecha_inicio <= str(hoy) <= fecha_fin
+
+        # Insertar la nueva oferta
         cur.execute("""
             INSERT INTO oferta (titulo, descripcion, descuento_pct, fecha_inicio, fecha_fin, vigente_bool)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -829,32 +838,36 @@ def add_oferta():
             data.get("titulo"),
             data.get("descripcion"),
             data.get("descuento_pct"),
-            data.get("fecha_inicio"),
-            data.get("fecha_fin"),
-            data.get("vigente_bool") == "on"
+            fecha_inicio,
+            fecha_fin,
+            vigente
         ))
         id_oferta = cur.fetchone()[0]
 
-        # Producto seleccionado
+        # Asociar producto a la oferta
         id_producto = data.get("productos")
         if id_producto and id_producto.strip() != "":
             id_producto = int(id_producto)
             cur.execute("""
-                        INSERT INTO oferta_producto (id_oferta, id_producto)
-                        VALUES (%s, %s);
+                INSERT INTO oferta_producto (id_oferta, id_producto)
+                VALUES (%s, %s);
             """, (id_oferta, id_producto))
         else:
             raise ValueError("Debes seleccionar un producto para la oferta")
 
         conn.commit()
-        flash("Oferta agregada correctamente", "success")
+        flash("✅ Oferta agregada correctamente", "success")
+
     except Exception as e:
         conn.rollback()
-        flash(f"Error al agregar la oferta: {str(e)}", "danger")
+        flash(f"⚠️ Error al agregar la oferta: {str(e)}", "danger")
+
     finally:
         cur.close()
         conn.close()
+
     return redirect(url_for("crud_ofertas"))
+
 
 
 # ===========================
@@ -1049,11 +1062,11 @@ def create_user(data):
         conn.rollback()
         return False, "El correo ya está registrado."
     except Exception as e:
-        conn.rollback()
-        return False, f"Error al registrar: {str(e)}"
-    finally:
-        cur.close()
-        conn.close()
+        import traceback
+        print("❌ Error al obtener ofertas:", e)
+        traceback.print_exc()   # 👈 mostrará línea exacta del error
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 
 
@@ -1620,6 +1633,56 @@ def api_bulk_delete_productos_public():
     finally:
         cur.close()
         conn.close()
+
+
+@app.route("/api/ofertas_public", methods=["GET"])
+def api_list_ofertas_public():
+    """
+    Devuelve todas las ofertas vigentes con su información y sus productos.
+    """
+    try:
+        conn = get_db_connection()
+
+        # Cursor 1: obtener todas las ofertas vigentes
+        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur_ofertas:
+            cur_ofertas.execute("""
+                SELECT id_oferta, titulo, descripcion, descuento_pct, 
+                       fecha_inicio, fecha_fin
+                FROM oferta
+                WHERE vigente_bool = TRUE
+                  AND CURRENT_DATE BETWEEN fecha_inicio AND fecha_fin
+                ORDER BY fecha_inicio DESC;
+            """)
+            ofertas = cur_ofertas.fetchall()
+
+        # Cursor 2: para obtener los productos por oferta
+        data = []
+        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur_prod:
+            for o in ofertas:
+                cur_prod.execute("""
+                    SELECT p.id_producto, p.nombre_producto, p.precio_producto, p.imagen_url, p.sku
+                    FROM producto p
+                    INNER JOIN oferta_producto op ON op.id_producto = p.id_producto
+                    WHERE op.id_oferta = %s;
+                """, (o["id_oferta"],))
+                productos = cur_prod.fetchall()
+
+                data.append({
+                    "id_oferta": o["id_oferta"],
+                    "titulo": o["titulo"],
+                    "descripcion": o["descripcion"],
+                    "descuento_pct": float(o["descuento_pct"]),
+                    "fecha_inicio": o["fecha_inicio"].isoformat(),
+                    "fecha_fin": o["fecha_fin"].isoformat(),
+                    "productos": [dict(p) for p in productos]
+                })
+
+        conn.close()
+        return jsonify(data), 200
+
+    except Exception as e:
+        print(f"❌ Error en /api/ofertas_public: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # ===========================
 # RUN
