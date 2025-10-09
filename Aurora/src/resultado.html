@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Resultado del Pago | Aurora</title>
+<link rel="stylesheet" href="../Public/Css/style.css" />
+
+<link rel="stylesheet" href="../Public/Css/resultado.css" />
+
+</head>
+<body>
+
+  <!-- ================= Header ================= -->
+ <header class="site-header">
+    <div class="container header-content">
+      <a href="./main.html" class="logo">AURORA</a>
+      <nav class="nav-links">
+        <a href="./colecciones.html">Colecciones</a>
+        <a href="./productos.html">Productos</a>
+        <a href="./ofertas.html">Ofertas</a>
+      </nav>
+      <div class="header-actions">
+        <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+        <a href="./login.html" class="icon-btn icon-login" aria-label="Login"></a>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- ================= Contenido principal ================= -->
+  <main class="main-content">
+    <div class="resultado-page">
+    <h1>Resultado de tu pago</h1>
+
+    <div class="receipt-card">
+      <div class="status-row">
+        <span class="status-badge" id="status-badge">...</span>
+        <span class="muted">Token: <span class="code" id="token">-</span></span>
+      </div>
+
+      <div class="kv" id="kv-data"></div>
+
+      <div class="actions" id="actions"></div>
+      <br>
+      <a href="/src/main.html" class="btn">Volver al inicio</a>
+    </div>
+    </div>
+    <p class="muted" style="margin-top: 14px;">
+      Si tienes dudas, contáctanos con tu <strong>orden de compra</strong>.
+    </p>
+    
+  </main>
+
+  <!-- ================= Script ================= -->
+  <script>
+    // Obtener parámetros de la URL
+    const params = new URLSearchParams(window.location.search);
+
+    const estado = params.get('estado') || (
+      params.get('success') === 'true'
+        ? 'aprobado'
+        : params.has('success')
+          ? 'rechazado'
+          : 'pendiente'
+    );
+
+    const data = {
+      buy_order: params.get('buy_order') || '-',
+      amount: params.get('amount') || '0',
+      authorization_code: params.get('authorization_code') || '-',
+      payment_type_code: params.get('payment_type_code') || '-',
+      installments_number: params.get('installments_number') || '0',
+      last4: params.get('last4') || '-',
+      token_ws: params.get('token_ws') || '-'
+    };
+
+    // Estado visual
+    const badge = document.getElementById('status-badge');
+    const tokenEl = document.getElementById('token');
+    tokenEl.textContent = data.token_ws;
+
+    const badgeClasses = {
+      aprobado: 'status-badge status-aprobado',
+      rechazado: 'status-badge status-rechazado',
+      pendiente: 'status-badge status-pendiente',
+      abortado: 'status-badge status-rechazado',
+      error: 'status-badge status-rechazado'
+    };
+
+    const badgeTexts = {
+      aprobado: '✓ Pago aprobado',
+      rechazado: '✗ Pago rechazado',
+      pendiente: '⌛ Pago pendiente',
+      abortado: '✗ Pago cancelado',
+      error: '⚠ Error en el pago'
+    };
+
+    badge.className = badgeClasses[estado] || 'status-badge';
+    badge.textContent = badgeTexts[estado] || estado;
+
+    // Key-values
+    const kv = document.getElementById('kv-data');
+    kv.innerHTML = `
+      <div><strong>Orden de compra</strong></div><div class="code">${data.buy_order}</div>
+      <div><strong>Monto</strong></div><div>$${Number(data.amount || 0).toLocaleString('es-CL')}</div>
+      <div><strong>Autorización</strong></div><div class="code">${data.authorization_code}</div>
+      <div><strong>Medio de pago</strong></div><div>${data.payment_type_code}</div>
+      <div><strong>Cuotas</strong></div><div>${data.installments_number}</div>
+      <div><strong>Últimos dígitos</strong></div><div>${data.last4}</div>
+    `;
+
+    // Acciones según estado
+    const actions = document.getElementById('actions');
+    if (estado === 'aprobado') {
+      actions.innerHTML = `
+        <a href="/mis-pedidos" class="btn">Ver mis pedidos</a>
+        <a href="/src/productos.html" class="btn secondary">Seguir comprando</a>
+        <button class="btn" onclick="window.print()">Imprimir comprobante</button>
+      `;
+    } else if (estado === 'pendiente') {
+      actions.innerHTML = `
+        <a href="/mis-pedidos" class="btn">Revisar estado</a>
+        <a href="/ayuda" class="btn secondary">¿Necesitas ayuda?</a>
+      `;
+    } else {
+      actions.innerHTML = `
+        <a href="/src/carrito.html" class="btn">Volver al carrito</a>
+        <a href="/ayuda" class="btn secondary">Contactar soporte</a>
+      `;
+    }
+  </script>
+</body>
+</html>

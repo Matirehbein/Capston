@@ -1,0 +1,130 @@
+/* ====== Página de resultado de pago ====== */
+
+.main-content {
+  max-width: 960px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+.main-content h1 {
+  font-size: 1.8rem;
+  margin-bottom: 24px;
+  color: #b0853e; /* tono dorado */
+}
+
+/* Tarjeta de resultado */
+.receipt-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.status-aprobado {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #6ee7b7;
+}
+
+.status-rechazado {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.status-pendiente {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fdba74;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin-top: 14px;
+  margin-bottom: 24px;
+}
+
+.kv > div {
+  padding: 4px 0;
+}
+
+.kv .code {
+  font-family: monospace;
+  background: #f3f4f6;
+  padding: 4px 6px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+/* Botones */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-block;
+  background: #000;
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  transition: background 0.3s;
+  text-align: center;
+}
+
+.btn:hover {
+  background: #333;
+}
+
+.btn.secondary {
+  background: #e5e7eb;
+  color: #111;
+}
+
+.btn.secondary:hover {
+  background: #d1d5db;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .status-row {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .kv {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
