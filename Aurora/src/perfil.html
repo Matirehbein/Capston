@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miperfil</title>
+    <link rel="stylesheet" href="/Public/Css/style.css"/>
+    <link rel="stylesheet" href="/Public/Css/perfil.css"/>
+</head>
+<body>
+    
+    <!-- Header -->
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <a href="/src/main.html" class="logo">AURORA</a>
+
+        <ul class="nav-links">
+          <li><a href="/src/colecciones.html">Colecciones</a></li>
+          <li><a href="/src/productos.html">Productos</a></li>
+          <li><a href="/src/ofertas.html">Ofertas</a></li>
+        </ul>
+
+        <div class="header-actions" style="display:flex;align-items:center;gap:10px;">
+          <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+
+          <!-- Botón de cuenta + menú -->
+          <div class="account-wrap">
+            <a id="accountBtn" class="icon-btn icon-login account-btn" aria-label="Cuenta"></a>
+            <div id="accountMenu" class="account-menu">
+              <div class="muted" style="padding:8px 10px;" id="welcomeUser">Cargando…</div>
+              <a href="/src/perfil.html">Mi perfil</a>
+              <a href="/src/pedidos.html">Mis pedidos</a>
+              <button id="logoutBtn">Cerrar sesión</button>
+            </div>
+          </div>
+
+          <!-- Menú Admin (controlado por JS según rol) -->
+          <li id="admin-menu-btn" style="display:none; list-style:none;">
+            <a href="../src/main_menu.html">Admin</a>
+          </li>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero (puedes quitarlo si no lo quieres en perfil) -->
+    <section class="hero" id="inicio">
+      <div class="container">
+        <div class="hero-content">
+          <h1>Mi perfil</h1>
+          <p>Revisa tus pedidos y estado de entrega</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pedidos -->
+    <section class="container orders-container">
+      <div class="orders-header">
+        <h2>Mis pedidos</h2>
+        <span id="ordersCount" class="muted"></span>
+      </div>
+
+      <div id="ordersBox">
+        <div class="orders-list" id="ordersList">
+          <!-- Cabecera -->
+          <div class="order-row order-head">
+            <div># Pedido</div>
+            <div>Fecha</div>
+            <div>Total</div>
+            <div>Estado</div>
+            <div>Acciones</div>
+          </div>
+          <!-- Filas por JS -->
+        </div>
+
+        <!-- Vacío -->
+        <div id="ordersEmpty" class="empty-box" style="display:none;">
+          <p>No tienes pedidos todavía.</p>
+          <a class="btn" href="/src/productos.html">Explorar productos</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Chatbot Aurora -->
+  <link rel="stylesheet" href="/Public/css/chatbot.css">
+  <div class="chatbot-container">
+    <button class="chatbot-btn" id="openChat">
+      <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" alt="Aurora" />
+    </button>
+    <div class="chat-window" id="chatWindow">
+      <div class="chat-header">
+        <h3>Asistente Aurora</h3>
+        <span id="closeChat">&times;</span>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="bot-message">
+          <p>👋 ¡Hola! Soy Aurora. ¿En qué te puedo ayudar hoy?</p>
+        </div>
+      </div>
+      <div class="chat-footer">
+        <input type="text" id="userInput" placeholder="Escribe tu mensaje..." />
+        <button id="sendBtn">Enviar</button>
+      </div>
+    </div>
+  </div>
+  <script src="/Public/js/chatbot.js"></script>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <nav class="footer-top">
+        <ul class="footer-menu">
+          <li><a href="./sobre_nosotros.html">Sobre Nosotros</a></li>
+          <li><a href="./envios.html">Envíos</a></li>
+          <li><a href="./cambios_devoluciones.html">Cambios y Devoluciones</a></li>
+          <li><a href="./contacto.html">Contacto</a></li>
+          <li><a href="./sucursales.html">Sucursales</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="container">
+      <div class="footer-bottom">
+        <p>© 2025, Aurora-chile · Moda y Belleza</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="/Public/js/perfil.js"></script>
+  <script type="module" src="/Public/js/colores.js"></script>
+</body>
+</html>
