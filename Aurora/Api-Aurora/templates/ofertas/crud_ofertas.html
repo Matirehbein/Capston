@@ -110,10 +110,12 @@
                     <td>{{ o.fecha_inicio.strftime('%Y-%m-%d') }}</td>
                     <td>{{ o.fecha_fin.strftime('%Y-%m-%d') }}</td>
                     <td>
-                        {% if o.fecha_fin < now().date() %}
-                            <span class="badge bg-secondary">Finalizada</span>
+                        {% if o.fecha_inicio > now().date() %}
+                          <span class="badge bg-warning text-dark">En espera</span>
+                        {% elif o.fecha_fin < now().date() %}
+                          <span class="badge bg-secondary">Finalizada</span>
                         {% else %}
-                            <span class="badge bg-success">Vigente</span>
+                          <span class="badge bg-success">Vigente</span>
                         {% endif %}
                     </td>
                     <td>

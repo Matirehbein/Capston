@@ -812,6 +812,8 @@ def crud_ofertas():
 # Agregar OFERTAS 
 # ===========================
 
+from datetime import date
+
 @app.route("/ofertas/add", methods=["POST"])
 @login_required
 def add_oferta():
@@ -819,6 +821,15 @@ def add_oferta():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Obtener fechas desde el formulario
+        fecha_inicio = data.get("fecha_inicio")
+        fecha_fin = data.get("fecha_fin")
+
+        # Calcular si la oferta está vigente actualmente
+        hoy = date.today()
+        vigente = fecha_inicio <= str(hoy) <= fecha_fin
+
+        # Insertar la nueva oferta
         cur.execute("""
             INSERT INTO oferta (titulo, descripcion, descuento_pct, fecha_inicio, fecha_fin, vigente_bool)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -827,32 +838,36 @@ def add_oferta():
             data.get("titulo"),
             data.get("descripcion"),
             data.get("descuento_pct"),
-            data.get("fecha_inicio"),
-            data.get("fecha_fin"),
-            data.get("vigente_bool") == "on"
+            fecha_inicio,
+            fecha_fin,
+            vigente
         ))
         id_oferta = cur.fetchone()[0]
 
-        # Producto seleccionado
+        # Asociar producto a la oferta
         id_producto = data.get("productos")
         if id_producto and id_producto.strip() != "":
             id_producto = int(id_producto)
             cur.execute("""
-                        INSERT INTO oferta_producto (id_oferta, id_producto)
-                        VALUES (%s, %s);
+                INSERT INTO oferta_producto (id_oferta, id_producto)
+                VALUES (%s, %s);
             """, (id_oferta, id_producto))
         else:
             raise ValueError("Debes seleccionar un producto para la oferta")
 
         conn.commit()
-        flash("Oferta agregada correctamente", "success")
+        flash("✅ Oferta agregada correctamente", "success")
+
     except Exception as e:
         conn.rollback()
-        flash(f"Error al agregar la oferta: {str(e)}", "danger")
+        flash(f"⚠️ Error al agregar la oferta: {str(e)}", "danger")
+
     finally:
         cur.close()
         conn.close()
+
     return redirect(url_for("crud_ofertas"))
+
 
 
 # ===========================
