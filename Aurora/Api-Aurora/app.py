@@ -1157,7 +1157,7 @@ def register():
         "telefono": request.form.get("telefono"),
     }
 
-    # Validaciones extra
+    # Validaciones
     if data["email_usuario"].lower() != (data["email_confirm"] or "").lower():
         return redirect(url_for("login") + "?error=email_mismatch&tab=register&src=register")
 
@@ -1168,9 +1168,10 @@ def register():
     if not ok:
         return redirect(url_for("login") + f"?error=weak_password&tab=register&src=register&msg={msg}")
 
-    ok, msg = do_register(data)
+    # Crear usuario y loguearlo automáticamente
+    ok, result = do_register(data)
     if not ok:
-        error_code = "email" if (msg and "correo" in msg.lower()) else "unknown"
+        error_code = "email" if (result and "correo" in result.lower()) else "unknown"
         return redirect(url_for("login") + f"?error={error_code}&tab=register&src=register")
 
     return redirect(FRONTEND_MAIN_URL)
@@ -1222,6 +1223,15 @@ def check_email():
     finally:
         if conn:
             conn.close()
+
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (nombre, apellido_paterno, apellido_materno, email, telefono, hashed_password))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return redirect(url_for("crud_usuarios"))
 
 
 
