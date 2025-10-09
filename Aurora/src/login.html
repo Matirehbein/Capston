@@ -33,7 +33,11 @@
       <input type="text" name="nombre_usuario" placeholder="Nombre" required>
       <input type="text" name="apellido_paterno" placeholder="Apellido Paterno" required>
       <input type="text" name="apellido_materno" placeholder="Apellido Materno" required>
-      <input type="email" name="email_usuario" placeholder="Correo Electrónico" required>
+      <input type="email" name="email_usuario" id="register-email" placeholder="Correo Electrónico" required>
+      <div id="email-exists-error" class="error-msg" style="color:red; font-size:0.85em; display:none;">
+        Este correo ya está en uso.
+      </div>
+
       <input type="email" name="email_confirm" placeholder="Confirmar Correo Electrónico" required>
 
       <input type="text" name="calle" placeholder="Calle">
@@ -325,6 +329,22 @@ document.getElementById("ciudad").addEventListener("change", e => {
     });
   }
 });
+
+document.getElementById("register").addEventListener("submit", function(e) {
+  const password = this.password.value;
+  const passwordConfirm = this.password_confirm.value;
+
+  if (password !== passwordConfirm) {
+    e.preventDefault(); // Detiene el envío del formulario
+    alert("Las contraseñas deben coincidir.");
+    this.password.focus();
+    return false;
+  }
+});
+
 </script>
+
+
+
 </body>
 </html>
