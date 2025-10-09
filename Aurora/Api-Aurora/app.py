@@ -1632,7 +1632,7 @@ def api_list_ofertas_public():
         SELECT o.id_oferta, o.titulo, o.descripcion, o.descuento_pct, 
                o.fecha_inicio, o.fecha_fin
         FROM oferta o
-        WHERE o.vigente_bool = FALSE
+        WHERE o.vigente_bool = TRUE
         AND CURRENT_DATE BETWEEN o.fecha_inicio AND o.fecha_fin
         ORDER BY o.fecha_inicio DESC;
     """)
