@@ -1640,29 +1640,28 @@ def api_list_ofertas_public():
     Devuelve las ofertas vigentes con su información básica y productos asociados.
     """
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur_ofertas = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur_productos = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    # Filtrar ofertas vigentes por fecha y campo booleano
-    cur.execute("""
+    cur_ofertas.execute("""
         SELECT o.id_oferta, o.titulo, o.descripcion, o.descuento_pct, 
                o.fecha_inicio, o.fecha_fin
         FROM oferta o
-        WHERE o.vigente_bool = TRUE
+        WHERE o.vigente_bool = FALSE
         AND CURRENT_DATE BETWEEN o.fecha_inicio AND o.fecha_fin
         ORDER BY o.fecha_inicio DESC;
     """)
-    ofertas = cur.fetchall()
+    ofertas = cur_ofertas.fetchall()
 
     data = []
     for o in ofertas:
-        # Buscar productos asociados
-        cur.execute("""
+        cur_productos.execute("""
             SELECT p.id_producto, p.nombre_producto, p.precio_producto, p.imagen_url, p.sku
             FROM producto p
             INNER JOIN oferta_producto op ON op.id_producto = p.id_producto
             WHERE op.id_oferta = %s
         """, (o["id_oferta"],))
-        productos = cur.fetchall()
+        productos = cur_productos.fetchall()
 
         data.append({
             "id_oferta": o["id_oferta"],
@@ -1674,7 +1673,8 @@ def api_list_ofertas_public():
             "productos": [dict(p) for p in productos]
         })
 
-    cur.close()
+    cur_productos.close()
+    cur_ofertas.close()
     conn.close()
     return jsonify(data), 200
 
