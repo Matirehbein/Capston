@@ -1,0 +1,139 @@
+/* ====== Cuenta: mini menú ====== */
+.account-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.account-btn {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.account-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 190px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+  padding: 6px;
+  display: none;
+  z-index: 50;
+}
+
+.account-menu.show { display: block; }
+
+.account-menu a,
+.account-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  color: #111827;
+}
+
+.account-menu a:hover,
+.account-menu button:hover {
+  background: #f3f4f6;
+}
+
+.muted { color: #6b7280; }
+
+/* ====== Pedidos ====== */
+.orders-container {
+  margin: 40px auto;
+  max-width: 1000px;
+}
+
+.orders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.orders-list {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.order-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 120px 140px 120px; /* #, fecha, total, estado, acciones */
+  gap: 12px;
+  padding: 14px 16px;
+  align-items: center;
+}
+
+.order-row:nth-child(odd) { background: #fafafa; }
+
+.order-head {
+  font-weight: 600;
+  background: #f3f4f6;
+}
+
+/* Badges de estado */
+.badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .85rem;
+  display: inline-block;
+  line-height: 1;
+  border: 1px solid transparent;
+}
+
+.badge.pendiente  { background:#fff7ed; color:#c2410c; border-color:#fdba74; }
+.badge.procesando { background:#eff6ff; color:#1d4ed8; border-color:#93c5fd; }
+.badge.enviado    { background:#ecfeff; color:#0891b2; border-color:#67e8f9; }
+.badge.entregado  { background:#ecfdf5; color:#059669; border-color:#6ee7b7; }
+
+/* Carcasa vacío */
+.empty-box {
+  text-align: center;
+  padding: 32px;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+}
+
+/* ====== Responsivo ====== */
+@media (max-width: 900px) {
+  .order-row {
+    grid-template-columns: 110px 1fr 110px 120px 100px;
+  }
+}
+
+@media (max-width: 680px) {
+  .orders-container { margin: 24px auto; }
+  .order-head { display: none; }
+
+  .orders-list { border: none; }
+  .order-row {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+  }
+
+  .order-row > div:nth-child(1)::before { content: "# Pedido"; display:block; color:#6b7280; font-size:.85rem; }
+  .order-row > div:nth-child(2)::before { content: "Fecha"; display:block; color:#6b7280; font-size:.85rem; }
+  .order-row > div:nth-child(3)::before { content: "Total"; display:block; color:#6b7280; font-size:.85rem; }
+  .order-row > div:nth-child(4)::before { content: "Estado"; display:block; color:#6b7280; font-size:.85rem; }
+  .order-row > div:nth-child(5)::before { content: "Acciones"; display:block; color:#6b7280; font-size:.85rem; }
+}
+.hero {
+  height: 300px; /* ajusta el tamaño a tu gusto (ej. 250px, 400px...) */
+  background-size: cover;      /* asegura que se vea bien */
+  background-position: center; /* centra la imagen */
+}

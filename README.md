@@ -79,6 +79,7 @@ pip install flask-cors
 
 proyecto node:  npm init -y
 dependencias:   npm i express dotenv cors transbank-sdk
+Iniciar servicio: node server.js
 tarjeta: 4051885600446623   
 cvc:  123
 
