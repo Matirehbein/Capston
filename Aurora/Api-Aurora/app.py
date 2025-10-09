@@ -1177,7 +1177,6 @@ def register():
     # Sesión ya creada en do_register, redirige al frontend
     return redirect(FRONTEND_MAIN_URL)
 
-
 # ===========================
 # Validar Email en registro
 # ===========================
@@ -1237,7 +1236,6 @@ def check_email():
     conn.close()
 
     return redirect(url_for("crud_usuarios"))
-
 
 
 @app.route("/logout")
