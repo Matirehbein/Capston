@@ -30,6 +30,7 @@
         <li><a href="{{ url_for('crud_sucursales') }}">CRUD Sucursales</a></li>
         <li><a href="{{ url_for('crud_productos') }}">CRUD Productos</a></li>
         <li><a href="{{ url_for('crud_usuarios') }}">CRUD Usuarios</a></li>
+        <li><a href="{{ url_for('crud_ofertas') }}">CRUD Ofertas</a></li>
 
         <li><a href="#">Reportes</a></li>
         <li><a href="#">Configuración</a></li>
@@ -44,15 +45,16 @@
     <h1 class="mb-4">{% block page_title %}Página{% endblock %}</h1>
 
     <!-- Mensajes Flash -->
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <div class="alert alert-success">
-            {% for message in messages %}
-                {{ message }}<br>
-            {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} mt-3" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
 
     <!-- Contenido específico de cada página -->
     {% block content %}{% endblock %}
