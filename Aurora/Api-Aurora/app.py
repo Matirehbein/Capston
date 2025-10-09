@@ -1634,49 +1634,55 @@ def api_bulk_delete_productos_public():
         cur.close()
         conn.close()
 
+
 @app.route("/api/ofertas_public", methods=["GET"])
 def api_list_ofertas_public():
     """
-    Devuelve las ofertas vigentes con su información básica y productos asociados.
+    Devuelve todas las ofertas vigentes con su información y sus productos.
     """
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        conn = get_db_connection()
 
-    # Filtrar ofertas vigentes por fecha y campo booleano
-    cur.execute("""
-        SELECT o.id_oferta, o.titulo, o.descripcion, o.descuento_pct, 
-               o.fecha_inicio, o.fecha_fin
-        FROM oferta o
-        WHERE o.vigente_bool = TRUE
-        AND CURRENT_DATE BETWEEN o.fecha_inicio AND o.fecha_fin
-        ORDER BY o.fecha_inicio DESC;
-    """)
-    ofertas = cur.fetchall()
+        # Cursor 1: obtener todas las ofertas vigentes
+        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur_ofertas:
+            cur_ofertas.execute("""
+                SELECT id_oferta, titulo, descripcion, descuento_pct, 
+                       fecha_inicio, fecha_fin
+                FROM oferta
+                WHERE vigente_bool = TRUE
+                  AND CURRENT_DATE BETWEEN fecha_inicio AND fecha_fin
+                ORDER BY fecha_inicio DESC;
+            """)
+            ofertas = cur_ofertas.fetchall()
 
-    data = []
-    for o in ofertas:
-        # Buscar productos asociados
-        cur.execute("""
-            SELECT p.id_producto, p.nombre_producto, p.precio_producto, p.imagen_url, p.sku
-            FROM producto p
-            INNER JOIN oferta_producto op ON op.id_producto = p.id_producto
-            WHERE op.id_oferta = %s
-        """, (o["id_oferta"],))
-        productos = cur.fetchall()
+        # Cursor 2: para obtener los productos por oferta
+        data = []
+        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur_prod:
+            for o in ofertas:
+                cur_prod.execute("""
+                    SELECT p.id_producto, p.nombre_producto, p.precio_producto, p.imagen_url, p.sku
+                    FROM producto p
+                    INNER JOIN oferta_producto op ON op.id_producto = p.id_producto
+                    WHERE op.id_oferta = %s;
+                """, (o["id_oferta"],))
+                productos = cur_prod.fetchall()
 
-        data.append({
-            "id_oferta": o["id_oferta"],
-            "titulo": o["titulo"],
-            "descripcion": o["descripcion"],
-            "descuento_pct": float(o["descuento_pct"]),
-            "fecha_inicio": o["fecha_inicio"].isoformat(),
-            "fecha_fin": o["fecha_fin"].isoformat(),
-            "productos": [dict(p) for p in productos]
-        })
+                data.append({
+                    "id_oferta": o["id_oferta"],
+                    "titulo": o["titulo"],
+                    "descripcion": o["descripcion"],
+                    "descuento_pct": float(o["descuento_pct"]),
+                    "fecha_inicio": o["fecha_inicio"].isoformat(),
+                    "fecha_fin": o["fecha_fin"].isoformat(),
+                    "productos": [dict(p) for p in productos]
+                })
 
-    cur.close()
-    conn.close()
-    return jsonify(data), 200
+        conn.close()
+        return jsonify(data), 200
+
+    except Exception as e:
+        print(f"❌ Error en /api/ofertas_public: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # ===========================
 # RUN
