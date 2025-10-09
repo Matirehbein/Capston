@@ -10,6 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 import json
 
+
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
@@ -145,25 +146,11 @@ def crud_productos():
 
 
 # ---------------------------
-# CRUD Sucursales
-# ---------------------------
-
-@app.route('/sucursales')
-def crud_sucursales():
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
-    # Sucursales
-    cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
-    sucursales = cur.fetchall()
-
-    cur.close()
-    conn.close()
-    return render_template("sucursales/crud_sucursales.html", sucursales=sucursales)
-
-
-# ---------------------------
 # Rutas de Productos
+# ---------------------------
+
+# ---------------------------
+# Agregar Productos
 # ---------------------------
 
 @app.route("/add", methods=["POST"])
@@ -177,6 +164,18 @@ def add_producto():
 
     conn = get_db_connection()
     cur = conn.cursor()
+
+# Validar que el SKU no exista
+    cur.execute("SELECT id_producto FROM producto WHERE sku = %s", (sku,))
+    existing = cur.fetchone()
+    if existing:
+        flash(f"Error: El SKU '{sku}' ya está registrado en otro producto.", "danger")
+        cur.close()
+        conn.close()
+        return redirect(url_for("crud_productos"))
+
+
+    #Insertar Productos
     cur.execute("""
         INSERT INTO producto (sku, nombre_producto, precio_producto, descripcion_producto, categoria_producto, imagen_url)
         VALUES (%s, %s, %s, %s, %s, %s)
@@ -186,6 +185,10 @@ def add_producto():
     conn.close()
     flash("Producto agregado con éxito")
     return redirect(url_for("crud_productos"))
+
+# ---------------------------
+# Editar Productos
+# ---------------------------
 
 @app.route("/edit/<int:id>", methods=["POST"])
 def edit_producto(id):
@@ -198,6 +201,18 @@ def edit_producto(id):
 
     conn = get_db_connection()
     cur = conn.cursor()
+
+    # Validar SKU único (excluyendo el producto actual)
+    cur.execute("SELECT id_producto FROM producto WHERE sku = %s AND id_producto != %s", (sku, id))
+    existing = cur.fetchone()
+    if existing:
+        flash(f"Error: El SKU '{sku}' ya está registrado en otro producto.", "danger")
+        cur.close()
+        conn.close()
+        return redirect(url_for("crud_productos"))
+
+
+    # UPDATE de Actualizar Producto
     cur.execute("""
         UPDATE producto
         SET sku = %s, nombre_producto = %s, precio_producto = %s,
@@ -210,16 +225,9 @@ def edit_producto(id):
     flash("Producto actualizado")
     return redirect(url_for("crud_productos"))
 
-@app.route("/delete/<int:id>", methods=["POST"])
-def delete_producto(id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM producto WHERE id_producto = %s", (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    flash("Producto eliminado")
-    return redirect(url_for("crud_productos"))
+# ---------------------------
+# Editar Stock de Productos
+# ---------------------------
 
 @app.route("/edit_stock/<int:id>", methods=["POST"])
 def edit_stock(id):
@@ -250,6 +258,21 @@ def edit_stock(id):
     cur.close()
     conn.close()
     flash("Stock actualizado")
+    return redirect(url_for("crud_productos"))
+
+# ---------------------------
+# Eliminar Productos
+# ---------------------------
+
+@app.route("/delete/<int:id>", methods=["POST"])
+def delete_producto(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM producto WHERE id_producto = %s", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Producto eliminado")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -382,9 +405,33 @@ def update_stock_sucursal(id_producto, id_sucursal):
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 
+# ---------------------------
+# CRUD Sucursales
+# ---------------------------
+
+
+@app.route('/sucursales')
+def crud_sucursales():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    # Sucursales
+    cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
+    sucursales = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    return render_template("sucursales/crud_sucursales.html", sucursales=sucursales)
 
 # ---------------------------
 # Rutas de Sucursales
+# ---------------------------
+
+
+
+
+# ---------------------------
+# Agregar Sucursales
 # ---------------------------
 
 @app.route("/add_sucursal", methods=["POST"])
@@ -411,6 +458,10 @@ def add_sucursal():
     flash("Sucursal agregada con éxito")
     return redirect(url_for("crud_sucursales"))
 
+# ---------------------------
+# Editar Sucursales
+# ---------------------------
+
 @app.route("/editar_sucursal/<int:id_sucursal>", methods=["POST"])
 def editar_sucursal(id_sucursal):
     nombre = request.form["nombre_sucursal"]
@@ -436,6 +487,10 @@ def editar_sucursal(id_sucursal):
     conn.close()
     flash("Sucursal actualizada con éxito")
     return redirect(url_for("crud_sucursales"))
+
+# ---------------------------
+# Eliminar Sucursales
+# ---------------------------
 
 @app.route("/eliminar_sucursal/<int:id_sucursal>", methods=["POST"])
 def eliminar_sucursal(id_sucursal):
@@ -513,14 +568,41 @@ def crud_usuarios():
     conn.close()
     return render_template("usuarios/crud_usuarios.html", usuarios=usuarios)
 
+# ===========================
+# Agregar USUARIOS
+# ===========================
+
 
 @app.route("/usuarios/add", methods=["POST"])
 @login_required
 def add_usuario():
     data = request.form
+    telefono = data.get("telefono")  # <-- Definición de la variable teléfono aquí
+    email_usuario = data.get("email_usuario")  # <-- Definición de la variable email para "email_usuario" aquí
     password_hash = generate_password_hash(data["password"])
     conn = get_db_connection()
     cur = conn.cursor()
+
+    # Validar correo electrónico duplicado
+    cur.execute("SELECT id_usuario FROM usuario WHERE email_usuario = %s", (email_usuario,))
+    existing_email = cur.fetchone()
+    if existing_email:
+        flash(f"Error: El correo '{email_usuario}' ya está registrado en otro usuario.", "danger")
+        cur.close()
+        conn.close()
+        return redirect(url_for("crud_usuarios"))
+
+
+    # Validar que el teléfono no exista
+    cur.execute("SELECT id_usuario FROM usuario WHERE telefono = %s", (telefono, )) 
+    existing = cur.fetchone()
+    if existing:
+        flash(f"Error: El teléfono '{telefono}' ya está registrado en otro usuario.", "danger")
+        cur.close()
+        conn.close()
+        return redirect(url_for("crud_usuarios"))
+
+    # Insertar Usuario
     try:
         cur.execute("""
             INSERT INTO usuario (nombre_usuario, apellido_paterno, apellido_materno, rol_usuario, email_usuario, password, calle, numero_calle, region, ciudad, comuna, telefono)
@@ -549,13 +631,38 @@ def add_usuario():
         conn.close()
     return redirect(url_for("crud_usuarios"))
 
+# ===========================
+# Editar USUARIOS
+# ===========================
+
 
 @app.route("/usuarios/edit/<int:id_usuario>", methods=["POST"])
 @login_required
 def edit_usuario(id_usuario):
     data = request.form
+    telefono = data.get("telefono")  # <-- definir aquí
+    email_usuario = data.get("email")  # <-- definir aquí
     conn = get_db_connection()
     cur = conn.cursor()
+
+    # 🔹 Validar correo electrónico duplicado (en otro usuario)
+    cur.execute("SELECT id_usuario FROM usuario WHERE email_usuario = %s AND id_usuario != %s", (email_usuario, id_usuario))
+    existing_email = cur.fetchone()
+    if existing_email:
+        flash(f"Error: El correo '{email_usuario}' ya está registrado en otro usuario.", "warning")
+        cur.close()
+        conn.close()
+        return redirect(url_for("crud_usuarios"))
+
+    # Validar que el teléfono no exista en otro usuario
+    cur.execute("SELECT id_usuario FROM usuario WHERE telefono = %s AND id_usuario != %s", (telefono, id_usuario))
+    existing = cur.fetchone()
+    if existing:
+        flash(f"Error: El teléfono '{telefono}' ya está registrado en otro usuario.", "warning")
+        cur.close()
+        conn.close()
+        return redirect(url_for("crud_usuarios"))
+
     try:
         # Solo actualizar password si no está vacío
         if data.get("password"):
@@ -610,6 +717,9 @@ def edit_usuario(id_usuario):
         conn.close()
     return redirect(url_for("crud_usuarios"))
 
+# ===========================
+# Eliminar USUARIOS
+# ===========================
 
 @app.route("/usuarios/delete/<int:id_usuario>", methods=["POST"])
 @login_required
@@ -629,6 +739,10 @@ def delete_usuario(id_usuario):
     return redirect(url_for("crud_usuarios"))
 
 
+# ===========================
+# CRUD USUARIOS: Listado de Usuarios
+# ===========================
+
 @app.route("/usuarios/view/<int:id_usuario>")
 @login_required
 def view_usuario(id_usuario):
@@ -641,6 +755,231 @@ def view_usuario(id_usuario):
     cur.close()
     conn.close()
     return render_template("usuarios/view_usuario.html", usuario=usuario)
+
+
+
+# ===========================
+# CRUD OFERTAS 
+# ===========================
+
+@app.route('/ofertas')
+def crud_ofertas():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    # Productos (para el formulario)
+    cur.execute("""
+        SELECT p.id_producto, p.nombre_producto, p.imagen_url, COALESCE(SUM(i.stock), 0) AS stock
+        FROM producto p
+        LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
+        LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
+        GROUP BY p.id_producto, p.nombre_producto, p.imagen_url
+        ORDER BY p.nombre_producto;
+    """)
+    productos = cur.fetchall()
+
+    # Ofertas (para el listado)
+    cur.execute("""
+        SELECT o.id_oferta,
+                o.titulo,
+                o.descripcion, 
+                o.descuento_pct,
+               o.fecha_inicio, 
+                o.fecha_fin, 
+                o.vigente_bool,
+               p.id_producto, 
+                p.nombre_producto,
+                p.imagen_url, 
+                p.precio_producto
+        FROM oferta o
+        JOIN oferta_producto op ON o.id_oferta = op.id_oferta
+        JOIN producto p ON op.id_producto = p.id_producto
+        ORDER BY o.id_oferta DESC;
+    """)
+    ofertas = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    from datetime import datetime
+    return render_template(
+        "ofertas/crud_ofertas.html",
+        ofertas=ofertas,
+        productos=productos,
+        now=datetime.now,
+    )
+
+
+# ===========================
+# Agregar OFERTAS 
+# ===========================
+
+@app.route("/ofertas/add", methods=["POST"])
+@login_required
+def add_oferta():
+    data = request.form
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO oferta (titulo, descripcion, descuento_pct, fecha_inicio, fecha_fin, vigente_bool)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id_oferta;
+        """, (
+            data.get("titulo"),
+            data.get("descripcion"),
+            data.get("descuento_pct"),
+            data.get("fecha_inicio"),
+            data.get("fecha_fin"),
+            data.get("vigente_bool") == "on"
+        ))
+        id_oferta = cur.fetchone()[0]
+
+        # Producto seleccionado
+        id_producto = data.get("productos")
+        if id_producto and id_producto.strip() != "":
+            id_producto = int(id_producto)
+            cur.execute("""
+                        INSERT INTO oferta_producto (id_oferta, id_producto)
+                        VALUES (%s, %s);
+            """, (id_oferta, id_producto))
+        else:
+            raise ValueError("Debes seleccionar un producto para la oferta")
+
+        conn.commit()
+        flash("Oferta agregada correctamente", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error al agregar la oferta: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+    return redirect(url_for("crud_ofertas"))
+
+
+# ===========================
+# Editar OFERTAS 
+# ===========================
+
+@app.route("/ofertas/edit/<int:id_oferta>", methods=["GET", "POST"])
+@login_required
+def edit_oferta(id_oferta):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    if request.method == "POST":
+        data = request.form
+        try:
+            cur.execute("""
+                UPDATE oferta
+                SET titulo=%s, descripcion=%s, descuento_pct=%s, 
+                    fecha_inicio=%s, fecha_fin=%s, vigente_bool=%s
+                WHERE id_oferta=%s;
+            """, (
+                data.get("titulo"),
+                data.get("descripcion"),
+                data.get("descuento_pct"),
+                data.get("fecha_inicio"),
+                data.get("fecha_fin"),
+                data.get("vigente_bool") == "on",
+                id_oferta
+            ))
+
+            # Actualizar productos asociados
+            cur.execute("DELETE FROM oferta_producto WHERE id_oferta=%s;", (id_oferta,))
+            productos = data.getlist("productos")
+            for id_producto in productos:
+                cur.execute("""
+                    INSERT INTO oferta_producto (id_oferta, id_producto)
+                    VALUES (%s, %s);
+                """, (id_oferta, id_producto))
+
+            conn.commit()
+            flash("✅ Oferta actualizada correctamente", "success")
+        except Exception as e:
+            conn.rollback()
+            flash(f"⚠️ Error al actualizar la oferta: {str(e)}", "danger")
+        finally:
+            cur.close()
+            conn.close()
+        return redirect(url_for("crud_ofertas"))
+    else:
+        cur.execute("SELECT * FROM oferta WHERE id_oferta=%s;", (id_oferta,))
+        oferta = cur.fetchone()
+
+        cur.execute("SELECT id_producto FROM oferta_producto WHERE id_oferta=%s;", (id_oferta,))
+        productos_asociados = [row[0] for row in cur.fetchall()]
+
+        cur.execute("""
+            SELECT p.id_producto, p.nombre_producto, COALESCE(SUM(i.stock), 0) AS stock
+            FROM producto p
+            LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
+            LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
+            GROUP BY p.id_producto, p.nombre_producto
+            ORDER BY p.nombre_producto;
+        """)
+        productos = cur.fetchall()
+
+        cur.close()
+        conn.close()
+        return render_template("ofertas/edit_oferta.html",
+                               oferta=oferta,
+                               productos=productos)
+
+
+# ===========================
+# Eliminar OFERTAS 
+# ===========================
+
+@app.route("/ofertas/delete/<int:id_oferta>", methods=["POST"])
+@login_required
+def delete_oferta(id_oferta):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM oferta_producto WHERE id_oferta=%s;", (id_oferta,))
+        cur.execute("DELETE FROM oferta WHERE id_oferta=%s;", (id_oferta,))
+        conn.commit()
+        flash("✅ Oferta eliminada correctamente", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"⚠️ Error al eliminar la oferta: {str(e)}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+    return redirect(url_for("crud_ofertas"))
+
+
+# ===========================
+# CRUD OFERTAS: Listado de Ofertas
+# ===========================
+
+@app.route("/ofertas/view/<int:id_oferta>")
+@login_required
+def view_oferta(id_oferta):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur.execute("""
+        SELECT 
+            o.id_oferta, 
+            o.titulo, 
+            o.descripcion, 
+            o.descuento_pct, 
+            o.fecha_inicio, 
+            o.fecha_fin, 
+            o.vigente_bool,
+            STRING_AGG(op.id_producto::TEXT, ', ') AS productos_asociados
+        FROM oferta o
+        LEFT JOIN oferta_producto op ON o.id_oferta = op.id_oferta
+        WHERE o.id_oferta = %s
+        GROUP BY o.id_oferta;
+    """, (id_oferta,))
+    oferta = cur.fetchone()
+    cur.close()
+    conn.close()
+    return render_template("ofertas/crud_ofertas.html", ofertas=ofertas, productos=producto, now=datetime.now)
+
+
 
 
 # ===========================
@@ -818,24 +1157,25 @@ def register():
         "telefono": request.form.get("telefono"),
     }
 
-    # Validaciones extra
+    # Validaciones
     if data["email_usuario"].lower() != (data["email_confirm"] or "").lower():
         return redirect(url_for("login") + "?error=email_mismatch&tab=register&src=register")
-
     if data["password"] != data["password_confirm"]:
         return redirect(url_for("login") + "?error=password_mismatch&tab=register&src=register")
 
+    # Validar fuerza de password
     ok, msg = validar_password(data["password"])
     if not ok:
         return redirect(url_for("login") + f"?error=weak_password&tab=register&src=register&msg={msg}")
 
-    ok, msg = do_register(data)
+    # Crear usuario y loguearlo automáticamente
+    ok, result = do_register(data)
     if not ok:
-        error_code = "email" if (msg and "correo" in msg.lower()) else "unknown"
+        error_code = "email" if (result and "correo" in result.lower()) else "unknown"
         return redirect(url_for("login") + f"?error={error_code}&tab=register&src=register")
 
+    # Sesión ya creada en do_register, redirige al frontend
     return redirect(FRONTEND_MAIN_URL)
-
 
 # ===========================
 # Validar Email en registro
@@ -884,6 +1224,18 @@ def check_email():
         if conn:
             conn.close()
 
+# Insertar usuario en DB
+    hashed_password = generate_password_hash(password)
+    cur.execute("""
+        INSERT INTO usuarios (nombre_usuario, apellido_paterno, apellido_materno, email_usuario, telefono, password)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (nombre, apellido_paterno, apellido_materno, email, telefono, hashed_password))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return redirect(url_for("crud_usuarios"))
 
 
 @app.route("/logout")
