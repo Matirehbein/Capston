@@ -183,7 +183,7 @@ def add_producto():
     conn.commit()
     cur.close()
     conn.close()
-    flash("Producto agregado con éxito")
+    flash("Producto agregado con éxito", "success")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -222,7 +222,7 @@ def edit_producto(id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Producto actualizado")
+    flash("Producto actualizado", "success")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -257,7 +257,7 @@ def edit_stock(id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Stock actualizado")
+    flash("Stock actualizado", "success")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -272,7 +272,7 @@ def delete_producto(id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Producto eliminado")
+    flash("Producto eliminado", "danger")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -401,7 +401,7 @@ def update_stock_sucursal(id_producto, id_sucursal):
     cur.close()
     conn.close()
 
-    flash("Stock actualizado en la sucursal")
+    flash("Stock actualizado en la sucursal", "success")
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 
@@ -426,9 +426,6 @@ def crud_sucursales():
 # ---------------------------
 # Rutas de Sucursales
 # ---------------------------
-
-
-
 
 # ---------------------------
 # Agregar Sucursales
@@ -455,7 +452,7 @@ def add_sucursal():
     conn.commit()
     cur.close()
     conn.close()
-    flash("Sucursal agregada con éxito")
+    flash("Sucursal agregada con éxito", "success")
     return redirect(url_for("crud_sucursales"))
 
 # ---------------------------
@@ -485,7 +482,7 @@ def editar_sucursal(id_sucursal):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Sucursal actualizada con éxito")
+    flash("Sucursal actualizada con éxito", "success")
     return redirect(url_for("crud_sucursales"))
 
 # ---------------------------
@@ -500,7 +497,7 @@ def eliminar_sucursal(id_sucursal):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Sucursal eliminada con éxito")
+    flash("Sucursal eliminada con éxito", "danger")
     return redirect(url_for("crud_sucursales"))
 
 # ===========================
