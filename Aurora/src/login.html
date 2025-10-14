@@ -12,10 +12,22 @@
     .strength-bar { height: 8px; width: 100%; background: #ddd; border-radius: 4px; margin-top: 5px; }
     .strength-fill { height: 100%; width: 0; border-radius: 4px; transition: width 0.3s; }
     .strength-text { font-size: 0.85em; margin-top: 3px; }
+    /* Estilo para el mensaje de error del servidor */
+    .server-error { 
+        padding: 10px; 
+        background-color: #fce4e4; 
+        border: 1px solid #fcc; 
+        color: #d32f2f; 
+        border-radius: 4px; 
+        margin-bottom: 10px;
+        font-size: 0.9em;
+        text-align: center;
+    }
   </style>
 </head>
 <body>
   <div class="box">
+    
     <div class="tabs">
       <button class="tab-btn active" onclick="openTab('login', this)">Login</button>
       <button class="tab-btn" onclick="openTab('register', this)">Registro</button>
@@ -30,18 +42,22 @@
 
     <!-- Formulario de Registro -->
     <form id="register" method="POST" action="http://127.0.0.1:5000/register">
+      <!-- Mensaje de error de registro (se muestra si viene de Flask) -->
+      <div id="register-server-error-container"></div>
+      
       <input type="text" name="nombre_usuario" placeholder="Nombre" required>
       <input type="text" name="apellido_paterno" placeholder="Apellido Paterno" required>
       <input type="text" name="apellido_materno" placeholder="Apellido Materno" required>
+      
+      <!-- Correo Electrónico Principal -->
       <input type="email" name="email_usuario" id="register-email" placeholder="Correo Electrónico" required>
-      <div id="email-exists-error" class="error-msg" style="color:red; font-size:0.85em; display:none;">
-        Este correo ya está en uso.
+      <div id="email-exists-error" class="error-msg" style="color:red; font-size:0.85em; display:none; min-height: 20px;">
+        ⚠️ Este correo ya está en uso.
       </div>
-
       <input type="email" name="email_confirm" placeholder="Confirmar Correo Electrónico" required>
-
       <input type="text" name="calle" placeholder="Calle">
       <input type="text" name="numero_calle" placeholder="Número de Calle">
+
 
       <!-- Región -->
       <select id="region" name="region" required>
@@ -76,7 +92,10 @@
         <option value="">Selecciona Comuna</option>
       </select>
 
-      <input type="text" name="telefono" placeholder="Número Telefónico">
+      <input type="text" name="telefono" id="register-telefono" placeholder="Número Telefónico" required>
+      <div id="telefono-exists-error" class="error-msg" style="color:red; font-size:0.85em; display:none; min-height: 20px;">
+        ⚠️ Este número telefónico ya está en uso.
+      </div>
 
       <!-- Contraseña -->
       <input type="password" id="password" name="password" placeholder="Contraseña" required>
@@ -90,8 +109,7 @@
       <div id="strength-text" class="strength-text">Débil</div>
 
       <input type="password" id="password_confirm" name="password_confirm" placeholder="Confirmar Contraseña" required>
-      <div id="password-error" style="color: red; font-size: 0.85em; margin-top: 5px;"></div>
-
+      <div id="password-error" style="color: red; font-size: 0.85em; margin-top: 5px; min-height: 20px;"></div>
 
       <button type="submit" name="registrar">Terminar Registro de Cuenta</button>
     </form>
@@ -101,7 +119,11 @@
     </div>
   </div>
 
+
 <script>
+// ==========================
+// UTILIDADES GENERALES
+// ==========================
 function openTab(tabId, clickedBtn) {
   document.querySelectorAll("form").forEach(f => f.classList.remove("active"));
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -122,11 +144,9 @@ const strengthText = document.getElementById("strength-text");
 const passInput = document.getElementById("password");
 const passConfirm = document.getElementById("password_confirm");
 const passError = document.getElementById("password-error");
-const registerFormPass = document.getElementById("register");
+const registerForm = document.getElementById("register"); // Usamos este para todos los listeners
 
-// ==========================
 // FUNCIÓN: Validar coincidencia de contraseñas
-// ==========================
 function validatePasswords() {
   if (passInput.value && passConfirm.value && passInput.value !== passConfirm.value) {
     passError.textContent = "⚠️ Las contraseñas no coinciden.";
@@ -142,9 +162,7 @@ function validatePasswords() {
 passInput.addEventListener("input", validatePasswords);
 passConfirm.addEventListener("input", validatePasswords);
 
-// ==========================
 // FUNCIÓN: Validar requisitos de contraseña en tiempo real
-// ==========================
 passwordInput.addEventListener("input", () => {
   const val = passwordInput.value;
   let score = 0;
@@ -179,130 +197,93 @@ passwordInput.addEventListener("input", () => {
 });
 
 // ==========================
-// FUNCIÓN: Validación completa al enviar formulario
-// ==========================
-registerFormPass.addEventListener("submit", (e) => {
-  const password = passInput.value;
-  const confirmPassword = passConfirm.value;
-
-  // Requisitos mínimos
-  const hasLength = password.length >= 6 && password.length <= 24;
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(password);
-
-  // 1.- Contraseñas coinciden
-  if (password !== confirmPassword) {
-    e.preventDefault();
-    passError.textContent = "⚠️ Las contraseñas no coinciden. Corrige antes de continuar.";
-    passConfirm.style.border = "2px solid red";
-    return;
-  }
-
-  // 2️.- Cumple los requisitos de seguridad
-  if (!hasLength || !hasUppercase || !hasNumber || !hasSpecial) {
-    e.preventDefault();
-    passError.textContent = "⚠️ La contraseña no cumple con los requisitos mínimos.";
-    passInput.style.border = "2px solid red";
-    return;
-  }
-
-  // Todo correcto
-  passError.textContent = "";
-  passInput.style.border = "";
-  passConfirm.style.border = "";
-});
-
-
-
-// ==========================
 // REGIÓN - CIUDAD - COMUNA
 // ==========================
 const ciudadesPorRegion = {
+  // ... (Tu objeto ciudadesPorRegion se mantiene igual)
   "Arica y Parinacota": {
-        "Arica": ["Arica Centro", "Azapa", "Chacalluta"],
-        "Putre": ["Putre Centro", "Quebrada de Acha", "Belén"],
-        "Camarones": ["Codpa", "Cuya", "Caleta Vítor"]
-    },
-    "Tarapacá": {
-        "Iquique": ["Alto Hospicio", "Iquique Centro", "Playa Brava"],
-        "Pozo Almonte": ["Pozo Almonte Urbano", "La Tirana", "Pampa del Tamarugal"],
-        "Pica": ["Matilla", "Llanos de Pica", "Valle de Quisma"]
-    },
-    "Antofagasta": {
-        "Antofagasta": ["Antofagasta Centro", "Sector Norte", "La Chimba"],
-        "Calama": ["Calama Central", "Oasis", "Chiu Chiu"],
-        "Tocopilla": ["Tocopilla Urbano", "Barriles", "María Elena"]
-    },
-    "Atacama": {
-        "Copiapó": ["Copiapó Centro", "Tierra Amarilla", "Paipote"],
-        "Vallenar": ["Vallenar Urbano", "Huasco", "Freirina"],
-        "Chañaral": ["Chañaral Central", "El Salado", "Diego de Almagro"]
-    },
-    "Coquimbo": {
-        "La Serena": ["La Serena Centro", "Las Compañías", "Coquimbo"],
-        "Ovalle": ["Ovalle Central", "Samo Alto", "Monte Patria"],
-        "Illapel": ["Illapel Urbano", "Los Vilos", "Salamanca"]
-    },
-    "Valparaíso": {
-        "Valparaíso": ["Playa Ancha", "Cerro Alegre", "Almendral"],
-        "Viña del Mar": ["Reñaca", "Centro", "Miraflores"],
-        "San Antonio": ["San Antonio Centro", "Cartagena", "Algarrobo"],
-    },
-    "Metropolitana": { 
-      "Santiago": ["Cerrillos", "Cerro Navia", "Conchalí", "El Bosque", "Estación Central", "Huechuraba",
-      "Independencia", "La Cisterna","La Florida","La Granja","La Pintana", "La Reina","Las Condes", "Lo Barnechea", "Lo Espejo",
-      "Lo Prado","Macul", "Maipú","Ñuñoa", "Pedro Aguirre Cerda","Peñalolén","Providencia","Pudahuel", "Quilicura", "Quinta Normal", "Recoleta", "Renca",
-      "San Joaquín", "San Miguel", "San Ramón", "Santiago", "Vitacura"],
+    "Arica": ["Arica Centro", "Azapa", "Chacalluta"],
+    "Putre": ["Putre Centro", "Quebrada de Acha", "Belén"],
+    "Camarones": ["Codpa", "Cuya", "Caleta Vítor"]
+  },
+  "Tarapacá": {
+    "Iquique": ["Alto Hospicio", "Iquique Centro", "Playa Brava"],
+    "Pozo Almonte": ["Pozo Almonte Urbano", "La Tirana", "Pampa del Tamarugal"],
+    "Pica": ["Matilla", "Llanos de Pica", "Valle de Quisma"]
+  },
+  "Antofagasta": {
+    "Antofagasta": ["Antofagasta Centro", "Sector Norte", "La Chimba"],
+    "Calama": ["Calama Central", "Oasis", "Chiu Chiu"],
+    "Tocopilla": ["Tocopilla Urbano", "Barriles", "María Elena"]
+  },
+  "Atacama": {
+    "Copiapó": ["Copiapó Centro", "Tierra Amarilla", "Paipote"],
+    "Vallenar": ["Vallenar Urbano", "Huasco", "Freirina"],
+    "Chañaral": ["Chañaral Central", "El Salado", "Diego de Almagro"]
+  },
+  "Coquimbo": {
+    "La Serena": ["La Serena Centro", "Las Compañías", "Coquimbo"],
+    "Ovalle": ["Ovalle Central", "Samo Alto", "Monte Patria"],
+    "Illapel": ["Illapel Urbano", "Los Vilos", "Salamanca"]
+  },
+  "Valparaíso": {
+    "Valparaíso": ["Playa Ancha", "Cerro Alegre", "Almendral"],
+    "Viña del Mar": ["Reñaca", "Centro", "Miraflores"],
+    "San Antonio": ["San Antonio Centro", "Cartagena", "Algarrobo"],
+  },
+  "Metropolitana": { 
+    "Santiago": ["Cerrillos", "Cerro Navia", "Conchalí", "El Bosque", "Estación Central", "Huechuraba",
+    "Independencia", "La Cisterna","La Florida","La Granja","La Pintana", "La Reina","Las Condes", "Lo Barnechea", "Lo Espejo",
+    "Lo Prado","Macul", "Maipú","Ñuñoa", "Pedro Aguirre Cerda","Peñalolén","Providencia","Pudahuel", "Quilicura", "Quinta Normal", "Recoleta", "Renca",
+    "San Joaquín", "San Miguel", "San Ramón", "Santiago", "Vitacura"],
     "Cordillera": ["Puente Alto", "San José de Maipo", "Pirque"]
   },
   "O'Higgins": {
-        "Rancagua": ["Rancagua Centro", "Machalí", "Graneros"],
-        "San Fernando": ["San Fernando Urbano", "Chimbarongo", "Peralillo"],
-        "Rengo": ["Rengo Centro", "Requínoa", "Malloa"]
-    },
-    "Maule": {
-        "Talca": ["Talca Centro", "Maule", "San Clemente"],
-        "Curicó": ["Curicó Urbano", "Molina", "Romeral"],
-        "Linares": ["Linares Central", "Parral", "San Javier"]
-    },
-    "Ñuble": {
-        "Chillán": ["Chillán Viejo", "San Carlos", "Quillón"],
-        "Bulnes": ["Bulnes Urbano", "San Ignacio", "El Carmen"],
-        "Yungay": ["Yungay Centro", "Pemuco", "Cabrero"]
-    },
-    "Biobío": {
-        "Concepción": ["Talcahuano", "San Pedro de la Paz", "Chiguayante"],
-        "Los Ángeles": ["Los Ángeles Centro", "Mulchén", "Nacimiento"],
-        "Arauco": ["Lebu", "Cañete", "Curanipe"]
-    },
-    "La Araucanía": {
-        "Temuco": ["Padre Las Casas", "Villarrica", "Pucón"],
-        "Angol": ["Angol Urbano", "Renaico", "Collipulli"],
-        "Lautaro": ["Lautaro Central", "Carahue", "Nueva Imperial"]
-    },
-    "Los Ríos": {
-        "Valdivia": ["Valdivia Centro", "Lanco", "Panguipulli"],
-        "La Unión": ["Río Bueno", "Futrono", "Lago Ranco"],
-        "Mariquina": ["San José de la Mariquina", "Máfil", "Corral"]
-    },
-    "Los Lagos": {
-        "Puerto Montt": ["Puerto Varas", "Frutillar", "Llanquihue"],
-        "Osorno": ["Osorno Urbano", "Río Negro", "Purranque"],
-        "Castro": ["Ancud", "Chonchi", "Quellón"]
-    },
-    "Aysén": {
-        "Coyhaique": ["Coyhaique Centro", "Puerto Aysén", "Puerto Cisnes"],
-        "Chile Chico": ["Chile Chico Urbano", "Cochrane", "Villa O'Higgins"],
-        "Melinka": ["Puerto Aguirre", "Puerto Chacabuco", "Lago Verde"]
-    },
-    "Magallanes y Antártica Chilena": {
-        "Punta Arenas": ["Punta Arenas Central", "Puerto Natales", "Porvenir"],
-        "Puerto Williams": ["Puerto Williams Centro", "Cabo de Hornos", "Timaukel"],
-        "Primavera": ["Cerro Sombrero", "Pampa Guanaco", "Bahía Inútil"]
-    }
-  // Agrega más...{
-  };
+    "Rancagua": ["Rancagua Centro", "Machalí", "Graneros"],
+    "San Fernando": ["San Fernando Urbano", "Chimbarongo", "Peralillo"],
+    "Rengo": ["Rengo Centro", "Requínoa", "Malloa"]
+  },
+  "Maule": {
+    "Talca": ["Talca Centro", "Maule", "San Clemente"],
+    "Curicó": ["Curicó Urbano", "Molina", "Romeral"],
+    "Linares": ["Linares Central", "Parral", "San Javier"]
+  },
+  "Ñuble": {
+    "Chillán": ["Chillán Viejo", "San Carlos", "Quillón"],
+    "Bulnes": ["Bulnes Urbano", "San Ignacio", "El Carmen"],
+    "Yungay": ["Yungay Centro", "Pemuco", "Cabrero"]
+  },
+  "Biobío": {
+    "Concepción": ["Talcahuano", "San Pedro de la Paz", "Chiguayante"],
+    "Los Ángeles": ["Los Ángeles Centro", "Mulchén", "Nacimiento"],
+    "Arauco": ["Lebu", "Cañete", "Curanipe"]
+  },
+  "La Araucanía": {
+    "Temuco": ["Padre Las Casas", "Villarrica", "Pucón"],
+    "Angol": ["Angol Urbano", "Renaico", "Collipulli"],
+    "Lautaro": ["Lautaro Central", "Carahue", "Nueva Imperial"]
+  },
+  "Los Ríos": {
+    "Valdivia": ["Valdivia Centro", "Lanco", "Panguipulli"],
+    "La Unión": ["Río Bueno", "Futrono", "Lago Ranco"],
+    "Mariquina": ["San José de la Mariquina", "Máfil", "Corral"]
+  },
+  "Los Lagos": {
+    "Puerto Montt": ["Puerto Varas", "Frutillar", "Llanquihue"],
+    "Osorno": ["Osorno Urbano", "Río Negro", "Purranque"],
+    "Castro": ["Ancud", "Chonchi", "Quellón"]
+  },
+  "Aysén": {
+    "Coyhaique": ["Coyhaique Centro", "Puerto Aysén", "Puerto Cisnes"],
+    "Chile Chico": ["Chile Chico Urbano", "Cochrane", "Villa O'Higgins"],
+    "Melinka": ["Puerto Aguirre", "Puerto Chacabuco", "Lago Verde"]
+  },
+  "Magallanes y Antártica Chilena": {
+    "Punta Arenas": ["Punta Arenas Central", "Puerto Natales", "Porvenir"],
+    "Puerto Williams": ["Puerto Williams Centro", "Cabo de Hornos", "Timaukel"],
+    "Primavera": ["Cerro Sombrero", "Pampa Guanaco", "Bahía Inútil"]
+  }
+};
 
 document.getElementById("region").addEventListener("change", e => {
   const region = e.target.value;
@@ -330,20 +311,163 @@ document.getElementById("ciudad").addEventListener("change", e => {
   }
 });
 
-document.getElementById("register").addEventListener("submit", function(e) {
-  const password = this.password.value;
-  const passwordConfirm = this.password_confirm.value;
 
-  if (password !== passwordConfirm) {
-    e.preventDefault(); // Detiene el envío del formulario
-    alert("Las contraseñas deben coincidir.");
-    this.password.focus();
-    return false;
+// ===================================================
+// LÓGICA DE VALIDACIÓN DE CORREO Y MANEJO DE ERRORES
+// ===================================================
+
+const emailInput = document.getElementById("register-email");
+const emailError = document.getElementById("email-exists-error");
+const registerErrorContainer = document.getElementById("register-server-error-container");
+
+// 1. VALIDAR SI EL CORREO YA EXISTE (Asíncrono al perder el foco)
+emailInput.addEventListener("blur", async () => {
+  const email = emailInput.value.trim();
+  if (!email) {
+    emailError.style.display = "none";
+    emailInput.style.border = "";
+    delete emailInput.dataset.invalid;
+    return;
+  }
+  
+  // Ocultamos el mensaje de error de servidor si el usuario está interactuando
+  if (registerErrorContainer.textContent.includes("correo")) {
+      registerErrorContainer.innerHTML = '';
+  }
+
+  try {
+    // Usamos el endpoint GET que definimos en Flask
+    const res = await fetch(`http://127.0.0.1:5000/check_email?email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+
+    if (data.exists) {
+      emailError.style.display = "block";
+      emailInput.style.border = "2px solid red";
+      emailInput.dataset.invalid = "true";
+    } else {
+      emailError.style.display = "none";
+      emailInput.style.border = "";
+      delete emailInput.dataset.invalid;
+    }
+  } catch (err) {
+    console.error("Error al verificar correo asíncrono:", err);
+    // Permitir el envío si hay error de red, la validación final la hará Flask
   }
 });
 
-</script>
+// 2. BLOQUEAR ENVÍO EN EL CLIENTE si la validación asíncrona falló.
+registerForm.addEventListener("submit", (e) => {
+  // Validar coincidencia y seguridad de contraseña (tu lógica existente)
+  const password = passInput.value;
+  const confirmPassword = passConfirm.value;
+  const hasLength = password.length >= 6 && password.length <= 24;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
 
+  if (password !== confirmPassword) {
+    e.preventDefault();
+    passError.textContent = "⚠️ Las contraseñas no coinciden. Corrige antes de continuar.";
+    passConfirm.style.border = "2px solid red";
+    return;
+  }
+
+  if (!hasLength || !hasUppercase || !hasNumber || !hasSpecial) {
+    e.preventDefault();
+    passError.textContent = "⚠️ La contraseña no cumple con los requisitos mínimos.";
+    passInput.style.border = "2px solid red";
+    return;
+  }
+  
+  // Validar correo asíncrono
+  if (emailInput.dataset.invalid === "true") {
+    e.preventDefault();
+    // Muestra el mensaje de error y enfoca el input
+    emailError.style.display = "block"; 
+    emailInput.focus();
+  }
+
+  // Bloquear envío si el teléfono ya existe
+if (telefonoInput.dataset.invalid === "true") {
+    e.preventDefault();
+    telefonoError.style.display = "block";
+    telefonoInput.focus();
+    return;
+}
+
+
+  // Si pasa todas las validaciones de cliente, se envía a Flask.
+});
+
+
+// 3. MOSTRAR ERRORES DEL SERVIDOR (Flask)
+document.addEventListener("DOMContentLoaded", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    const tab = urlParams.get('tab');
+    
+    let errorMessage = '';
+
+    if (error === 'email_exists') {
+        errorMessage = "⛔ **Error de Registro:** El correo electrónico ingresado ya está asociado a otra cuenta. Por favor, utiliza uno diferente.";
+    } else if (error === 'email_mismatch') {
+        errorMessage = "⚠️ Los correos electrónicos no coinciden.";
+    } else if (error === 'password_mismatch') {
+        errorMessage = "⚠️ Las contraseñas no coinciden.";
+    } else if (error === 'weak_password') {
+        const msg = urlParams.get('msg') || "Tu contraseña no cumple con los requisitos mínimos.";
+        errorMessage = `⚠️ Contraseña inválida: ${msg}`;
+    }
+    if (error === 'telefono_exists') {
+    errorMessage = "⛔ **Error de Registro:** El número telefónico ingresado ya está asociado a otra cuenta. Por favor, utiliza otro.";
+    }
+
+    // Puedes añadir más errores aquí según los que definas en Flask
+
+    if (errorMessage && tab === 'register') {
+        // Muestra el mensaje de error en el contenedor y cambia a la pestaña de registro
+        registerErrorContainer.innerHTML = `<div class="server-error">${errorMessage}</div>`;
+        const registerTabBtn = document.querySelector(".tab-btn[onclick*='register']");
+        openTab('register', registerTabBtn);
+
+        // Opcional: limpiar la URL para que el mensaje no se muestre al refrescar
+        history.replaceState(null, '', window.location.pathname); 
+    }
+
+    
+});
+
+const telefonoInput = document.getElementById("register-telefono");
+const telefonoError = document.getElementById("telefono-exists-error");
+
+telefonoInput.addEventListener("blur", async () => {
+    const telefono = telefonoInput.value.trim();
+    if (!telefono) {
+        telefonoError.style.display = "none";
+        telefonoInput.style.border = "";
+        delete telefonoInput.dataset.invalid;
+        return;
+    }
+
+    try {
+        const res = await fetch(`http://127.0.0.1:5000/check_telefono?telefono=${encodeURIComponent(telefono)}`);
+        const data = await res.json();
+
+        if (data.exists) {
+            telefonoError.style.display = "block";
+            telefonoInput.style.border = "2px solid red";
+            telefonoInput.dataset.invalid = "true";
+        } else {
+            telefonoError.style.display = "none";
+            telefonoInput.style.border = "";
+            delete telefonoInput.dataset.invalid;
+        }
+    } catch (err) {
+        console.error("Error al verificar teléfono asíncrono:", err);
+    }
+});
+
+</script>
 
 
 </body>

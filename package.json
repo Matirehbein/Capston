@@ -1,0 +1,26 @@
+{
+  "name": "capston",
+  "version": "1.0.0",
+  "description": "Aurora es un proyecto web de moda y belleza.  \r Incluye páginas de **colecciones**, **productos**, **ofertas**, **login** y más, con un diseño responsivo y simple de ejecutar.\r En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de ayudas.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Matirehbein/Capston.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Matirehbein/Capston/issues"
+  },
+  "homepage": "https://github.com/Matirehbein/Capston#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "transbank-sdk": "^6.1.0"
+  }
+}

@@ -1152,6 +1152,10 @@ def validar_password(password):
         return False, "La contraseña debe incluir al menos un carácter especial."
     return True, None
 
+from werkzeug.security import generate_password_hash
+
+from werkzeug.security import generate_password_hash
+
 @app.route("/register", methods=["POST"])
 def register():
     data = {
@@ -1170,25 +1174,63 @@ def register():
         "telefono": request.form.get("telefono"),
     }
 
-    # Validaciones
+    # ----------------------------
+    # 1️⃣ Validaciones
+    # ----------------------------
     if data["email_usuario"].lower() != (data["email_confirm"] or "").lower():
         return redirect(url_for("login") + "?error=email_mismatch&tab=register&src=register")
     if data["password"] != data["password_confirm"]:
         return redirect(url_for("login") + "?error=password_mismatch&tab=register&src=register")
 
-    # Validar fuerza de password
     ok, msg = validar_password(data["password"])
     if not ok:
         return redirect(url_for("login") + f"?error=weak_password&tab=register&src=register&msg={msg}")
 
-    # Crear usuario y loguearlo automáticamente
-    ok, result = do_register(data)
-    if not ok:
-        error_code = "email" if (result and "correo" in result.lower()) else "unknown"
-        return redirect(url_for("login") + f"?error={error_code}&tab=register&src=register")
+    # ----------------------------
+    # 2️⃣ Insertar en la base de datos con rol 'cliente'
+    # ----------------------------
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
 
-    # Sesión ya creada en do_register, redirige al frontend
+        # Validar si el teléfono ya existe
+        cur.execute("SELECT 1 FROM usuario WHERE telefono = %s LIMIT 1;", (data["telefono"],))
+        if cur.fetchone() is not None:
+            return redirect(url_for("login") + "?error=telefono_exists&tab=register&src=register")
+
+        # Validar si el correo ya existe
+        cur.execute("SELECT 1 FROM usuario WHERE email_usuario = %s LIMIT 1;", (data["email_usuario"],))
+        if cur.fetchone() is not None:
+            return redirect(url_for("login") + "?error=email_exists&tab=register&src=register")
+
+        # Hashear contraseña
+        hashed_password = generate_password_hash(data["password"])
+
+        # Insertar usuario con rol predeterminado 'cliente'
+        cur.execute("""
+            INSERT INTO usuario (
+                nombre_usuario, apellido_paterno, apellido_materno, email_usuario,
+                password, rol_usuario, calle, numero_calle, region, ciudad, comuna, telefono
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (
+            data["nombre_usuario"], data["apellido_paterno"], data["apellido_materno"],
+            data["email_usuario"], hashed_password, 'cliente', data["calle"], data["numero_calle"],
+            data["region"], data["ciudad"], data["comuna"], data["telefono"]
+        ))
+
+        conn.commit()  # Muy importante para guardar el registro
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        print("Error al registrar usuario:", e)
+        return redirect(url_for("login") + "?error=unknown&tab=register&src=register")
+
+    # ----------------------------
+    # 3️⃣ Redirigir al frontend
+    # ----------------------------
     return redirect(FRONTEND_MAIN_URL)
+
 
 # ===========================
 # Validar Email en registro
@@ -1208,14 +1250,11 @@ def check_email():
     conn = None # Inicializar conexión
     try:
         # 1. CONEXIÓN A LA BASE DE DATOS
-        # Asume que tienes una función para obtener la conexión a PostgreSQL
-        # Reemplaza 'get_db_connection()' con tu método real de conexión.
         conn = get_db_connection()
         cur = conn.cursor()
 
         # 2. CONSULTA SQL
-        # Reemplaza 'nombre_de_tu_tabla' y 'nombre_de_la_columna_email'
-        query = "SELECT 1 FROM nombre_de_tu_tabla WHERE nombre_de_la_columna_email = %s LIMIT 1;"
+        query = "SELECT 1 FROM usuario WHERE email_usuario = %s LIMIT 1;"
         cur.execute(query, (email,))
         
         # 3. VERIFICACIÓN DE RESULTADOS
@@ -1249,6 +1288,31 @@ def check_email():
     conn.close()
 
     return redirect(url_for("crud_usuarios"))
+
+# ===========================
+# Validar Email en registro
+# ===========================
+
+@app.route('/check_telefono', methods=['GET'])
+def check_telefono():
+    telefono = request.args.get('telefono')
+    if not telefono:
+        return jsonify({'exists': False})
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM usuario WHERE telefono = %s LIMIT 1;", (telefono,))
+        telefono_exists = cur.fetchone() is not None
+        cur.close()
+        return jsonify({'exists': telefono_exists})
+    except Exception as e:
+        print(f"Error al verificar el teléfono en DB: {e}")
+        return jsonify({'exists': False}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route("/logout")
