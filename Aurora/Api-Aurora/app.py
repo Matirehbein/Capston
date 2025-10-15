@@ -15,6 +15,13 @@ import datetime
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
+
+# Constantes para categorías y tallas
+CATEGORIAS_ROPA = ["Abrigos", "Chaquetas", "Parkas", "Polerones", "Poleras", "Ropa interior", "Top", "Traje de baño"]
+CATEGORIAS_CALZADO = ["Calzado", "Pantalones"]
+TALLAS_ROPA = ["XS", "S", "M", "L", "XL"]
+TALLAS_CALZADO = [str(i) for i in range(35, 47)] # Genera tallas del 35 al 46
+
 # ===========================
 # SESSION INFO
 # ===========================
@@ -60,7 +67,7 @@ def login_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
-            flash("Debes iniciar sesión.", "warning")
+            flash("⚠️ Debes iniciar sesión.", "warning")
             return redirect(url_for("login"))
         return fn(*args, **kwargs)
     return wrapper
@@ -121,29 +128,155 @@ def index_options():
 # CRUD Productos
 # ---------------------------
 
+
+# REEMPLAZA ESTA FUNCIÓN COMPLETA en app.py
+
 @app.route('/productos')
+@login_required
 def crud_productos():
+    # 1. Obtener los parámetros de filtrado desde la URL (sin cambios)
+    filtro_categoria = request.args.get('filtro_categoria', '')
+    filtro_nombre = request.args.get('filtro_nombre', '')
+    filtro_sucursal = request.args.get('filtro_sucursal', '')
+    q = request.args.get('q', '')
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    # Productos
-    cur.execute("""
-        SELECT p.*, COALESCE(SUM(i.stock),0) as stock
-        FROM producto p
+    # 2. Construir la consulta SQL de forma dinámica
+    # La modificación principal está aquí, en cómo se une la tabla de inventario.
+    
+    params = []
+    
+    # NUEVO: Se construye la cláusula del JOIN dinámicamente
+    join_clause = """
         LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
         LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
-        GROUP BY p.id_producto
-        ORDER BY p.id_producto;
-    """)
+    """
+    
+    # Si se está filtrando por una sucursal, modificamos el JOIN para que solo
+    # considere el stock de esa sucursal específica en el cálculo.
+    if filtro_sucursal:
+        join_clause = """
+            LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
+            LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion AND i.id_sucursal = %s
+        """
+        params.append(filtro_sucursal)
+
+    base_query = f"""
+        SELECT 
+            p.id_producto, p.sku, p.nombre_producto, p.precio_producto, 
+            p.descripcion_producto, p.categoria_producto, p.imagen_url, 
+            COALESCE(SUM(i.stock), 0) as stock
+        FROM producto p
+        {join_clause}
+    """
+    
+    where_clauses = []
+    
+    # El resto de los filtros se añaden como cláusulas WHERE
+    if filtro_categoria:
+        where_clauses.append("p.categoria_producto = %s")
+        params.append(filtro_categoria)
+    
+    if filtro_nombre:
+        where_clauses.append("p.nombre_producto = %s")
+        params.append(filtro_nombre)
+
+    # NUEVO: El filtro de sucursal ahora se enfoca en asegurar que el producto exista allí.
+    # El cálculo de stock ya se maneja en el JOIN.
+    if filtro_sucursal:
+        where_clauses.append("p.id_producto IN (SELECT v.id_producto FROM inventario_sucursal i JOIN variacion_producto v ON i.id_variacion = v.id_variacion WHERE i.id_sucursal = %s AND i.stock > 0)")
+        params.append(filtro_sucursal)
+
+    if q:
+        where_clauses.append("(p.id_producto::text ILIKE %s OR p.sku ILIKE %s)")
+        params.extend([f"%{q}%", f"%{q}%"])
+
+    final_query = base_query
+    if where_clauses:
+        final_query += " WHERE " + " AND ".join(where_clauses)
+    
+    final_query += " GROUP BY p.id_producto ORDER BY p.id_producto;"
+    
+    cur.execute(final_query, tuple(params))
     productos = cur.fetchall()
 
-    # Sucursales (para el modal de stock)
+    # Obtener datos para los menús desplegables (sin cambios)
+    cur.execute("SELECT DISTINCT categoria_producto FROM producto WHERE categoria_producto IS NOT NULL ORDER BY categoria_producto;")
+    categorias = [row['categoria_producto'] for row in cur.fetchall()]
+    
+    nombres_productos_query = "SELECT DISTINCT nombre_producto FROM producto"
+    nombres_params = []
+    if filtro_categoria:
+        nombres_productos_query += " WHERE categoria_producto = %s"
+        nombres_params.append(filtro_categoria)
+    nombres_productos_query += " ORDER BY nombre_producto;"
+    cur.execute(nombres_productos_query, nombres_params)
+    nombres_productos = [row['nombre_producto'] for row in cur.fetchall()]
+
     cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
     sucursales = cur.fetchall()
 
     cur.close()
     conn.close()
-    return render_template("productos/crud_productos.html", productos=productos, sucursales=sucursales)
+
+    filtros_activos = {
+        'categoria': filtro_categoria,
+        'nombre': filtro_nombre,
+        'sucursal': filtro_sucursal,
+        'q': q
+    }
+
+    return render_template(
+        "productos/crud_productos.html", 
+        productos=productos, 
+        sucursales=sucursales,
+        categorias=categorias,
+        nombres_productos=nombres_productos,
+        filtros_activos=filtros_activos
+    )
+
+# ---------------------------
+# Filtro de Búsqueda CRUD DE PRODUCTO
+# ---------------------------
+# ===========================
+# API PARA FILTROS DINÁMICOS
+# ===========================
+@app.route("/api/productos/nombres_por_categoria")
+@login_required
+def api_nombres_por_categoria():
+    """
+    Devuelve una lista JSON de nombres de productos filtrados por una categoría.
+    Si no se proporciona categoría, devuelve todos los nombres distintos.
+    """
+    categoria = request.args.get('categoria', '')
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        if categoria:
+            # Si se especifica una categoría, filtra por ella
+            cur.execute("""
+                SELECT DISTINCT nombre_producto FROM producto 
+                WHERE categoria_producto = %s 
+                ORDER BY nombre_producto;
+            """, (categoria,))
+        else:
+            # Si no, devuelve todos los nombres de productos
+            cur.execute("SELECT DISTINCT nombre_producto FROM producto ORDER BY nombre_producto;")
+            
+        nombres = [row[0] for row in cur.fetchall()]
+        return jsonify({"nombres": nombres})
+
+    except Exception as e:
+        # Manejo básico de errores
+        print(f"Error en la API de nombres por categoría: {e}")
+        return jsonify({"nombres": [], "error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ---------------------------
@@ -156,35 +289,63 @@ def crud_productos():
 
 @app.route("/add", methods=["POST"])
 def add_producto():
-    sku = request.form["sku"]
+    # --- 1. Obtenemos los 5 dígitos del SKU y construimos el SKU completo ---
+    sku_digits = request.form["sku_digits"]
+    sku = f"AUR-{sku_digits}" # Construimos el SKU final. Ej: "AUR-00001"
+    
+    # El resto de los datos se obtienen igual
     nombre = request.form["nombre"]
     precio = request.form["precio"]
+    color = request.form.get("color")
     descripcion = request.form.get("descripcion")
     categoria = request.form.get("categoria")
     imagen_url = request.form.get("imagen_url")
 
+    if not color:
+        flash("❌ Error: Debes seleccionar un color para el producto.", "danger")
+        return redirect(url_for("crud_productos"))
+
     conn = get_db_connection()
     cur = conn.cursor()
 
-# Validar que el SKU no exista
-    cur.execute("SELECT id_producto FROM producto WHERE sku = %s", (sku,))
-    existing = cur.fetchone()
-    if existing:
-        flash(f"Error: El SKU '{sku}' ya está registrado en otro producto.", "danger")
+    try:
+        # --- 2. Validar que el SKU COMPLETO no exista ---
+        cur.execute("SELECT id_producto FROM producto WHERE sku = %s", (sku,))
+        if cur.fetchone():
+            flash(f"❌ Error: El SKU '{sku}' ya está registrado.", "danger")
+            return redirect(url_for("crud_productos"))
+
+        # --- 3. Insertar el producto con el SKU COMPLETO ---
+        cur.execute("""
+            INSERT INTO producto (sku, nombre_producto, precio_producto, descripcion_producto, categoria_producto, imagen_url)
+            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_producto;
+        """, (sku, nombre, precio, descripcion, categoria, imagen_url))
+        
+        id_producto_nuevo = cur.fetchone()[0]
+
+        # --- 4. Crear la variación de color Y SU SKU BASE ---
+        
+        # ¡NUEVA LÍNEA! Generamos el SKU para la variación base (producto + color)
+        sku_variacion_base = f"{sku}-{color[:3].upper()}"
+
+        # ¡LÍNEA MODIFICADA! Añadimos el nuevo sku_variacion_base al INSERT
+        cur.execute("""
+            INSERT INTO variacion_producto (id_producto, color, sku_variacion)
+            VALUES (%s, %s, %s);
+        """, (id_producto_nuevo, color, sku_variacion_base))
+        
+        # --- 5. Guardar cambios ---
+        conn.commit()
+        flash(" ✅ Producto agregado con éxito", "success")
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"❌ Ocurrió un error al agregar el producto: {e}", "danger")
+    
+    finally:
         cur.close()
         conn.close()
-        return redirect(url_for("crud_productos"))
 
-
-    #Insertar Productos
-    cur.execute("""
-        INSERT INTO producto (sku, nombre_producto, precio_producto, descripcion_producto, categoria_producto, imagen_url)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, (sku, nombre, precio, descripcion, categoria, imagen_url))
-    conn.commit()
-    cur.close()
-    conn.close()
-    flash("Producto agregado con éxito", "success")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -207,7 +368,7 @@ def edit_producto(id):
     cur.execute("SELECT id_producto FROM producto WHERE sku = %s AND id_producto != %s", (sku, id))
     existing = cur.fetchone()
     if existing:
-        flash(f"Error: El SKU '{sku}' ya está registrado en otro producto.", "danger")
+        flash(f"❌ Error: El SKU '{sku}' ya está registrado en otro producto.", "danger")
         cur.close()
         conn.close()
         return redirect(url_for("crud_productos"))
@@ -223,7 +384,7 @@ def edit_producto(id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Producto actualizado", "success")
+    flash("✅ Producto actualizado", "success")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -258,7 +419,7 @@ def edit_stock(id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Stock actualizado", "success")
+    flash("✅ Stock actualizado", "success")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
@@ -273,38 +434,149 @@ def delete_producto(id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Producto eliminado", "danger")
+    flash(" ❌ Producto eliminado", "danger")
     return redirect(url_for("crud_productos"))
 
 # ---------------------------
 # Ver stock del Listado de Productos
 # ---------------------------
 
+# REEMPLAZA ESTA FUNCIÓN COMPLETA en app.py
+
 @app.route("/ver_stock/<int:id_producto>")
+@login_required
 def ver_stock(id_producto):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    # Traer el producto
+    # 1. Obtener información del producto (sin cambios)
     cur.execute("SELECT * FROM producto WHERE id_producto = %s", (id_producto,))
     producto = cur.fetchone()
+    if not producto:
+        flash("Producto no encontrado.", "danger")
+        return redirect(url_for("crud_productos"))
 
-    # Traer sucursales + stock de este producto
-    cur.execute("""
-        SELECT s.id_sucursal, s.nombre_sucursal, COALESCE(i.stock, 0) as stock
-        FROM sucursal s
-        LEFT JOIN inventario_sucursal i 
-            ON s.id_sucursal = i.id_sucursal
-        LEFT JOIN variacion_producto v
-            ON i.id_variacion = v.id_variacion
-        WHERE v.id_producto = %s OR v.id_producto IS NULL
-        ORDER BY s.id_sucursal
-    """, (id_producto,))
+    # 2. Determinar las tallas disponibles (sin cambios)
+    categoria = (producto["categoria_producto"] or "").strip()
+    tallas_disponibles = []
+    if categoria in CATEGORIAS_ROPA:
+        tallas_disponibles = TALLAS_ROPA
+    elif categoria in CATEGORIAS_CALZADO:
+        tallas_disponibles = TALLAS_CALZADO
+    
+    usa_tallas = bool(tallas_disponibles)
+
+    # 3. Obtener todas las sucursales (sin cambios)
+    cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal")
     sucursales = cur.fetchall()
+
+    # 4. Obtener el stock por talla y el total por sucursal (sin cambios)
+    stock_por_talla = {}
+    stock_total_sucursal = {}
+    for s in sucursales:
+        id_sucursal = s["id_sucursal"]
+        cur.execute("""
+            SELECT v.talla, COALESCE(i.stock, 0) as stock
+            FROM variacion_producto v
+            LEFT JOIN inventario_sucursal i ON v.id_variacion = i.id_variacion AND i.id_sucursal = %s
+            WHERE v.id_producto = %s
+        """, (id_sucursal, id_producto))
+        
+        stock_tallas_sucursal = {row['talla']: row['stock'] for row in cur.fetchall()}
+        stock_por_talla[id_sucursal] = stock_tallas_sucursal
+        stock_total_sucursal[id_sucursal] = sum(stock_tallas_sucursal.values())
 
     cur.close()
     conn.close()
-    return render_template("productos/ver_stock.html", producto=producto, sucursales=sucursales)
+
+    # ¡NUEVO! 5. Calcular el stock total del producto sumando el de todas las sucursales.
+    stock_total_producto = sum(stock_total_sucursal.values())
+
+    return render_template(
+        "productos/ver_stock.html",
+        producto=producto,
+        sucursales=sucursales,
+        usa_tallas=usa_tallas,
+        tallas_disponibles=tallas_disponibles,
+        stock_por_talla=stock_por_talla,
+        stock_total_sucursal=stock_total_sucursal,
+        stock_total_producto=stock_total_producto  # ¡NUEVO! Enviamos el total general a la plantilla.
+    )
+
+# ---------------------------
+# Gestionar talla de stock de productos
+# ---------------------------
+
+@app.route("/productos/<int:id_producto>/actualizar_stock_por_tallas", methods=["POST"])
+@login_required
+def actualizar_stock_por_tallas(id_producto):
+    id_sucursal = request.form.get("id_sucursal")
+    if not id_sucursal:
+        flash("❌ Error: No se especificó una sucursal.", "danger")
+        return redirect(url_for("ver_stock", id_producto=id_producto))
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        # 1. Obtener el color base y el SKU base del producto
+        cur.execute("""
+            SELECT p.sku, v.color 
+            FROM producto p
+            JOIN variacion_producto v ON p.id_producto = v.id_producto
+            WHERE p.id_producto = %s AND v.color IS NOT NULL 
+            LIMIT 1;
+        """, (id_producto,))
+        info_base = cur.fetchone()
+        color_base = info_base['color'] if info_base else 'SIN_COLOR'
+        sku_base = info_base['sku'] if info_base else f'SKU-{id_producto}'
+
+        # 2. Recolectar las nuevas cantidades del formulario
+        nuevas_cantidades = {}
+        for key, value in request.form.items():
+            if key.startswith("stock_talla_"):
+                talla = key.replace("stock_talla_", "")
+                cantidad = max(0, int(value or 0))
+                nuevas_cantidades[talla] = cantidad
+
+        # 3. Actualizar la base de datos
+        for talla, cantidad in nuevas_cantidades.items():
+            # Generar el SKU de variación
+            sku_variacion = f"{sku_base}-{color_base[:3].upper()}-{talla.upper()}"
+
+            # Buscar si la variación (producto + talla) ya existe
+            cur.execute("SELECT id_variacion FROM variacion_producto WHERE id_producto = %s AND talla = %s", (id_producto, talla))
+            variacion = cur.fetchone()
+            
+            if not variacion:
+                # Si no existe, la CREA con el color y el SKU de variación
+                cur.execute("""
+                    INSERT INTO variacion_producto (id_producto, talla, color, sku_variacion) 
+                    VALUES (%s, %s, %s, %s) RETURNING id_variacion
+                """, (id_producto, talla, color_base, sku_variacion))
+                id_variacion = cur.fetchone()[0]
+            else:
+                # Si ya existe, solo actualiza su SKU por si acaso no lo tenía
+                id_variacion = variacion[0]
+                cur.execute("UPDATE variacion_producto SET sku_variacion = %s WHERE id_variacion = %s", (sku_variacion, id_variacion))
+
+            # Finalmente, inserta o actualiza el stock en el inventario
+            cur.execute("""
+                INSERT INTO inventario_sucursal (id_sucursal, id_variacion, stock) VALUES (%s, %s, %s)
+                ON CONFLICT (id_sucursal, id_variacion) DO UPDATE SET stock = EXCLUDED.stock;
+            """, (id_sucursal, id_variacion, cantidad))
+        
+        conn.commit()
+        flash("✅ Stock por tallas actualizado correctamente.", "success")
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"❌ Error al actualizar el stock: {e}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    return redirect(url_for("ver_stock", id_producto=id_producto))
 
 
 # ---------------------------
@@ -346,7 +618,7 @@ def guardar_stock_sucursales(id_producto):
             total_nuevo += int(val)
 
     if total_nuevo > stock_max:
-        flash(f"No puedes asignar {total_nuevo} unidades. El máximo permitido es {stock_max}.")
+        flash(f"❌ No puedes asignar {total_nuevo} unidades. El máximo permitido es {stock_max}.")
         conn.close()
         return redirect(url_for("ver_stock", id_producto=id_producto))
 
@@ -366,7 +638,7 @@ def guardar_stock_sucursales(id_producto):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Stock por sucursal actualizado correctamente.")
+    flash("✅ Stock por sucursal actualizado correctamente.")
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 # ---------------------------
@@ -402,7 +674,7 @@ def update_stock_sucursal(id_producto, id_sucursal):
     cur.close()
     conn.close()
 
-    flash("Stock actualizado en la sucursal", "success")
+    flash("✅ Stock actualizado en la sucursal", "success")
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 
@@ -410,19 +682,153 @@ def update_stock_sucursal(id_producto, id_sucursal):
 # CRUD Sucursales
 # ---------------------------
 
-
 @app.route('/sucursales')
+@login_required
 def crud_sucursales():
+    # 1. Obtener los parámetros de filtrado desde la URL
+    filtro_nombre = request.args.get('filtro_nombre', '')
+    filtro_region = request.args.get('filtro_region', '')
+    filtro_comuna = request.args.get('filtro_comuna', '')
+    q = request.args.get('q', '')
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    # Sucursales
-    cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
+    # 2. Construir la consulta SQL principal para la tabla (sin cambios)
+    base_query = "SELECT * FROM sucursal"
+    where_clauses = []
+    params = []
+
+    if q:
+        where_clauses.append("id_sucursal::text ILIKE %s")
+        params.append(f"%{q}%")
+    if filtro_nombre:
+        where_clauses.append("nombre_sucursal = %s") # Cambiado a '=' para coincidencia exacta del select
+        params.append(filtro_nombre)
+    if filtro_region:
+        where_clauses.append("region_sucursal = %s") # Cambiado a '='
+        params.append(filtro_region)
+    if filtro_comuna:
+        where_clauses.append("comuna_sucursal = %s") # Cambiado a '='
+        params.append(filtro_comuna)
+
+    final_query = base_query
+    if where_clauses:
+        final_query += " WHERE " + " AND ".join(where_clauses)
+    final_query += " ORDER BY id_sucursal;"
+    
+    cur.execute(final_query, tuple(params))
     sucursales = cur.fetchall()
+
+    # 3. Obtener listas para los menús desplegables de forma contextual
+    # Para Regiones (siempre todas)
+    cur.execute("SELECT DISTINCT region_sucursal FROM sucursal ORDER BY region_sucursal;")
+    regiones = [row['region_sucursal'] for row in cur.fetchall()]
+    
+    # Para Comunas (depende de la región seleccionada)
+    comunas_query = "SELECT DISTINCT comuna_sucursal FROM sucursal"
+    comunas_params = []
+    if filtro_region:
+        comunas_query += " WHERE region_sucursal = %s"
+        comunas_params.append(filtro_region)
+    comunas_query += " ORDER BY comuna_sucursal;"
+    cur.execute(comunas_query, comunas_params)
+    comunas = [row['comuna_sucursal'] for row in cur.fetchall()]
+
+    # Para Nombres de sucursal (depende de la comuna y región seleccionadas)
+    nombres_query = "SELECT DISTINCT nombre_sucursal FROM sucursal"
+    nombres_params = []
+    nombres_where = []
+    if filtro_region:
+        nombres_where.append("region_sucursal = %s")
+        nombres_params.append(filtro_region)
+    if filtro_comuna:
+        nombres_where.append("comuna_sucursal = %s")
+        nombres_params.append(filtro_comuna)
+    if nombres_where:
+        nombres_query += " WHERE " + " AND ".join(nombres_where)
+    nombres_query += " ORDER BY nombre_sucursal;"
+    cur.execute(nombres_query, nombres_params)
+    nombres_sucursales = [row['nombre_sucursal'] for row in cur.fetchall()]
 
     cur.close()
     conn.close()
-    return render_template("sucursales/crud_sucursales.html", sucursales=sucursales)
+
+    filtros_activos = {
+        'nombre': filtro_nombre,
+        'region': filtro_region,
+        'comuna': filtro_comuna,
+        'q': q
+    }
+
+    return render_template(
+        "sucursales/crud_sucursales.html", 
+        sucursales=sucursales,
+        nombres_sucursales=nombres_sucursales,
+        regiones=regiones,
+        comunas=comunas,
+        filtros_activos=filtros_activos
+    )
+
+# ---------------------------
+# Filtrado de Sucursales: Comunas por Región escogida
+# ---------------------------
+
+@app.route("/api/sucursales/comunas_por_region")
+@login_required
+def api_comunas_por_region():
+    region = request.args.get('region', '')
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        if region:
+            cur.execute("SELECT DISTINCT comuna_sucursal FROM sucursal WHERE region_sucursal = %s ORDER BY comuna_sucursal;", (region,))
+        else:
+            cur.execute("SELECT DISTINCT comuna_sucursal FROM sucursal ORDER BY comuna_sucursal;")
+        comunas = [row[0] for row in cur.fetchall()]
+        return jsonify({"comunas": comunas})
+    except Exception as e:
+        return jsonify({"comunas": [], "error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+# ---------------------------
+# Filtrado de Sucursales: Nombres por Comuna escogida
+# ---------------------------
+
+@app.route("/api/sucursales/nombres_por_comuna")
+@login_required
+def api_nombres_por_comuna():
+    comuna = request.args.get('comuna', '')
+    region = request.args.get('region', '')
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        query = "SELECT DISTINCT nombre_sucursal FROM sucursal"
+        where_clauses = []
+        params = []
+        if comuna:
+            where_clauses.append("comuna_sucursal = %s")
+            params.append(comuna)
+        if region:
+            where_clauses.append("region_sucursal = %s")
+            params.append(region)
+
+        if where_clauses:
+            query += " WHERE " + " AND ".join(where_clauses)
+        
+        query += " ORDER BY nombre_sucursal;"
+        
+        cur.execute(query, tuple(params))
+        nombres = [row[0] for row in cur.fetchall()]
+        return jsonify({"nombres": nombres})
+    except Exception as e:
+        return jsonify({"nombres": [], "error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
 
 # ---------------------------
 # Rutas de Sucursales
@@ -453,7 +859,7 @@ def add_sucursal():
     conn.commit()
     cur.close()
     conn.close()
-    flash("Sucursal agregada con éxito", "success")
+    flash("✅ Sucursal agregada con éxito", "success")
     return redirect(url_for("crud_sucursales"))
 
 # ---------------------------
@@ -483,7 +889,7 @@ def editar_sucursal(id_sucursal):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Sucursal actualizada con éxito", "success")
+    flash("✅ Sucursal actualizada con éxito", "success")
     return redirect(url_for("crud_sucursales"))
 
 # ---------------------------
@@ -498,7 +904,7 @@ def eliminar_sucursal(id_sucursal):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Sucursal eliminada con éxito", "danger")
+    flash("✅ Sucursal eliminada con éxito", "danger")
     return redirect(url_for("crud_sucursales"))
 
 # ===========================
@@ -551,20 +957,69 @@ def detalle_sucursal(id_sucursal):
 # CRUD USUARIOS
 # ===========================
 
+# REEMPLAZA ESTA FUNCIÓN COMPLETA en app.py
+
 @app.route('/usuarios')
 @login_required
 def crud_usuarios():
+    # 1. Obtener los parámetros de filtrado desde la URL
+    filtro_rol = request.args.get('filtro_rol', '')
+    filtro_nombre = request.args.get('filtro_nombre', '')
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cur.execute("""
-        SELECT id_usuario, nombre_usuario, apellido_paterno, apellido_materno, rol_usuario, email_usuario, calle, numero_calle, region, ciudad, comuna, telefono
+
+    # 2. Construir la consulta SQL de forma dinámica
+    base_query = """
+        SELECT id_usuario, nombre_usuario, apellido_paterno, apellido_materno, rol_usuario, email_usuario, 
+               calle, numero_calle, region, ciudad, comuna, telefono
         FROM usuario
-        ORDER BY id_usuario;
-    """)
+    """
+    where_clauses = []
+    params = []
+
+    if filtro_rol:
+        where_clauses.append("rol_usuario = %s")
+        params.append(filtro_rol)
+    
+    if filtro_nombre:
+        # Usamos CONCAT para buscar en nombre y apellidos
+        where_clauses.append("CONCAT(nombre_usuario, ' ', apellido_paterno, ' ', apellido_materno) ILIKE %s")
+        params.append(f"%{filtro_nombre}%")
+
+    # 3. Ensamblar y ejecutar la consulta final
+    final_query = base_query
+    if where_clauses:
+        final_query += " WHERE " + " AND ".join(where_clauses)
+    
+    final_query += " ORDER BY id_usuario;"
+    
+    cur.execute(final_query, tuple(params))
     usuarios = cur.fetchall()
+
+    # 4. Obtener listas únicas para poblar los menús desplegables de los filtros
+    cur.execute("SELECT DISTINCT rol_usuario FROM usuario WHERE rol_usuario IS NOT NULL ORDER BY rol_usuario;")
+    roles = [row['rol_usuario'] for row in cur.fetchall()]
+    
+    cur.execute("SELECT DISTINCT nombre_usuario FROM usuario ORDER BY nombre_usuario;")
+    nombres_usuarios = [row['nombre_usuario'] for row in cur.fetchall()]
+
     cur.close()
     conn.close()
-    return render_template("usuarios/crud_usuarios.html", usuarios=usuarios)
+
+    # 5. Guardar los filtros activos para "recordarlos" en el formulario
+    filtros_activos = {
+        'rol': filtro_rol,
+        'nombre': filtro_nombre
+    }
+
+    return render_template(
+        "usuarios/crud_usuarios.html", 
+        usuarios=usuarios,
+        roles=roles,
+        nombres_usuarios=nombres_usuarios,
+        filtros_activos=filtros_activos
+    )
 
 # ===========================
 # Agregar USUARIOS
@@ -585,7 +1040,7 @@ def add_usuario():
     cur.execute("SELECT id_usuario FROM usuario WHERE email_usuario = %s", (email_usuario,))
     existing_email = cur.fetchone()
     if existing_email:
-        flash(f"Error: El correo '{email_usuario}' ya está registrado en otro usuario.", "danger")
+        flash(f"❌ Error: El correo '{email_usuario}' ya está registrado en otro usuario.", "danger")
         cur.close()
         conn.close()
         return redirect(url_for("crud_usuarios"))
@@ -595,7 +1050,7 @@ def add_usuario():
     cur.execute("SELECT id_usuario FROM usuario WHERE telefono = %s", (telefono, )) 
     existing = cur.fetchone()
     if existing:
-        flash(f"Error: El teléfono '{telefono}' ya está registrado en otro usuario.", "danger")
+        flash(f"❌ Error: El teléfono '{telefono}' ya está registrado en otro usuario.", "danger")
         cur.close()
         conn.close()
         return redirect(url_for("crud_usuarios"))
@@ -620,10 +1075,10 @@ def add_usuario():
             data.get("telefono")
         ))
         conn.commit()
-        flash("Usuario agregado correctamente", "success")
+        flash("✅ Usuario agregado correctamente", "success")
     except Exception as e:
         conn.rollback()
-        flash(f"Error: {str(e)}", "danger")
+        flash(f"❌ Error: {str(e)}", "danger")
     finally:
         cur.close()
         conn.close()
@@ -647,7 +1102,7 @@ def edit_usuario(id_usuario):
     cur.execute("SELECT id_usuario FROM usuario WHERE email_usuario = %s AND id_usuario != %s", (email_usuario, id_usuario))
     existing_email = cur.fetchone()
     if existing_email:
-        flash(f"Error: El correo '{email_usuario}' ya está registrado en otro usuario.", "warning")
+        flash(f"❌ Error: El correo '{email_usuario}' ya está registrado en otro usuario.", "warning")
         cur.close()
         conn.close()
         return redirect(url_for("crud_usuarios"))
@@ -656,7 +1111,7 @@ def edit_usuario(id_usuario):
     cur.execute("SELECT id_usuario FROM usuario WHERE telefono = %s AND id_usuario != %s", (telefono, id_usuario))
     existing = cur.fetchone()
     if existing:
-        flash(f"Error: El teléfono '{telefono}' ya está registrado en otro usuario.", "warning")
+        flash(f"❌ Error: El teléfono '{telefono}' ya está registrado en otro usuario.", "warning")
         cur.close()
         conn.close()
         return redirect(url_for("crud_usuarios"))
@@ -706,10 +1161,10 @@ def edit_usuario(id_usuario):
                 id_usuario
             ))
         conn.commit()
-        flash("Usuario actualizado correctamente", "success")
+        flash("✅ Usuario actualizado correctamente", "success")
     except Exception as e:
         conn.rollback()
-        flash(f"Error: {str(e)}", "danger")
+        flash(f"❌ Error: {str(e)}", "danger")
     finally:
         cur.close()
         conn.close()
@@ -727,10 +1182,10 @@ def delete_usuario(id_usuario):
     try:
         cur.execute("DELETE FROM usuario WHERE id_usuario=%s", (id_usuario,))
         conn.commit()
-        flash("Usuario eliminado correctamente", "success")
+        flash("✅ Usuario eliminado correctamente", "success")
     except Exception as e:
         conn.rollback()
-        flash(f"Error: {str(e)}", "danger")
+        flash(f"❌ Error: {str(e)}", "danger")
     finally:
         cur.close()
         conn.close()
@@ -755,57 +1210,151 @@ def view_usuario(id_usuario):
     return render_template("usuarios/view_usuario.html", usuario=usuario)
 
 
-
 # ===========================
 # CRUD OFERTAS 
 # ===========================
 
+# REEMPLAZA ESTA FUNCIÓN COMPLETA en app.py
+
 @app.route('/ofertas')
+@login_required # Es buena práctica proteger las vistas
 def crud_ofertas():
+    # 1. Obtener parámetros de filtrado desde la URL
+    filtro_id = request.args.get('q', '')
+    filtro_estado = request.args.get('filtro_estado', '')
+    filtro_titulo = request.args.get('filtro_titulo', '')
+    filtro_producto = request.args.get('filtro_producto', '')
+    filtro_descuento = request.args.get('filtro_descuento', '')
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    # Productos (para el formulario)
-    cur.execute("""
-        SELECT p.id_producto, p.nombre_producto, p.imagen_url, COALESCE(SUM(i.stock), 0) AS stock
-        FROM producto p
-        LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
-        LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
-        GROUP BY p.id_producto, p.nombre_producto, p.imagen_url
-        ORDER BY p.nombre_producto;
-    """)
-    productos = cur.fetchall()
-
-    # Ofertas (para el listado)
-    cur.execute("""
-        SELECT o.id_oferta,
-                o.titulo,
-                o.descripcion, 
-                o.descuento_pct,
-               o.fecha_inicio, 
-                o.fecha_fin, 
-                o.vigente_bool,
-               p.id_producto, 
-                p.nombre_producto,
-                p.imagen_url, 
-                p.precio_producto
+    # 2. Construir la consulta SQL dinámicamente
+    base_query = """
+        SELECT o.id_oferta, o.titulo, o.descripcion, o.descuento_pct, o.fecha_inicio, o.fecha_fin, o.vigente_bool,
+               p.id_producto, p.nombre_producto, p.imagen_url, p.precio_producto
         FROM oferta o
         JOIN oferta_producto op ON o.id_oferta = op.id_oferta
         JOIN producto p ON op.id_producto = p.id_producto
-        ORDER BY o.id_oferta DESC;
-    """)
+    """
+    where_clauses = []
+    params = []
+
+    if filtro_id:
+        where_clauses.append("o.id_oferta::text ILIKE %s")
+        params.append(f"%{filtro_id}%")
+    
+    if filtro_titulo:
+        where_clauses.append("o.titulo = %s")
+        params.append(filtro_titulo)
+        
+    if filtro_producto:
+        where_clauses.append("p.id_producto = %s")
+        params.append(filtro_producto)
+
+    # Lógica para filtro de estado (derivado de las fechas)
+    if filtro_estado == 'vigente':
+        where_clauses.append("CURRENT_DATE BETWEEN o.fecha_inicio AND o.fecha_fin")
+    elif filtro_estado == 'finalizada':
+        where_clauses.append("o.fecha_fin < CURRENT_DATE")
+    elif filtro_estado == 'en_espera':
+        where_clauses.append("o.fecha_inicio > CURRENT_DATE")
+
+    # Lógica para filtro de descuento por rangos
+    if filtro_descuento == 'high':
+        where_clauses.append("o.descuento_pct BETWEEN 70 AND 95")
+    elif filtro_descuento == 'medium':
+        where_clauses.append("o.descuento_pct BETWEEN 30 AND 69.99")
+    elif filtro_descuento == 'low':
+        where_clauses.append("o.descuento_pct BETWEEN 5 AND 29.99")
+
+    # 3. Ensamblar y ejecutar la consulta
+    final_query = base_query
+    if where_clauses:
+        final_query += " WHERE " + " AND ".join(where_clauses)
+    
+    final_query += " ORDER BY o.id_oferta DESC;"
+    
+    cur.execute(final_query, tuple(params))
     ofertas = cur.fetchall()
+
+    # 4. Obtener datos para poblar los menús desplegables de los filtros
+    # Esta es la corrección
+    cur.execute("""
+                SELECT p.id_producto, p.nombre_producto, COALESCE(SUM(i.stock), 0) AS stock
+                FROM producto p
+                LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
+                LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
+                GROUP BY p.id_producto, p.nombre_producto
+                ORDER BY p.nombre_producto;
+                """)
+    productos = cur.fetchall() # Reutilizamos esta lista para el formulario de agregar y el filtro
+    
+    cur.execute("SELECT DISTINCT titulo FROM oferta ORDER BY titulo;")
+    titulos_ofertas = [row['titulo'] for row in cur.fetchall()]
 
     cur.close()
     conn.close()
 
-    from datetime import datetime
+    # 5. Guardar los filtros activos para "recordarlos" en el formulario
+    filtros_activos = {
+        'q': filtro_id,
+        'estado': filtro_estado,
+        'titulo': filtro_titulo,
+        'producto': filtro_producto,
+        'descuento': filtro_descuento
+    }
+
     return render_template(
         "ofertas/crud_ofertas.html",
         ofertas=ofertas,
         productos=productos,
-        now=datetime.now,
+        titulos_ofertas=titulos_ofertas,
+        filtros_activos=filtros_activos,
+        now=datetime.datetime.now, # Tu código original ya lo pasaba
     )
+
+# ===========================
+# Filtrado de ofertas: Por Estado
+# ===========================
+
+# AGREGA ESTA NUEVA RUTA en app.py
+
+@app.route("/api/ofertas/titulos_por_estado")
+@login_required
+def api_titulos_por_estado():
+    """
+    Devuelve una lista JSON de títulos de ofertas filtrados por su estado (vigente, finalizada, en_espera).
+    """
+    estado = request.args.get('estado', '')
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        query = "SELECT DISTINCT titulo FROM oferta"
+        params = []
+        
+        # Traducimos el 'estado' a una condición SQL sobre las fechas
+        if estado == 'vigente':
+            query += " WHERE CURRENT_DATE BETWEEN fecha_inicio AND fecha_fin"
+        elif estado == 'finalizada':
+            query += " WHERE fecha_fin < CURRENT_DATE"
+        elif estado == 'en_espera':
+            query += " WHERE fecha_inicio > CURRENT_DATE"
+        
+        query += " ORDER BY titulo;"
+        
+        cur.execute(query, tuple(params))
+        titulos = [row[0] for row in cur.fetchall()]
+        return jsonify({"titulos": titulos})
+
+    except Exception as e:
+        print(f"Error en la API de títulos por estado: {e}")
+        return jsonify({"titulos": [], "error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ===========================
@@ -860,7 +1409,7 @@ def add_oferta():
 
     except Exception as e:
         conn.rollback()
-        flash(f"⚠️ Error al agregar la oferta: {str(e)}", "danger")
+        flash(f"❌ Error al agregar la oferta: {str(e)}", "danger")
 
     finally:
         cur.close()
@@ -911,7 +1460,7 @@ def edit_oferta(id_oferta):
             flash("✅ Oferta actualizada correctamente", "success")
         except Exception as e:
             conn.rollback()
-            flash(f"⚠️ Error al actualizar la oferta: {str(e)}", "danger")
+            flash(f"❌ Error al actualizar la oferta: {str(e)}", "danger")
         finally:
             cur.close()
             conn.close()
@@ -956,7 +1505,7 @@ def delete_oferta(id_oferta):
         flash("✅ Oferta eliminada correctamente", "success")
     except Exception as e:
         conn.rollback()
-        flash(f"⚠️ Error al eliminar la oferta: {str(e)}", "danger")
+        flash(f"❌ Error al eliminar la oferta: {str(e)}", "danger")
     finally:
         cur.close()
         conn.close()
@@ -1318,7 +1867,7 @@ def check_telefono():
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("Sesión cerrada.", "info")
+    flash("✅ Sesión cerrada.", "info")
     return redirect(url_for("login"))
 
 
@@ -1326,7 +1875,7 @@ def login_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
-            flash("Debes iniciar sesión.", "warning")
+            flash("⚠️ Debes iniciar sesión.", "warning")
             return redirect(url_for("login"))
         return fn(*args, **kwargs)
     return wrapper

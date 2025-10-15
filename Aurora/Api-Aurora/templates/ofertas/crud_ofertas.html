@@ -1,14 +1,75 @@
 {% extends "base.html" %}
 {% block title %}Ofertas{% endblock %}
 {% block page_title %}Ofertas{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ url_for('crud_ofertas') }}" method="GET" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label for="q" class="form-label">ID Oferta</label>
+                    <input type="text" name="q" id="q" class="form-control" placeholder="Buscar por ID..." value="{{ filtros_activos.q }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="filtro_estado" class="form-label">Estado</label>
+                    <select name="filtro_estado" id="filtro_estado" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="vigente" {{ 'selected' if 'vigente' == filtros_activos.estado }}>Vigente</option>
+                        <option value="finalizada" {{ 'selected' if 'finalizada' == filtros_activos.estado }}>Finalizada</option>
+                        <option value="en_espera" {{ 'selected' if 'en_espera' == filtros_activos.estado }}>En espera</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filtro_titulo" class="form-label">Título</label>
+                    <select name="filtro_titulo" id="filtro_titulo" class="form-select">
+                        <option value="">Todos</option>
+                        {% for titulo in titulos_ofertas %}
+                            <option value="{{ titulo }}" {{ 'selected' if titulo == filtros_activos.titulo }}>{{ titulo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filtro_producto" class="form-label">Producto</label>
+                    <select name="filtro_producto" id="filtro_producto" class="form-select">
+                        <option value="">Todos</option>
+                        {% for p in productos %}
+                            <option value="{{ p.id_producto }}" {{ 'selected' if p.id_producto|string == filtros_activos.producto }}>{{ p.nombre_producto }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="filtro_descuento" class="form-label">Rango Descuento</label>
+                    <select name="filtro_descuento" id="filtro_descuento" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="high" {{ 'selected' if 'high' == filtros_activos.descuento }}>95% - 70%</option>
+                        <option value="medium" {{ 'selected' if 'medium' == filtros_activos.descuento }}>69% - 30%</option>
+                        <option value="low" {{ 'selected' if 'low' == filtros_activos.descuento }}>29% - 5%</option>
+                    </select>
+                </div>
+                <div class="col-md-12 d-flex justify-content-end mt-3">
+                    <button type="submit" class="btn btn-primary me-2">Filtrar</button>
+                    <a href="{{ url_for('crud_ofertas') }}" class="btn btn-secondary">Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <h2>Agregar Nueva Oferta</h2>
     <div class="marco-piel mb-5">
         <form action="{{ url_for('add_oferta') }}" method="POST" id="form-oferta" class="row g-3">
-
-            <!-- Producto -->
             <div class="col-md-6">
                 <label for="producto" class="form-label">Producto</label>
                 <select name="productos" id="producto" class="form-select" required>
@@ -19,48 +80,33 @@
                         </option>
                     {% endfor %}
                 </select>
-
                 <small id="stock-real" class="text-muted"></small>
             </div>
-
-            <!-- Stock disponible -->
             <div class="col-md-6">
                 <label for="stock_oferta" class="form-label">Stock disponible en oferta</label>
                 <input type="number" name="stock_oferta" id="stock_oferta" class="form-control" min="1" required>
                 <small id="stock-error" class="text-danger"></small>
             </div>
-
-            <!-- Título -->
             <div class="col-md-6">
                 <label for="titulo" class="form-label">Título de la oferta</label>
                 <input type="text" name="titulo" id="titulo" class="form-control" required>
             </div>
-
-            <!-- Descripción -->
             <div class="col-md-6">
                 <label for="descripcion" class="form-label">Descripción</label>
                 <input type="text" name="descripcion" id="descripcion" class="form-control">
             </div>
-
-            <!-- Descuento -->
             <div class="col-md-4">
                 <label for="descuento_pct" class="form-label">Descuento (%)</label>
                 <input type="number" name="descuento_pct" id="descuento_pct" class="form-control" min="1" max="100" step="0.01" required>
             </div>
-
-            <!-- Fecha inicio -->
             <div class="col-md-4">
                 <label for="fecha_inicio" class="form-label">Fecha inicio</label>
                 <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" required>
             </div>
-
-            <!-- Fecha fin -->
             <div class="col-md-4">
                 <label for="fecha_fin" class="form-label">Fecha fin</label>
                 <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" required>
             </div>
-
-            <!-- Botón -->
             <div class="col-12">
                 <button type="submit" class="btn btn-success w-100">Agregar Oferta</button>
             </div>
@@ -69,7 +115,6 @@
 
     <hr>
 
-    <!-- ======== LISTADO DE OFERTAS ======== -->
     <h2>Listado de Ofertas Actuales</h2>
     <div class="marco-piel mb-5">
         <table class="table table-striped table-bordered align-middle text-center">
@@ -95,13 +140,12 @@
                     <td>{{ o.id_oferta }}</td>
                     <td>{{ o.nombre_producto }}</td>
                     <td>
-    {% if o.imagen_url %}
-        <img src="{{ o.imagen_url }}" alt="{{ o.nombre_producto }}" width="80">
-    {% else %}
-        <span class="text-muted">Sin imagen</span>
-    {% endif %}
-</td>
-
+                        {% if o.imagen_url %}
+                            <img src="{{ o.imagen_url }}" alt="{{ o.nombre_producto }}" width="80">
+                        {% else %}
+                            <span class="text-muted">Sin imagen</span>
+                        {% endif %}
+                    </td>
                     <td>{{ o.titulo }}</td>
                     <td>{{ o.descripcion }}</td>
                     <td>${{ "%.0f"|format(o.precio_producto) }}</td>
@@ -111,139 +155,106 @@
                     <td>{{ o.fecha_fin.strftime('%Y-%m-%d') }}</td>
                     <td>
                         {% if o.fecha_inicio > now().date() %}
-                          <span class="badge bg-warning text-dark">En espera</span>
+                            <span class="badge bg-warning text-dark">En espera</span>
                         {% elif o.fecha_fin < now().date() %}
-                          <span class="badge bg-secondary">Finalizada</span>
+                            <span class="badge bg-secondary">Finalizada</span>
                         {% else %}
-                          <span class="badge bg-success">Vigente</span>
+                            <span class="badge bg-success">Vigente</span>
                         {% endif %}
                     </td>
                     <td>
-  <!-- Botón Editar -->
-  <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editOfertaModal{{ o.id_oferta }}">
-    Editar
-  </button>
-
-  <!-- Botón Eliminar -->
-  <form action="{{ url_for('delete_oferta', id_oferta=o.id_oferta) }}" method="POST" style="display:inline;">
-    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar esta oferta?')">
-      Eliminar
-    </button>
-  </form>
-</td>
-</tr>
-
-<!-- Modal Editar -->
-<div class="modal fade" id="editOfertaModal{{ o.id_oferta }}" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form action="{{ url_for('edit_oferta', id_oferta=o.id_oferta) }}" method="POST">
-        <div class="modal-header">
-          <h5 class="modal-title">Editar Oferta #{{ o.id_oferta }}</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-
-        <div class="modal-body row g-3">
-
-          <!-- Producto -->
-          <div class="col-md-6">
-            <label class="form-label">Producto</label>
-            <select name="productos" class="form-select" required>
-              {% for p in productos %}
-                <option value="{{ p.id_producto }}" {% if p.id_producto == o.id_producto %}selected{% endif %}>
-                  {{ p.nombre_producto }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <!-- Título -->
-          <div class="col-md-6">
-            <label class="form-label">Título</label>
-            <input type="text" name="titulo" class="form-control" value="{{ o.titulo }}" required>
-          </div>
-
-          <!-- Descuento -->
-          <div class="col-md-6">
-            <label class="form-label">Descuento (%)</label>
-            <input type="number" name="descuento_pct" class="form-control" value="{{ o.descuento_pct }}" min="1" max="100" required>
-          </div>
-
-          <!-- Fecha inicio -->
-          <div class="col-md-6">
-            <label class="form-label">Fecha inicio</label>
-            <input type="date" name="fecha_inicio" class="form-control" value="{{ o.fecha_inicio.strftime('%Y-%m-%d') }}" required>
-          </div>
-
-          <!-- Fecha fin -->
-          <div class="col-md-6">
-            <label class="form-label">Fecha fin</label>
-            <input type="date" name="fecha_fin" class="form-control" value="{{ o.fecha_fin.strftime('%Y-%m-%d') }}" required>
-          </div>
-
-          <!-- Descripción -->
-          <div class="col-12">
-            <label class="form-label">Descripción</label>
-            <textarea name="descripcion" class="form-control" rows="2">{{ o.descripcion }}</textarea>
-          </div>
-
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editOfertaModal{{ o.id_oferta }}">Editar</button>
+                        <form action="{{ url_for('delete_oferta', id_oferta=o.id_oferta) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar esta oferta?')">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
 </div>
 
-<!-- Validación de stock -->
+{% for o in ofertas %}
+<div class="modal fade" id="editOfertaModal{{ o.id_oferta }}" tabindex="-1">
+    </div>
+{% endfor %}
+
 <script>
-const productoSelect = document.getElementById("producto");
-const stockInput = document.getElementById("stock_oferta");
-const stockError = document.getElementById("stock-error");
-const stockRealText = document.getElementById("stock-real");
-const form = document.getElementById("form-oferta");
-let stockReal = 0;
+    // Tu script de validación de stock (INTACTO)
+    const productoSelect = document.getElementById("producto");
+    const stockInput = document.getElementById("stock_oferta");
+    const stockError = document.getElementById("stock-error");
+    const stockRealText = document.getElementById("stock-real");
+    const form = document.getElementById("form-oferta");
+    let stockReal = 0;
 
-productoSelect.addEventListener("change", () => {
-  const selectedOption = productoSelect.options[productoSelect.selectedIndex];
-  stockReal = parseInt(selectedOption.dataset.stock || 0);
-  if (stockReal) {
-    stockRealText.textContent = `Stock real disponible: ${stockReal} unidades.`;
-  } else {
-    stockRealText.textContent = "";
-  }
-  stockError.textContent = "";
-});
+    productoSelect.addEventListener("change", () => {
+        const selectedOption = productoSelect.options[productoSelect.selectedIndex];
+        stockReal = parseInt(selectedOption.dataset.stock || 0);
+        stockRealText.textContent = stockReal ? `Stock real disponible: ${stockReal} unidades.` : "";
+        stockError.textContent = "";
+    });
 
-stockInput.addEventListener("input", () => {
-  const stockIngresado = parseInt(stockInput.value || 0);
-  if (stockIngresado > stockReal) {
-    stockError.textContent = `⚠️ El stock disponible sobrepasa el existente. El stock para "${productoSelect.options[productoSelect.selectedIndex].text}" es ${stockReal}.`;
-    stockInput.style.border = "2px solid red";
-  } else {
-    stockError.textContent = "";
-    stockInput.style.border = "";
-  }
-});
+    stockInput.addEventListener("input", () => {
+        const stockIngresado = parseInt(stockInput.value || 0);
+        if (stockIngresado > stockReal) {
+            stockError.textContent = `⚠️ El stock disponible sobrepasa el existente. El stock para "${productoSelect.options[productoSelect.selectedIndex].text}" es ${stockReal}.`;
+            stockInput.style.border = "2px solid red";
+        } else {
+            stockError.textContent = "";
+            stockInput.style.border = "";
+        }
+    });
 
-form.addEventListener("submit", (e) => {
-  const stockIngresado = parseInt(stockInput.value || 0);
-  if (stockIngresado > stockReal) {
-    e.preventDefault();
-    stockError.textContent = `⚠️ El stock disponible sobrepasa el existente. El stock para "${productoSelect.options[productoSelect.selectedIndex].text}" es ${stockReal}.`;
-    stockInput.style.border = "2px solid red";
-  }
+    form.addEventListener("submit", (e) => {
+        const stockIngresado = parseInt(stockInput.value || 0);
+        if (stockIngresado > stockReal) {
+            e.preventDefault();
+            stockError.textContent = `⚠️ El stock disponible sobrepasa el existente. El stock para "${productoSelect.options[productoSelect.selectedIndex].text}" es ${stockReal}.`;
+            stockInput.style.border = "2px solid red";
+        }
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const estadoSelect = document.getElementById('filtro_estado');
+    const tituloSelect = document.getElementById('filtro_titulo');
+    const tituloOriginalSeleccionado = "{{ filtros_activos.titulo or '' }}";
+
+    // Escucha cada vez que el usuario cambia el estado.
+    estadoSelect.addEventListener('change', function() {
+        actualizarTitulos(this.value);
+    });
+
+    // Función que se conecta a la API y actualiza el menú de títulos.
+    function actualizarTitulos(estado) {
+        const url = `/api/ofertas/titulos_por_estado?estado=${encodeURIComponent(estado)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                // Limpia las opciones actuales.
+                tituloSelect.innerHTML = '<option value="">Todos</option>';
+
+                // Agrega las nuevas opciones desde la API.
+                data.titulos.forEach(titulo => {
+                    const option = document.createElement('option');
+                    option.value = titulo;
+                    option.textContent = titulo;
+
+                    // Si este título coincide con el filtro original, lo dejamos seleccionado.
+                    if (titulo === tituloOriginalSeleccionado && estado === "{{ filtros_activos.estado or '' }}") {
+                        option.selected = true;
+                    }
+                    tituloSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error al cargar los títulos:', error));
+    }
 });
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

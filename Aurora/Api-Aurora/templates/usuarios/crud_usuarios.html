@@ -5,6 +5,33 @@
 
 {% block content %}
 <div class="container mt-4">
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ url_for('crud_usuarios') }}" method="GET" class="row g-3 align-items-end">
+                
+                <div class="col-md-4">
+                    <label for="filtro_rol" class="form-label">Rol</label>
+                    <select name="filtro_rol" id="filtro_rol" class="form-select">
+                        <option value="">Todos</option>
+                        {% for rol in roles %}
+                            <option value="{{ rol }}" {{ 'selected' if rol == filtros_activos.rol }}>{{ rol|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="filtro_nombre" class="form-label">Nombre</label>
+                    <input type="text" name="filtro_nombre" id="filtro_nombre" class="form-control" placeholder="Buscar por nombre..." value="{{ filtros_activos.nombre }}">
+                </div>
+
+                <div class="col-md-4 d-flex">
+                    <button type="submit" class="btn btn-primary me-2">Filtrar</button>
+                    <a href="{{ url_for('crud_usuarios') }}" class="btn btn-secondary">Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
     <h2>Agregar Nuevo Usuario</h2>
     <div class="marco-piel mb-5">
         <form action="{{ url_for('add_usuario') }}" method="POST" class="row g-3">
@@ -17,7 +44,6 @@
             <div class="col-md-4">
                 <input type="text" name="apellido_materno" class="form-control" placeholder="Apellido Materno" required>
             </div>
-
             <div class="col-md-4">
                 <select name="rol_usuario" class="form-select" required>
                     <option value="">-- Seleccione Rol --</option>
@@ -26,14 +52,12 @@
                     <option value="soporte">Soporte</option>
                 </select>
             </div>
-
             <div class="col-md-4">
                 <input type="email" name="email_usuario" class="form-control" placeholder="Correo electrónico" required>
             </div>
             <div class="col-md-4">
                 <input type="password" name="password" class="form-control" placeholder="Contraseña" required>
             </div>
-
             <div class="col-md-3">
                 <input type="text" name="region" class="form-control" placeholder="Región">
             </div>
@@ -52,7 +76,6 @@
             <div class="col-md-3">
                 <input type="text" name="telefono" class="form-control" placeholder="Teléfono">
             </div>
-
             <div class="col-12">
                 <button type="submit" class="btn btn-success w-100">Agregar Usuario</button>
             </div>
@@ -77,110 +100,78 @@
                     <td>{{ u.nombre_usuario }} {{ u.apellido_paterno }} {{ u.apellido_materno }}</td>
                     <td>{{ u.rol_usuario }}</td>
                     <td>
-                        <!-- Botón Ver Usuario -->
-                        <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#viewUsuarioModal{{ u.id_usuario }}">
-                            Ver
-                        </button>
-
-                        <!-- Botón Editar Usuario -->
-                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUsuarioModal{{ u.id_usuario }}">
-                            Editar
-                        </button>
-
-                        <!-- Botón Eliminar -->
+                        <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#viewUsuarioModal{{ u.id_usuario }}">Ver</button>
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUsuarioModal{{ u.id_usuario }}">Editar</button>
                         <form action="{{ url_for('delete_usuario', id_usuario=u.id_usuario) }}" method="POST" style="display:inline;">
                             <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar este usuario?')">Eliminar</button>
                         </form>
                     </td>
                 </tr>
-
-                <!-- Modal Ver Usuario -->
-                <div class="modal fade" id="viewUsuarioModal{{ u.id_usuario }}" tabindex="-1">
-                    <div class="modal-dialog modal-md">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Ficha de Usuario</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p><strong>Nombre completo:</strong> {{ u.nombre_usuario }} {{ u.apellido_paterno }} {{ u.apellido_materno }}</p>
-                                <p><strong>Email:</strong> {{ u.email_usuario }}</p>
-                                <p><strong>Rol:</strong> {{ u.rol_usuario }}</p>
-                                <p><strong>Dirección:</strong> {{ u.calle }} {{ u.numero_calle }}, {{ u.comuna }}, {{ u.ciudad }}, {{ u.region }}</p>
-                                <p><strong>Teléfono:</strong> {{ u.telefono }}</p>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal Editar Usuario -->
-                <div class="modal fade" id="editUsuarioModal{{ u.id_usuario }}" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <form action="{{ url_for('edit_usuario', id_usuario=u.id_usuario) }}" method="POST">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Editar Usuario</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body row g-3">
-                                    <div class="col-md-4">
-                                        <input type="text" name="nombre_usuario" class="form-control" value="{{ u.nombre_usuario }}" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <input type="text" name="apellido_paterno" class="form-control" value="{{ u.apellido_paterno }}" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <input type="text" name="apellido_materno" class="form-control" value="{{ u.apellido_materno }}" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <select name="rol_usuario" class="form-select" required>
-                                            <option value="cliente" {% if u.rol_usuario == 'cliente' %}selected{% endif %}>Cliente</option>
-                                            <option value="admin" {% if u.rol_usuario == 'admin' %}selected{% endif %}>Admin</option>
-                                            <option value="soporte" {% if u.rol_usuario == 'soporte' %}selected{% endif %}>Soporte</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <input type="email" name="email_usuario" class="form-control" value="{{ u.email_usuario }}" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <input type="password" name="password" class="form-control" placeholder="Nueva contraseña (opcional)">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" name="region" class="form-control" value="{{ u.region }}">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" name="ciudad" class="form-control" value="{{ u.ciudad }}">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" name="calle" class="form-control" value="{{ u.calle }}">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" name="numero_calle" class="form-control" value="{{ u.numero_calle }}">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" name="comuna" class="form-control" value="{{ u.comuna }}">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" name="telefono" class="form-control" value="{{ u.telefono }}">
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+{% for u in usuarios %}
+    <div class="modal fade" id="viewUsuarioModal{{ u.id_usuario }}" tabindex="-1">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ficha de Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Nombre completo:</strong> {{ u.nombre_usuario }} {{ u.apellido_paterno }} {{ u.apellido_materno }}</p>
+                    <p><strong>Email:</strong> {{ u.email_usuario }}</p>
+                    <p><strong>Rol:</strong> {{ u.rol_usuario }}</p>
+                    <p><strong>Dirección:</strong> {{ u.calle }} {{ u.numero_calle }}, {{ u.comuna }}, {{ u.ciudad }}, {{ u.region }}</p>
+                    <p><strong>Teléfono:</strong> {{ u.telefono }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editUsuarioModal{{ u.id_usuario }}" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form action="{{ url_for('edit_usuario', id_usuario=u.id_usuario) }}" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar Usuario</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body row g-3">
+                        <div class="col-md-4"><input type="text" name="nombre_usuario" class="form-control" value="{{ u.nombre_usuario }}" required></div>
+                        <div class="col-md-4"><input type="text" name="apellido_paterno" class="form-control" value="{{ u.apellido_paterno }}" required></div>
+                        <div class="col-md-4"><input type="text" name="apellido_materno" class="form-control" value="{{ u.apellido_materno }}" required></div>
+                        <div class="col-md-4">
+                            <select name="rol_usuario" class="form-select" required>
+                                <option value="cliente" {% if u.rol_usuario == 'cliente' %}selected{% endif %}>Cliente</option>
+                                <option value="admin" {% if u.rol_usuario == 'admin' %}selected{% endif %}>Admin</option>
+                                <option value="soporte" {% if u.rol_usuario == 'soporte' %}selected{% endif %}>Soporte</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4"><input type="email" name="email_usuario" class="form-control" value="{{ u.email_usuario }}" required></div>
+                        <div class="col-md-4"><input type="password" name="password" class="form-control" placeholder="Nueva contraseña (opcional)"></div>
+                        <div class="col-md-3"><input type="text" name="region" class="form-control" value="{{ u.region }}"></div>
+                        <div class="col-md-3"><input type="text" name="ciudad" class="form-control" value="{{ u.ciudad }}"></div>
+                        <div class="col-md-3"><input type="text" name="calle" class="form-control" value="{{ u.calle }}"></div>
+                        <div class="col-md-3"><input type="text" name="numero_calle" class="form-control" value="{{ u.numero_calle }}"></div>
+                        <div class="col-md-3"><input type="text" name="comuna" class="form-control" value="{{ u.comuna }}"></div>
+                        <div class="col-md-3"><input type="text" name="telefono" class="form-control" value="{{ u.telefono }}"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endfor %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

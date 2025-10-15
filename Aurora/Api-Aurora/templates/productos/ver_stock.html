@@ -2,65 +2,81 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Stock por Sucursales</title>
+    <title>Gestión de Stock - {{ producto.nombre_producto }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <style>
-        .producto-header {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .producto-header img {
-            max-width: 120px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
+        .producto-header { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; }
+        .producto-header img { max-width: 100px; border-radius: 8px; }
+        .talla-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem; }
+        .total-stock-display { font-size: 1.2rem; font-weight: bold; }
     </style>
 </head>
 <body class="bg-light">
 
 <div class="container mt-5">
-    <!-- Información del producto -->
-    <div class="producto-header">
-        {% if producto.imagen_url %}
-            <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre_producto }}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
         {% endif %}
+    {% endwith %}
+
+    <div class="producto-header">
+        <img src="{{ producto.imagen_url or 'https://via.placeholder.com/100' }}" alt="{{ producto.nombre_producto }}">
         <div>
-            <h2>{{ producto.nombre_producto }}</h2>
-            <p><strong>Precio:</strong> ${{ "%.2f"|format(producto.precio_producto) }}</p>
+            <h2>{{ producto.nombre_producto }} <span class="badge bg-secondary">ID: {{ producto.id_producto }}</span></h2>
+            <p class="mb-0"><strong>Categoría:</strong> {{ producto.categoria_producto }}</p>
+            <p class="mb-0"><strong>Precio:</strong> ${{ "%.2f"|format(producto.precio_producto) }}</p>
         </div>
     </div>
 
-    <!-- Tabla de stock por sucursal -->
-    <h3>Stock por Sucursales</h3>
-    <table class="table table-bordered table-striped">
-        <thead class="table-dark">
-            <tr>
-                <th>Sucursal</th>
-                <th>Stock Actual</th>
-                <th>Modificar</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for s in sucursales %}
-            <tr>
-                <td>{{ s.nombre_sucursal }}</td>
-                <td>{{ s.stock }}</td>
-                <td>
-                    <form action="{{ url_for('update_stock_sucursal', id_producto=producto.id_producto, id_sucursal=s.id_sucursal) }}" method="post" class="d-flex">
-                        <input type="number" name="stock" min="0" class="form-control me-2" placeholder="Nuevo stock" required>
-                        <button type="submit" class="btn btn-sm btn-primary">Actualizar</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Gestión de Stock por Sucursal</h3>
+        <div class="fs-5 fw-bold">
+            Stock Total Disponible:
+            <span class="badge bg-dark">{{ stock_total_producto }}</span>
+        </div>
+    </div>
 
-    <!-- Botón volver -->
-    <a href="{{ url_for('crud_productos') }}" class="btn btn-secondary mt-3">Volver al CRUD de Productos</a>
+    {% for s in sucursales %}
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ s.nombre_sucursal }}</h5>
+            <div class="total-stock-display">
+                Stock Total: <span id="total-stock-{{ s.id_sucursal }}">{{ stock_total_sucursal[s.id_sucursal] }}</span>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if usa_tallas %}
+                <form action="{{ url_for('actualizar_stock_por_tallas', id_producto=producto.id_producto) }}" method="POST">
+                    <input type="hidden" name="id_sucursal" value="{{ s.id_sucursal }}">
+                    <h6 class="card-title">Actualizar Stock por Tallas</h6>
+                    <p class="card-text text-muted small">Modifica las cantidades y haz clic en "Actualizar Stock". Esto cambiará el stock total de la sucursal.</p>
+                    
+                    <div class="talla-grid mb-3">
+                        {% for talla in tallas_disponibles %}
+                        <div class="form-group">
+                            <label for="stock_{{ s.id_sucursal }}_{{ talla }}">{{ talla }}</label>
+                            <input type="number" min="0" value="{{ stock_por_talla[s.id_sucursal].get(talla, 0) }}" name="stock_talla_{{ talla }}" class="form-control stock-input-dist" data-sucursal-id="{{ s.id_sucursal }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-success">Actualizar Stock</button>
+                    </div>
+                </form>
+            {% else %}
+                <p class="text-center text-muted">Este producto no se gestiona por tallas.</p>
+                {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <a href="{{ url_for('crud_productos') }}" class="btn btn-secondary mt-3">Volver al Listado de Productos</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
