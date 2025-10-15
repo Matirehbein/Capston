@@ -1318,8 +1318,6 @@ def crud_ofertas():
 # Filtrado de ofertas: Por Estado
 # ===========================
 
-# AGREGA ESTA NUEVA RUTA en app.py
-
 @app.route("/api/ofertas/titulos_por_estado")
 @login_required
 def api_titulos_por_estado():

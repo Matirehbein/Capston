@@ -32,7 +32,6 @@
         <li><a href="#">Reportes</a></li>
         <li><a href="#">Configuración</a></li>
     </ul>
-
     <div class="sidebar-footer">
       <a href="{{ url_for('index_options') }}" class="btn btn-secondary w-100">Menú Principal</a>
     </div>
@@ -58,6 +57,11 @@
         <div class="card-body">
             <form action="{{ url_for('crud_productos') }}" method="GET" class="row g-3 align-items-end">
                 <div class="col-md-3">
+                    <label for="q" class="form-label">ID o SKU</label>
+                    <input type="text" name="q" id="q" class="form-control" placeholder="Buscar..." value="{{ filtros_activos.q }}">
+                </div>
+                
+                <div class="col-md-3">
                     <label for="filtro_categoria" class="form-label">Categoría</label>
                     <select name="filtro_categoria" id="filtro_categoria" class="form-select">
                         <option value="">Todas</option>
@@ -66,7 +70,8 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
+
+                <div class="col-md-2">
                     <label for="filtro_nombre" class="form-label">Nombre</label>
                     <select name="filtro_nombre" id="filtro_nombre" class="form-select">
                         <option value="">Todos</option>
@@ -75,6 +80,7 @@
                         {% endfor %}
                     </select>
                 </div>
+
                 <div class="col-md-2">
                     <label for="filtro_sucursal" class="form-label">Sucursal</label>
                     <select name="filtro_sucursal" id="filtro_sucursal" class="form-select">
@@ -84,10 +90,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label for="q" class="form-label">ID o SKU</label>
-                    <input type="text" name="q" id="q" class="form-control" placeholder="Buscar..." value="{{ filtros_activos.q }}">
-                </div>
+
                 <div class="col-md-2 d-flex">
                     <button type="submit" class="btn btn-primary me-2">Filtrar</button>
                     <a href="{{ url_for('crud_productos') }}" class="btn btn-secondary">Limpiar</a>
@@ -102,15 +105,7 @@
                 <label for="sku_digits" class="form-label">SKU</label>
                 <div class="input-group">
                     <span class="input-group-text">AUR-</span>
-                    <input type="text" 
-                           class="form-control" 
-                           id="sku_digits" 
-                           name="sku_digits" 
-                           placeholder="00001" 
-                           required 
-                           maxlength="5" 
-                           pattern="[0-9]{5}"
-                           title="Debe ingresar 5 dígitos numéricos.">
+                    <input type="text" class="form-control" id="sku_digits" name="sku_digits" placeholder="00001" required maxlength="5" pattern="[0-9]{5}" title="Debe ingresar 5 dígitos numéricos.">
                 </div>
             </div>
             <div class="col-md-8">
@@ -214,72 +209,72 @@
                 </tr>
 
                 <div class="modal fade" id="editProductoModal{{p.id_producto}}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <form action="{{ url_for('edit_producto', id=p.id_producto) }}" method="post">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Editar Producto</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="mb-2">
-                                        <label class="form-label">SKU</label>
-                                        <input type="text" class="form-control" name="sku" value="{{ p.sku }}" required>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Nombre del Producto</label>
-                                        <input type="text" class="form-control" name="nombre" value="{{ p.nombre_producto }}" required>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Precio</label>
-                                        <input type="number" step="0.01" class="form-control" name="precio" value="{{ p.precio_producto }}" required>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Descripción</label>
-                                        <textarea class="form-control" name="descripcion" placeholder="Descripción">{{ p.descripcion_producto }}</textarea>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Categoría</label>
-                                        <input type="text" class="form-control" name="categoria" value="{{ p.categoria_producto }}">
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">URL de la imagen</label>
-                                        <input type="text" class="form-control" name="imagen_url" value="{{ p.imagen_url }}" placeholder="URL de la imagen">
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                    <button type="submit" class="btn btn-primary">Guardar</button>
-                                </div>
-                            </form>
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <form action="{{ url_for('edit_producto', id=p.id_producto) }}" method="post">
+                        <div class="modal-header">
+                          <h5 class="modal-title">Editar Producto</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
+                        <div class="modal-body">
+                          <div class="mb-2">
+                            <label class="form-label">SKU</label>
+                            <input type="text" class="form-control" name="sku" value="{{ p.sku }}" required>
+                          </div>
+                          <div class="mb-2">
+                            <label class="form-label">Nombre del Producto</label>
+                            <input type="text" class="form-control" name="nombre" value="{{ p.nombre_producto }}" required>
+                          </div>
+                          <div class="mb-2">
+                            <label class="form-label">Precio</label>
+                            <input type="number" step="0.01" class="form-control" name="precio" value="{{ p.precio_producto }}" required>
+                          </div>
+                          <div class="mb-2">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" name="descripcion" placeholder="Descripción">{{ p.descripcion_producto }}</textarea>
+                          </div>
+                          <div class="mb-2">
+                            <label class="form-label">Categoría</label>
+                            <input type="text" class="form-control" name="categoria" value="{{ p.categoria_producto }}">
+                          </div>
+                          <div class="mb-2">
+                            <label class="form-label">URL de la imagen</label>
+                            <input type="text" class="form-control" name="imagen_url" value="{{ p.imagen_url }}" placeholder="URL de la imagen">
+                          </div>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                          <button type="submit" class="btn btn-primary">Guardar</button>
+                        </div>
+                      </form>
                     </div>
+                  </div>
                 </div>
 
                 <div class="modal fade" id="stockModal{{p.id_producto}}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <form action="{{ url_for('edit_stock', id=p.id_producto) }}" method="post">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Editar Stock</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <label for="sucursal">Sucursal</label>
-                                    <select name="id_sucursal" class="form-control mb-2" required>
-                                        {% for s in sucursales %}
-                                            <option value="{{ s.id_sucursal }}">{{ s.nombre_sucursal }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <input type="number" class="form-control mb-2" name="stock" placeholder="Nuevo stock" required>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                    <button type="submit" class="btn btn-warning">Guardar</button>
-                                </div>
-                            </form>
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <form action="{{ url_for('edit_stock', id=p.id_producto) }}" method="post">
+                        <div class="modal-header">
+                          <h5 class="modal-title">Editar Stock</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
+                        <div class="modal-body">
+                          <label for="sucursal">Sucursal</label>
+                          <select name="id_sucursal" class="form-control mb-2" required>
+                            {% for s in sucursales %}
+                              <option value="{{ s.id_sucursal }}">{{ s.nombre_sucursal }}</option>
+                            {% endfor %}
+                          </select>
+                          <input type="number" class="form-control mb-2" name="stock" placeholder="Nuevo stock" required>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                          <button type="submit" class="btn btn-warning">Guardar</button>
+                        </div>
+                      </form>
                     </div>
+                  </div>
                 </div>
                 {% endfor %}
             </tbody>
@@ -301,28 +296,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function actualizarNombres(categoria) {
         const url = `/api/productos/nombres_por_categoria?categoria=${encodeURIComponent(categoria)}`;
-
         fetch(url)
-            .then(response => {
-                if (!response.ok) throw new Error('Error de red');
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                nombreSelect.innerHTML = '<option value="">Todos</option>'; // Limpiar opciones
+                nombreSelect.innerHTML = '<option value="">Todos</option>';
                 data.nombres.forEach(nombre => {
                     const option = document.createElement('option');
                     option.value = nombre;
                     option.textContent = nombre;
-                    // Si este nombre coincide con el filtro original, lo dejamos seleccionado
                     if (nombre === nombreOriginalSeleccionado && categoria === "{{ filtros_activos.categoria or '' }}") {
                         option.selected = true;
                     }
                     nombreSelect.appendChild(option);
                 });
             })
-            .catch(error => console.error('Error al cargar nombres:', error));
+            .catch(error => console.error('Error al cargar los nombres:', error));
     }
 });
 </script>
+
 </body>
 </html>
