@@ -1262,3 +1262,10 @@ table.admin-table {
   border-radius: 10px;
 }
 
+.producto-link {
+    text-decoration: none;
+    color: inherit;
+}
+.producto-link:hover {
+    color: inherit;
+}

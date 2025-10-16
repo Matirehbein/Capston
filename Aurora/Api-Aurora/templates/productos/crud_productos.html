@@ -7,7 +7,6 @@
     <link href="{{ url_for('static', filename='css/crud_productos.css') }}" rel="stylesheet">
 
     <style>
-        /* Marco y fondo piel para formularios y tablas */
         .marco-piel {
             border: 2px solid #ffdbc4;
             border-radius: 8px;
@@ -37,7 +36,6 @@
     </div>
 </div>
 
-
 <div class="container mt-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Productos</h1>
@@ -60,7 +58,6 @@
                     <label for="q" class="form-label">ID o SKU</label>
                     <input type="text" name="q" id="q" class="form-control" placeholder="Buscar..." value="{{ filtros_activos.q }}">
                 </div>
-                
                 <div class="col-md-3">
                     <label for="filtro_categoria" class="form-label">Categoría</label>
                     <select name="filtro_categoria" id="filtro_categoria" class="form-select">
@@ -70,34 +67,32 @@
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="col-md-2">
                     <label for="filtro_nombre" class="form-label">Nombre</label>
                     <select name="filtro_nombre" id="filtro_nombre" class="form-select">
                         <option value="">Todos</option>
                         {% for nombre in nombres_productos %}
-                             <option value="{{ nombre }}" {{ 'selected' if nombre == filtros_activos.nombre }}>{{ nombre }}</option>
+                            <option value="{{ nombre }}" {{ 'selected' if nombre == filtros_activos.nombre }}>{{ nombre }}</option>
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="col-md-2">
                     <label for="filtro_sucursal" class="form-label">Sucursal</label>
                     <select name="filtro_sucursal" id="filtro_sucursal" class="form-select">
                         <option value="">Todas</option>
-                         {% for s in sucursales %}
+                        {% for s in sucursales %}
                             <option value="{{ s.id_sucursal }}" {{ 'selected' if s.id_sucursal|string == filtros_activos.sucursal }}>{{ s.nombre_sucursal }}</option>
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="col-md-2 d-flex">
                     <button type="submit" class="btn btn-primary me-2">Filtrar</button>
-                    <a href="{{ url_for('crud_productos') }}" class="btn btn-secondary">Limpiar</a>
+                    <a href="{{ url_for('crud_productos') }}" class="btn btn-warning">Limpiar</a>
                 </div>
             </form>
         </div>
     </div>
+    
     <div class="marco-piel mb-5">
         <h2>Agregar Producto</h2>
         <form action="{{ url_for('add_producto') }}" method="post" class="row g-3">
@@ -243,6 +238,8 @@
                           </div>
                         </div>
                         <div class="modal-footer">
+                          <a href="{{ url_for('gestionar_imagenes', id_producto=p.id_producto) }}" class="btn btn-success me-auto">Gestionar Imágenes</a>
+                          
                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                           <button type="submit" class="btn btn-primary">Guardar</button>
                         </div>
@@ -250,7 +247,6 @@
                     </div>
                   </div>
                 </div>
-
                 <div class="modal fade" id="stockModal{{p.id_producto}}" tabindex="-1">
                   <div class="modal-dialog">
                     <div class="modal-content">

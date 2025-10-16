@@ -4,12 +4,39 @@
 {% block page_title %}Usuarios{% endblock %}
 
 {% block content %}
+<style>
+    /* Estilos para los requisitos de la contraseña */
+    .password-requirements-popover {
+        list-style-type: none;
+        padding: 0.5rem 0.5rem 0.5rem 1rem;
+        margin: 0;
+        font-size: 0.9em;
+    }
+    .password-requirements-popover li {
+        transition: color 0.3s ease;
+    }
+    .password-requirements-popover li.invalid {
+        color: #dc3545; /* Rojo */
+    }
+    .password-requirements-popover li.valid {
+        color: #198754; /* Verde */
+        text-decoration: line-through;
+    }
+    .password-requirements-popover li.valid::before {
+        content: '✓ ';
+        font-weight: bold;
+    }
+    .password-requirements-popover li.invalid::before {
+        content: '✗ ';
+        font-weight: bold;
+    }
+</style>
+
 <div class="container mt-4">
 
     <div class="card mb-4">
         <div class="card-body">
             <form action="{{ url_for('crud_usuarios') }}" method="GET" class="row g-3 align-items-end">
-                
                 <div class="col-md-4">
                     <label for="filtro_rol" class="form-label">Rol</label>
                     <select name="filtro_rol" id="filtro_rol" class="form-select">
@@ -19,22 +46,21 @@
                         {% endfor %}
                     </select>
                 </div>
-                
                 <div class="col-md-4">
                     <label for="filtro_nombre" class="form-label">Nombre</label>
                     <input type="text" name="filtro_nombre" id="filtro_nombre" class="form-control" placeholder="Buscar por nombre..." value="{{ filtros_activos.nombre }}">
                 </div>
-
                 <div class="col-md-4 d-flex">
                     <button type="submit" class="btn btn-primary me-2">Filtrar</button>
-                    <a href="{{ url_for('crud_usuarios') }}" class="btn btn-secondary">Limpiar</a>
+                    <a href="{{ url_for('crud_usuarios') }}" class="btn btn-warning">Limpiar</a>
                 </div>
             </form>
         </div>
     </div>
+    
     <h2>Agregar Nuevo Usuario</h2>
     <div class="marco-piel mb-5">
-        <form action="{{ url_for('add_usuario') }}" method="POST" class="row g-3">
+        <form id="add-user-form" action="{{ url_for('add_usuario') }}" method="POST" class="row g-3">
             <div class="col-md-4">
                 <input type="text" name="nombre_usuario" class="form-control" placeholder="Nombre" required>
             </div>
@@ -56,28 +82,17 @@
                 <input type="email" name="email_usuario" class="form-control" placeholder="Correo electrónico" required>
             </div>
             <div class="col-md-4">
-                <input type="password" name="password" class="form-control" placeholder="Contraseña" required>
+                <input type="password" name="password" id="add-password" class="form-control" placeholder="Contraseña" required
+                       data-bs-toggle="popover" data-bs-placement="bottom" data-bs-html="true" title="Requisitos de la contraseña">
             </div>
-            <div class="col-md-3">
-                <input type="text" name="region" class="form-control" placeholder="Región">
-            </div>
-            <div class="col-md-3">
-                <input type="text" name="ciudad" class="form-control" placeholder="Ciudad">
-            </div>
-            <div class="col-md-3">
-                <input type="text" name="calle" class="form-control" placeholder="Calle">
-            </div>
-            <div class="col-md-3">
-                <input type="text" name="numero_calle" class="form-control" placeholder="Número de calle">
-            </div>
-            <div class="col-md-3">
-                <input type="text" name="comuna" class="form-control" placeholder="Comuna">
-            </div>
-            <div class="col-md-3">
-                <input type="text" name="telefono" class="form-control" placeholder="Teléfono">
-            </div>
+            <div class="col-md-3"><input type="text" name="region" class="form-control" placeholder="Región"></div>
+            <div class="col-md-3"><input type="text" name="ciudad" class="form-control" placeholder="Ciudad"></div>
+            <div class="col-md-3"><input type="text" name="calle" class="form-control" placeholder="Calle"></div>
+            <div class="col-md-3"><input type="text" name="numero_calle" class="form-control" placeholder="Número de calle"></div>
+            <div class="col-md-3"><input type="text" name="comuna" class="form-control" placeholder="Comuna"></div>
+            <div class="col-md-3"><input type="text" name="telefono" class="form-control" placeholder="Teléfono"></div>
             <div class="col-12">
-                <button type="submit" class="btn btn-success w-100">Agregar Usuario</button>
+                <button type="submit" id="add-user-submit" class="btn btn-success w-100">Agregar Usuario</button>
             </div>
         </form>
     </div>
@@ -113,6 +128,15 @@
     </div>
 </div>
 
+<div id="password-requirements-template" style="display: none;">
+    <ul class="password-requirements-popover">
+        <li class="req-length invalid">6–24 caracteres</li>
+        <li class="req-upper invalid">Al menos una mayúscula</li>
+        <li class="req-number invalid">Al menos un número</li>
+        <li class="req-special invalid">Al menos un carácter especial</li>
+    </ul>
+</div>
+
 {% for u in usuarios %}
     <div class="modal fade" id="viewUsuarioModal{{ u.id_usuario }}" tabindex="-1">
         <div class="modal-dialog modal-md">
@@ -134,7 +158,6 @@
             </div>
         </div>
     </div>
-
     <div class="modal fade" id="editUsuarioModal{{ u.id_usuario }}" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -155,7 +178,10 @@
                             </select>
                         </div>
                         <div class="col-md-4"><input type="email" name="email_usuario" class="form-control" value="{{ u.email_usuario }}" required></div>
-                        <div class="col-md-4"><input type="password" name="password" class="form-control" placeholder="Nueva contraseña (opcional)"></div>
+                        <div class="col-md-4">
+                            <input type="password" name="password" class="form-control edit-password-input" placeholder="Nueva contraseña (opcional)"
+                                   data-bs-toggle="popover" data-bs-placement="bottom" data-bs-html="true" title="Requisitos de la contraseña">
+                        </div>
                         <div class="col-md-3"><input type="text" name="region" class="form-control" value="{{ u.region }}"></div>
                         <div class="col-md-3"><input type="text" name="ciudad" class="form-control" value="{{ u.ciudad }}"></div>
                         <div class="col-md-3"><input type="text" name="calle" class="form-control" value="{{ u.calle }}"></div>
@@ -165,7 +191,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                        <button type="submit" class="btn btn-primary edit-user-submit">Guardar Cambios</button>
                     </div>
                 </form>
             </div>
@@ -174,4 +200,64 @@
 {% endfor %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function setupPasswordValidation(passwordInput, submitButton, isOptional) {
+        const popoverContentEl = document.getElementById('password-requirements-template').cloneNode(true);
+        popoverContentEl.style.display = 'block';
+        popoverContentEl.id = '';
+
+        const popover = new bootstrap.Popover(passwordInput, {
+            content: popoverContentEl,
+            trigger: 'focus'
+        });
+
+        const reqs = {
+            length: popoverContentEl.querySelector('.req-length'),
+            upper: popoverContentEl.querySelector('.req-upper'),
+            number: popoverContentEl.querySelector('.req-number'),
+            special: popoverContentEl.querySelector('.req-special')
+        };
+
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+
+            if (isOptional && password.length === 0) {
+                submitButton.disabled = false;
+                popover.hide();
+                return;
+            }
+
+            const hasLength = password.length >= 6 && password.length <= 24;
+            const hasUpper = /[A-Z]/.test(password);
+            const hasNumber = /\d/.test(password);
+            const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+            updateRequirement(reqs.length, hasLength);
+            updateRequirement(reqs.upper, hasUpper);
+            updateRequirement(reqs.number, hasNumber);
+            updateRequirement(reqs.special, hasSpecial);
+
+            const allValid = hasLength && hasUpper && hasNumber && hasSpecial;
+            submitButton.disabled = !allValid;
+        });
+
+        function updateRequirement(element, isValid) {
+            element.className = isValid ? 'valid' : 'invalid';
+        }
+    }
+
+    const addPasswordInput = document.getElementById('add-password');
+    const addSubmitBtn = document.getElementById('add-user-submit');
+    setupPasswordValidation(addPasswordInput, addSubmitBtn, false);
+
+    document.querySelectorAll('.modal[id^="editUsuarioModal"]').forEach(modal => {
+        const passwordInput = modal.querySelector('.edit-password-input');
+        const submitBtn = modal.querySelector('.edit-user-submit');
+        setupPasswordValidation(passwordInput, submitBtn, true);
+    });
+});
+</script>
+
 {% endblock %}

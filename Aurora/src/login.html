@@ -409,7 +409,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let errorMessage = '';
 
     if (error === 'email_exists') {
-        errorMessage = "⛔ **Error de Registro:** El correo electrónico ingresado ya está asociado a otra cuenta. Por favor, utiliza uno diferente.";
+        errorMessage = "⛔ El correo electrónico ingresado ya está asociado a otra cuenta. Por favor, utiliza uno diferente.";
     } else if (error === 'email_mismatch') {
         errorMessage = "⚠️ Los correos electrónicos no coinciden.";
     } else if (error === 'password_mismatch') {
