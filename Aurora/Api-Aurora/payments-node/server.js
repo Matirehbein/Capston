@@ -1,17 +1,33 @@
 const express = require('express');
-const dotenv  = require('dotenv');
-const cors    = require('cors');
+const cors = require('cors');
+require('dotenv').config();
 
-dotenv.config();
 const app = express();
+const PORT = process.env.PORT || 3010;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // necesario para token_ws (POST)
-app.use('/webpay', require('./routes/webpay'));
 
+// RUTAS
+const webpayRoutes = require('./routes/webpay');           // <- tu ruta existente
+const mercadopagoRoutes = require('./routes/mercadopago'); // <- la que creamos abajo
+app.use('/webpay', webpayRoutes);
+app.use('/mercadopago', mercadopagoRoutes);
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+// Página base (opcional)
+app.get('/', (_req, res) => res.send('Servidor de pagos activo ✅ (Webpay + MP)'));
 
-const PORT = process.env.PORT || 3010;
-app.listen(PORT, () => console.log(`Webpay Node corriendo en http://localhost:${PORT}`));
+// Healthcheck útil
+app.get('/healthz', (_req, res) => {
+  const mask = v => (v ? v.slice(0, 10) + '...' : 'MISSING');
+  res.json({
+    MP_ACCESS_TOKEN: mask(process.env.MP_ACCESS_TOKEN),
+    FRONT_SUCCESS_URL: process.env.FRONT_SUCCESS_URL,
+    FRONT_FAILURE_URL: process.env.FRONT_FAILURE_URL,
+    FRONT_PENDING_URL: process.env.FRONT_PENDING_URL,
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`✓ Pagos en http://localhost:${PORT}`);
+});

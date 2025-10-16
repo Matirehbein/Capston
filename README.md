@@ -85,3 +85,11 @@ cvc:  123
 
 Rut: 11.111.111-1   
 contraseña: 123
+
+
+#mercado Pago
+
+4168 8188 4444 7115	123	11/30
+ Nombre de usuario: TESTUSER5743405410736737635
+correo: test_user_5743405410736737635@testuser.com
+
