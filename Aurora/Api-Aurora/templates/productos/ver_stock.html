@@ -5,7 +5,7 @@
     <title>Gestión de Stock - {{ producto.nombre_producto }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .producto-header { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; }
+        .producto-header { display: flex; align-items: center; gap: 20px; } /* Se quita el margin-bottom */
         .producto-header img { max-width: 100px; border-radius: 8px; }
         .talla-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem; }
         .total-stock-display { font-size: 1.2rem; font-weight: bold; }
@@ -25,15 +25,23 @@
         {% endif %}
     {% endwith %}
 
-    <div class="producto-header">
-        <img src="{{ producto.imagen_url or 'https://via.placeholder.com/100' }}" alt="{{ producto.nombre_producto }}">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div class="producto-header">
+            <img src="{{ producto.imagen_url or 'https://via.placeholder.com/100' }}" alt="{{ producto.nombre_producto }}">
+            <div>
+                <h2>{{ producto.nombre_producto }}</h2>
+                <div>
+                    <span class="badge bg-dark">ID: {{ producto.id_producto }}</span>
+                    <span class="badge bg-info text-dark">SKU: {{ producto.sku }}</span>
+                </div>
+                <p class="mb-0 mt-2"><strong>Categoría:</strong> {{ producto.categoria_producto }}</p>
+                <p class="mb-0"><strong>Precio:</strong> ${{ "%.2f"|format(producto.precio_producto) }}</p>
+            </div>
+        </div>
         <div>
-            <h2>{{ producto.nombre_producto }} <span class="badge bg-secondary">ID: {{ producto.id_producto }}</span></h2>
-            <p class="mb-0"><strong>Categoría:</strong> {{ producto.categoria_producto }}</p>
-            <p class="mb-0"><strong>Precio:</strong> ${{ "%.2f"|format(producto.precio_producto) }}</p>
+            <a href="{{ url_for('crud_productos') }}" class="btn btn-secondary">Volver al Listado</a>
         </div>
     </div>
-
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>Gestión de Stock por Sucursal</h3>
         <div class="fs-5 fw-bold">
@@ -71,13 +79,12 @@
                 </form>
             {% else %}
                 <p class="text-center text-muted">Este producto no se gestiona por tallas.</p>
-                {% endif %}
+            {% endif %}
         </div>
     </div>
     {% endfor %}
 
-    <a href="{{ url_for('crud_productos') }}" class="btn btn-secondary mt-3">Volver al Listado de Productos</a>
-</div>
+    </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -132,6 +132,17 @@ CREATE TABLE producto (
   imagen_url TEXT
 );
 
+CREATE TABLE producto_imagenes (
+    id_imagen SERIAL PRIMARY KEY,
+    id_producto INT NOT NULL,
+    url_imagen TEXT NOT NULL,
+    orden INT DEFAULT 0,
+    CONSTRAINT fk_producto
+        FOREIGN KEY(id_producto) 
+        REFERENCES producto(id_producto)
+        ON DELETE CASCADE
+);
+
 CREATE TABLE oferta_producto (
   id_oferta INT NOT NULL,
   id_producto INT NOT NULL,

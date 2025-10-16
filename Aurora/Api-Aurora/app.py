@@ -863,6 +863,86 @@ def add_sucursal():
     return redirect(url_for("crud_sucursales"))
 
 # ---------------------------
+# Api para validar teléfono de la sucursal en la base de datos
+# ---------------------------
+
+@app.route('/api/check_telefono_sucursal', methods=['GET'])
+@login_required
+def check_telefono_sucursal():
+    """
+    Verifica si un número de teléfono ya está registrado en la base de datos,
+    con la opción de excluir un ID de sucursal específico (para la edición).
+    """
+    telefono = request.args.get('telefono')
+    exclude_id = request.args.get('exclude_id') # Nuevo parámetro para ignorar un ID
+
+    if not telefono:
+        return jsonify({'exists': False})
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        query = "SELECT 1 FROM sucursal WHERE telefono_sucursal = %s"
+        params = [telefono]
+
+        # Si estamos editando, añadimos una condición para excluir la propia sucursal de la búsqueda
+        if exclude_id:
+            query += " AND id_sucursal != %s"
+            params.append(exclude_id)
+        
+        query += " LIMIT 1;"
+        
+        cur.execute(query, tuple(params))
+        telefono_exists = cur.fetchone() is not None
+        return jsonify({'exists': telefono_exists})
+    except Exception as e:
+        print(f"Error al verificar el teléfono de sucursal: {e}")
+        return jsonify({'exists': False}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+# ---------------------------
+# Api para validar dirección de la sucursal en la base de datos
+# ---------------------------
+
+@app.route('/api/check_direccion_sucursal', methods=['GET'])
+@login_required
+def check_direccion_sucursal():
+    """
+    Verifica si una dirección ya está registrada en otra sucursal,
+    con la opción de excluir un ID de sucursal específico (para la edición).
+    """
+    direccion = request.args.get('direccion', '')
+    exclude_id = request.args.get('exclude_id')
+
+    if not direccion:
+        return jsonify({'exists': False})
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Usamos ILIKE para una comparación insensible a mayúsculas/minúsculas
+        query = "SELECT 1 FROM sucursal WHERE direccion_sucursal ILIKE %s"
+        params = [direccion.strip()]
+
+        if exclude_id:
+            query += " AND id_sucursal != %s"
+            params.append(exclude_id)
+        
+        query += " LIMIT 1;"
+        
+        cur.execute(query, tuple(params))
+        direccion_exists = cur.fetchone() is not None
+        return jsonify({'exists': direccion_exists})
+    except Exception as e:
+        print(f"Error al verificar la dirección de sucursal: {e}")
+        return jsonify({'exists': False}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+# ---------------------------
 # Editar Sucursales
 # ---------------------------
 
@@ -957,8 +1037,6 @@ def detalle_sucursal(id_sucursal):
 # CRUD USUARIOS
 # ===========================
 
-# REEMPLAZA ESTA FUNCIÓN COMPLETA en app.py
-
 @app.route('/usuarios')
 @login_required
 def crud_usuarios():
@@ -1025,7 +1103,6 @@ def crud_usuarios():
 # Agregar USUARIOS
 # ===========================
 
-
 @app.route("/usuarios/add", methods=["POST"])
 @login_required
 def add_usuario():
@@ -1088,7 +1165,6 @@ def add_usuario():
 # Editar USUARIOS
 # ===========================
 
-
 @app.route("/usuarios/edit/<int:id_usuario>", methods=["POST"])
 @login_required
 def edit_usuario(id_usuario):
@@ -1102,7 +1178,7 @@ def edit_usuario(id_usuario):
     cur.execute("SELECT id_usuario FROM usuario WHERE email_usuario = %s AND id_usuario != %s", (email_usuario, id_usuario))
     existing_email = cur.fetchone()
     if existing_email:
-        flash(f"❌ Error: El correo '{email_usuario}' ya está registrado en otro usuario.", "warning")
+        flash(f"❌ Error: El correo '{email_usuario}' ya está registrado en otro usuario.", "danger")
         cur.close()
         conn.close()
         return redirect(url_for("crud_usuarios"))
@@ -1111,7 +1187,7 @@ def edit_usuario(id_usuario):
     cur.execute("SELECT id_usuario FROM usuario WHERE telefono = %s AND id_usuario != %s", (telefono, id_usuario))
     existing = cur.fetchone()
     if existing:
-        flash(f"❌ Error: El teléfono '{telefono}' ya está registrado en otro usuario.", "warning")
+        flash(f"❌ Error: El teléfono '{telefono}' ya está registrado en otro usuario.", "danger")
         cur.close()
         conn.close()
         return redirect(url_for("crud_usuarios"))
@@ -1430,6 +1506,18 @@ def edit_oferta(id_oferta):
     if request.method == "POST":
         data = request.form
         try:
+            # --- INICIO DE LA LÓGICA CORREGIDA ---
+            # 1. Obtenemos las fechas del formulario de edición.
+            fecha_inicio_str = data.get("fecha_inicio")
+            fecha_fin_str = data.get("fecha_fin")
+            
+            # 2. Obtenemos la fecha de hoy para comparar.
+            hoy_str = date.today().isoformat()
+            
+            # 3. Recalculamos si la oferta está vigente con las nuevas fechas.
+            vigente = (fecha_inicio_str <= hoy_str <= fecha_fin_str)
+            # --- FIN DE LA LÓGICA CORREGIDA ---
+
             cur.execute("""
                 UPDATE oferta
                 SET titulo=%s, descripcion=%s, descuento_pct=%s, 
@@ -1439,16 +1527,16 @@ def edit_oferta(id_oferta):
                 data.get("titulo"),
                 data.get("descripcion"),
                 data.get("descuento_pct"),
-                data.get("fecha_inicio"),
-                data.get("fecha_fin"),
-                data.get("vigente_bool") == "on",
+                fecha_inicio_str,      # Usamos la fecha del formulario
+                fecha_fin_str,         # Usamos la fecha del formulario
+                vigente,               # Usamos el valor booleano que acabamos de calcular
                 id_oferta
             ))
 
-            # Actualizar productos asociados
+            # Actualizar productos asociados (esta parte ya estaba bien)
             cur.execute("DELETE FROM oferta_producto WHERE id_oferta=%s;", (id_oferta,))
-            productos = data.getlist("productos")
-            for id_producto in productos:
+            productos_seleccionados = data.getlist("productos") # Corregido a getlist para múltiples productos si se implementa en el futuro
+            for id_producto in productos_seleccionados:
                 cur.execute("""
                     INSERT INTO oferta_producto (id_oferta, id_producto)
                     VALUES (%s, %s);
@@ -1463,13 +1551,14 @@ def edit_oferta(id_oferta):
             cur.close()
             conn.close()
         return redirect(url_for("crud_ofertas"))
-    else:
+    else: # La parte GET para mostrar el modal se mantiene igual
         cur.execute("SELECT * FROM oferta WHERE id_oferta=%s;", (id_oferta,))
         oferta = cur.fetchone()
 
         cur.execute("SELECT id_producto FROM oferta_producto WHERE id_oferta=%s;", (id_oferta,))
-        productos_asociados = [row[0] for row in cur.fetchall()]
-
+        # ... el resto de tu código GET ...
+        
+        # Necesitamos la lista de todos los productos para poblar el select en el modal
         cur.execute("""
             SELECT p.id_producto, p.nombre_producto, COALESCE(SUM(i.stock), 0) AS stock
             FROM producto p
@@ -1482,9 +1571,9 @@ def edit_oferta(id_oferta):
 
         cur.close()
         conn.close()
-        return render_template("ofertas/edit_oferta.html",
-                               oferta=oferta,
-                               productos=productos)
+        
+        # Renderizar la plantilla principal, el modal se activará desde allí
+        return redirect(url_for('crud_ofertas')) # Es mejor redirigir para que la URL se mantenga limpia
 
 
 # ===========================
@@ -2065,6 +2154,127 @@ def api_bulk_delete_productos():
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ===========================
+# Mostrar página de Gestión de Imágenes
+# ===========================
+
+@app.route('/producto/<int:id_producto>/imagenes', methods=['GET'])
+@login_required
+def gestionar_imagenes(id_producto):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    # Obtener el producto principal
+    cur.execute("SELECT * FROM producto WHERE id_producto = %s", (id_producto,))
+    producto = cur.fetchone()
+
+    # Obtener las imágenes adicionales de la nueva tabla
+    cur.execute("SELECT * FROM producto_imagenes WHERE id_producto = %s ORDER BY orden", (id_producto,))
+    imagenes_adicionales = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    if not producto:
+        flash("❌ Producto no encontrado.", "danger")
+        return redirect(url_for('crud_productos'))
+
+    return render_template('productos/gestionar_imagenes.html', producto=producto, imagenes_adicionales=imagenes_adicionales)
+
+
+# ===========================
+# Gestión de Imágenes: Guardar cambios
+# ===========================
+
+@app.route('/producto/<int:id_producto>/guardar_imagenes', methods=['POST'])
+@login_required
+def guardar_imagenes(id_producto):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # 1. Actualizar la imagen principal en la tabla 'producto'
+        imagen_principal_url = request.form.get('imagen_principal')
+        cur.execute("UPDATE producto SET imagen_url = %s WHERE id_producto = %s", (imagen_principal_url, id_producto))
+
+        # 2. Borrar las imágenes adicionales antiguas para reemplazarlas
+        cur.execute("DELETE FROM producto_imagenes WHERE id_producto = %s", (id_producto,))
+
+        # 3. Insertar las nuevas imágenes adicionales
+        imagenes_adicionales = request.form.getlist('imagenes_adicionales[]')
+        orden = 1
+        for url in imagenes_adicionales:
+            if url: # Solo insertar si el campo no está vacío
+                cur.execute(
+                    "INSERT INTO producto_imagenes (id_producto, url_imagen, orden) VALUES (%s, %s, %s)",
+                    (id_producto, url, orden)
+                )
+                orden += 1
+        
+        conn.commit()
+        flash("✅ Imágenes guardadas correctamente.", "success")
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"❌ Error al guardar las imágenes: {e}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    return redirect(url_for('gestionar_imagenes', id_producto=id_producto))
+
+
+# ===========================
+# Detalle de los productos en productos.html
+# ===========================
+
+## AGREGA ESTA NUEVA RUTA en app.py
+
+@app.route('/api/producto/<int:id_producto>')
+def api_detalle_producto(id_producto):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        cur.execute("SELECT * FROM producto WHERE id_producto = %s", (id_producto,))
+        producto = cur.fetchone()
+
+        if not producto:
+            return jsonify({"error": "Producto no encontrado"}), 404
+
+        todas_las_imagenes = [producto['imagen_url']] if producto['imagen_url'] else []
+        cur.execute("SELECT url_imagen FROM producto_imagenes WHERE id_producto = %s ORDER BY orden", (id_producto,))
+        imagenes_adicionales = [row['url_imagen'] for row in cur.fetchall()]
+        todas_las_imagenes.extend(imagenes_adicionales)
+
+        cur.execute("""
+            SELECT talla, sku_variacion, color FROM variacion_producto 
+            WHERE id_producto = %s AND talla IS NOT NULL 
+            ORDER BY 
+                CASE 
+                    WHEN talla = 'XS' THEN 1 WHEN talla = 'S' THEN 2
+                    WHEN talla = 'M' THEN 3 WHEN talla = 'L' THEN 4
+                    WHEN talla = 'XL' THEN 5 ELSE 6
+                END;
+        """, (id_producto,))
+        variaciones = cur.fetchall()
+
+        # Prepara los datos para enviar como JSON
+        datos_producto = {
+            "producto": dict(producto),
+            "imagenes": todas_las_imagenes,
+            "variaciones": [dict(v) for v in variaciones]
+        }
+        return jsonify(datos_producto)
+
+    except Exception as e:
+        print(f"Error en API de detalle de producto: {e}")
+        return jsonify({"error": "Error interno del servidor"}), 500
     finally:
         cur.close()
         conn.close()
