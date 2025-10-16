@@ -88,6 +88,7 @@ contraseña: 123
 
 
 #mercado Pago
+npm list mercadopago
 
 4168 8188 4444 7115	123	11/30
  Nombre de usuario: TESTUSER5743405410736737635
