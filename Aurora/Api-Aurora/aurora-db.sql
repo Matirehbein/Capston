@@ -230,6 +230,35 @@ ALTER TABLE detalle_pedido
   ADD CONSTRAINT detalle_pedido_variacion_fk
   FOREIGN KEY (id_variacion) REFERENCES variacion_producto(id_variacion) ON DELETE RESTRICT;
 
+
+-- Agregar campos relacionados con pago y dirección
+ALTER TABLE pedido
+ADD COLUMN metodo_pago VARCHAR(50),
+ADD COLUMN estado_pago VARCHAR(20) CHECK (estado_pago IN ('pendiente', 'aprobado', 'rechazado', 'reembolsado')),
+ADD COLUMN total NUMERIC(10,2) DEFAULT 0 CHECK (total >= 0),
+ADD COLUMN direccion_envio TEXT;
+
+
+-- Asegurar integridad de datos con subtotal calculado y actualización
+ALTER TABLE detalle_pedido
+ADD COLUMN subtotal NUMERIC(10,2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED;
+
+
+CREATE TABLE pago (
+  id_pago SERIAL PRIMARY KEY,
+  id_pedido INT NOT NULL,
+  monto NUMERIC(10,2) NOT NULL CHECK (monto >= 0),
+  metodo_pago VARCHAR(50) NOT NULL,
+  estado_pago VARCHAR(20) CHECK (estado_pago IN ('pendiente', 'aprobado', 'rechazado', 'reembolsado')) DEFAULT 'pendiente',
+  fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  transaccion_id VARCHAR(100),
+  observaciones TEXT,
+
+  CONSTRAINT pago_pedido_fk FOREIGN KEY (id_pedido)
+    REFERENCES pedido(id_pedido)
+    ON DELETE CASCADE
+);
+
 -- Creación de índices
 CREATE INDEX idx_conversacion_usuario        ON conversacion(id_usuario);
 CREATE INDEX IF NOT EXISTS idx_pedido_usuario ON pedido(id_usuario);
@@ -243,4 +272,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_ticket_activo_por_prioridad
 CREATE INDEX idx_variacion_producto_prod     ON variacion_producto(id_producto);
 CREATE INDEX idx_inventario_sucursal         ON inventario_sucursal(id_sucursal);
 CREATE INDEX idx_inventario_variacion        ON inventario_sucursal(id_variacion);
+CREATE INDEX idx_pedido_pago      ON pago(id_pedido);
+CREATE INDEX idx_pedido_estado    ON pedido(estado_pedido);
+CREATE INDEX idx_pago_estado      ON pago(estado_pago);
 
