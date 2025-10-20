@@ -4,7 +4,7 @@ import { addItem, formatCLP } from "./cart.js";
 
 
 
-const API_BASE = "http://127.0.0.1:5000"; // ajusta si usas otra IP/puerto
+const API_BASE = "http://localhost:5000"; // ajusta si usas otra IP/puerto
 
 const $ = (s) => document.querySelector(s);
 

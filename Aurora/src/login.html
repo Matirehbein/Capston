@@ -34,14 +34,14 @@
     </div>
 
     <!-- Formulario de Login -->
-    <form id="login" class="active" method="POST" action="http://127.0.0.1:5000/login">
+    <form id="login" class="active" method="POST" action="http://localhost:5000/login">
       <input type="email" name="email_usuario" placeholder="Correo" required>
       <input type="password" name="password" placeholder="Contraseña" required>
       <button type="submit">Entrar</button>
     </form>
 
     <!-- Formulario de Registro -->
-    <form id="register" method="POST" action="http://127.0.0.1:5000/register">
+    <form id="register" method="POST" action="http://localhost:5000/register">
       <!-- Mensaje de error de registro (se muestra si viene de Flask) -->
       <div id="register-server-error-container"></div>
       
@@ -337,7 +337,7 @@ emailInput.addEventListener("blur", async () => {
 
   try {
     // Usamos el endpoint GET que definimos en Flask
-    const res = await fetch(`http://127.0.0.1:5000/check_email?email=${encodeURIComponent(email)}`);
+    const res = await fetch(`http://localhost:5000/check_email?email=${encodeURIComponent(email)}`);
     const data = await res.json();
 
     if (data.exists) {
@@ -450,7 +450,7 @@ telefonoInput.addEventListener("blur", async () => {
     }
 
     try {
-        const res = await fetch(`http://127.0.0.1:5000/check_telefono?telefono=${encodeURIComponent(telefono)}`);
+        const res = await fetch(`http://localhost:5000/check_telefono?telefono=${encodeURIComponent(telefono)}`);
         const data = await res.json();
 
         if (data.exists) {

@@ -1,7 +1,7 @@
 // ../Public/js/ofertasclientes.js
 import { addItem, formatCLP } from "./cart.js";
 
-const API_BASE = "http://127.0.0.1:5000";
+const API_BASE = "http://localhost:5000";
 const grid = document.querySelector(".ofertas-grid");
 
 function productCard(p, descuento) {

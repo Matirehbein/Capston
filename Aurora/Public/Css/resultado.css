@@ -1,19 +1,18 @@
-/* ====== Página de resultado de pago ====== */
-
-.main-content {
+/* ====== Página de resultado de pago (aislada) ====== */
+.resultado-page {
   max-width: 960px;
   margin: 40px auto;
   padding: 20px;
 }
 
-.main-content h1 {
+.resultado-page h1 {
   font-size: 1.8rem;
   margin-bottom: 24px;
   color: #b0853e; /* tono dorado */
 }
 
 /* Tarjeta de resultado */
-.receipt-card {
+.resultado-page .receipt-card {
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -22,14 +21,14 @@
   margin: 0 auto;
 }
 
-.status-row {
+.resultado-page .status-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
 }
 
-.status-badge {
+.resultado-page .status-badge {
   display: inline-block;
   padding: 8px 14px;
   border-radius: 999px;
@@ -37,25 +36,25 @@
   font-weight: 500;
 }
 
-.status-aprobado {
+.resultado-page .status-aprobado {
   background: #ecfdf5;
   color: #059669;
   border: 1px solid #6ee7b7;
 }
 
-.status-rechazado {
+.resultado-page .status-rechazado {
   background: #fef2f2;
   color: #dc2626;
   border: 1px solid #fca5a5;
 }
 
-.status-pendiente {
+.resultado-page .status-pendiente {
   background: #fff7ed;
   color: #c2410c;
   border: 1px solid #fdba74;
 }
 
-.kv {
+.resultado-page .kv {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px 14px;
@@ -63,11 +62,11 @@
   margin-bottom: 24px;
 }
 
-.kv > div {
+.resultado-page .kv > div {
   padding: 4px 0;
 }
 
-.kv .code {
+.resultado-page .kv .code {
   font-family: monospace;
   background: #f3f4f6;
   padding: 4px 6px;
@@ -76,13 +75,13 @@
 }
 
 /* Botones */
-.actions {
+.resultado-page .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.btn {
+.resultado-page .btn {
   display: inline-block;
   background: #000;
   color: #fff;
@@ -93,37 +92,37 @@
   text-align: center;
 }
 
-.btn:hover {
+.resultado-page .btn:hover {
   background: #333;
 }
 
-.btn.secondary {
+.resultado-page .btn.secondary {
   background: #e5e7eb;
   color: #111;
 }
 
-.btn.secondary:hover {
+.resultado-page .btn.secondary:hover {
   background: #d1d5db;
 }
 
 /* Responsive */
 @media (max-width: 600px) {
-  .status-row {
+  .resultado-page .status-row {
     flex-direction: column;
     gap: 8px;
     align-items: flex-start;
   }
 
-  .kv {
+  .resultado-page .kv {
     grid-template-columns: 1fr;
   }
 
-  .actions {
+  .resultado-page .actions {
     flex-direction: column;
     width: 100%;
   }
 
-  .actions .btn {
+  .resultado-page .actions .btn {
     width: 100%;
     text-align: center;
   }

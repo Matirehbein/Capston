@@ -1,6 +1,6 @@
 // ../Public/js/productos.js
 
-const API_BASE = "http://127.0.0.1:5000"; // ajusta si usas otra IP
+const API_BASE = "http://localhost:5000"; // ajusta si usas otra IP
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 

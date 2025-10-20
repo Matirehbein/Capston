@@ -92,7 +92,7 @@ PUBLIC_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "Public"))      # ...\
 FRONTEND_MAIN_URL = "http://localhost:3000/src/main.html"
 CORS(app,
     supports_credentials=True,
-    resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
+    resources={r"/api/*": {"origins": ["http://localhost:3000"]}})
 # Servir /Public (CSS/JS/Imgs)
 @app.route("/Public/<path:filename>")
 def public_files(filename):
@@ -2509,4 +2509,4 @@ def api_list_ofertas_public():
 # RUN
 # ===========================
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="localhost", port=5000, debug=True)

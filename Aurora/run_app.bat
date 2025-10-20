@@ -10,5 +10,5 @@ start cmd /k "cd Api-Aurora && ..\.venv\Scripts\activate && python app.py"
 start cmd /k "cd src && npm run dev"
 
 echo Servidores iniciados:
-echo  - Flask en http://127.0.0.1:5000
+echo  - Flask en http://localhost:5000
 echo  - npm en http://localhost:3000
