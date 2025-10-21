@@ -66,3 +66,26 @@ export function totalItems() {
 export function totalPrice() {
   return getCart().reduce((acc, it) => acc + it.qty * it.price, 0);
 }
+
+// AÑADE ESTO A TU ARCHIVO Public/js/cart.js
+
+// Esta función lee el carrito y devuelve el NÚMERO TOTAL de unidades
+function getCartTotalItems() {
+    const cart = JSON.parse(localStorage.getItem('aurora-cart')) || [];
+    return cart.reduce((total, item) => total + item.quantity, 0);
+}
+
+// Esta función actualiza el badge en el HTML
+export function updateCartCounter() {
+    const totalItems = getCartTotalItems();
+    const badge = document.getElementById('cart-badge-count');
+    if (badge) {
+        badge.textContent = totalItems;
+            badge.classList.add('visible');
+        } else {
+            badge.classList.remove('visible');
+        }
+    }
+
+// Finalmente, asegúrate de que el contador se actualice al cargar la página
+document.addEventListener('DOMContentLoaded', updateCartCounter);
