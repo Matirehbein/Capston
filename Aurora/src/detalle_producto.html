@@ -1,192 +1,195 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <title>Aurora | Detalle de Producto</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="../Public/Css/style.css" />
-    <style>
-        .detalle-producto-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 50px; }
-        @media (min-width: 768px) { .detalle-producto-grid { grid-template-columns: 1fr 1fr; gap: 40px; } }
-        .galeria-producto { position: relative; }
-        .galeria-imagen { width: 100%; height: auto; border-radius: 8px; border: 1px solid #eee; }
-        .galeria-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 15px; box-sizing: border-box; pointer-events: none; }
-        .galeria-nav button { pointer-events: all; background-color: rgba(255, 255, 255, 0.7); border: 1px solid #ccc; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 20px; }
-        .info-producto h1 { font-size: 28px; margin-top: 0; }
-        .info-producto .precio { font-size: 24px; color: #d9534f; margin-bottom: 20px; }
-        .tallas-selector button { background: #fff; border: 1px solid #ccc; padding: 8px 15px; margin-right: 5px; cursor: pointer; border-radius: 4px; }
-        .tallas-selector button.active { background: #333; color: #fff; border-color: #333; }
-        .cantidad-selector { display: flex; align-items: center; border: 1px solid #ccc; width: fit-content; border-radius: 4px; }
-        .cantidad-selector button { width: 40px; height: 40px; border: none; background: #f0f0f0; cursor: pointer; }
-        .cantidad-selector input { width: 50px; text-align: center; border: none; background: transparent; }
-        .descripcion-section { margin-top: 80px; border-top: 1px solid #eee; padding-top: 40px; }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Aurora | Cargando producto...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../Public/Css/style.css" />
+  
+  <style>
+    .detalle-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .detalle-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .product-gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .product-gallery-main img {
+      width: 100%;
+      max-height: 600px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .product-gallery-thumbnails {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+    }
+    .product-gallery-thumbnails img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 4px;
+      cursor: pointer;
+      opacity: 0.7;
+    }
+    .product-gallery-thumbnails img.active {
+      opacity: 1;
+      border: 2px solid var(--color-primary, #000);
+    }
+    .product-info h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .product-info-sku {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 1rem;
+    }
+    .product-info-price {
+      font-size: 2rem;
+      color: var(--color-primary, #000);
+      margin-bottom: 1.5rem;
+    }
+    .product-info-description {
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    .product-variations {
+      margin-bottom: 1.5rem;
+    }
+    .product-variations strong {
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+    .product-variations-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .product-variations-options .btn-talla {
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+    .product-variations-options .btn-talla.selected {
+      background: #000;
+      color: #fff;
+      border-color: #000;
+    }
+    .btn-add-cart-detail {
+      width: 100%;
+      padding: 1rem;
+    }
+
+    @media (min-width: 768px) {
+      .detalle-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    /* Estado de carga */
+    .loading-state, .error-state {
+      text-align: center;
+      padding: 4rem 1rem;
+    }
+  </style>
 </head>
 <body>
 
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <a href="../src/main.html" class="logo">AURORA</a>
-                <ul class="nav-links">
-                    <li><a href="../src/colecciones.html">Colecciones</a></li>
-                    <li><a href="../src/productos.html" class="active">Productos</a></li>
-                    <li><a href="../src/ofertas.html">Ofertas</a></li>
-                </ul>
-                <div class="header-actions">
-                    <a href="../src/carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
-                    <a href="../src/login.html" class="icon-btn icon-login" aria-label="Login"></a>
-                </div>
-            </div>
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <a href="../src/main.html" class="logo">AURORA</a>
+        <ul class="nav-links">
+          <li><a href="../src/colecciones.html">Colecciones</a></li>
+          <li><a href="../src/productos.html">Productos</a></li>
+          <li><a href="../src/ofertas.html">Ofertas</a></li>
+        </ul>
+        <div class="header-actions">
+          <a href="../src/carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+          <a href="../src/login.html" class="icon-btn icon-login" aria-label="Login"></a>
         </div>
-    </header>
+      </div>
+    </div>
+  </header>
 
-    <main id="detalle-container" class="container">
-        <p style="text-align: center; padding: 50px;">Cargando producto...</p>
-    </main>
+  <main>
+    <div class="detalle-container" id="product-detail-content">
+      
+      <div class="loading-state" id="product-loading">
+        <h2>Cargando producto...</h2>
+      </div>
 
-    <footer class="footer">
-        <div class="container"><nav class="footer-top"><ul class="footer-menu"><li><a href="./sobre_nosotros.html">Sobre Nosotros</a></li><li><a href="./envios.html">Envíos</a></li><li><a href="./cambios_devoluciones.html">Cambios y Devoluciones</a></li><li><a href="./contacto.html">Contacto</a></li><li><a href="./sucursales.html">Sucursales</a></li></ul></nav></div>
-        <div class="footer-divider"></div>
-        <div class="container"><div class="footer-bottom"><p>© 2025, Aurora-Chile · Moda y Belleza</p></div></div>
-    </footer>
+      <div class="error-state" id="product-error" style="display: none;">
+        <h2>Error</h2>
+        <p id="product-error-message">No se pudo cargar el producto.</p>
+        <a href="productos.html" class="btn">Volver a Productos</a>
+      </div>
 
-    <script type="module">
-        import { addItem, formatCLP } from "../Public/js/cart.js";
+      <div class="detalle-grid" id="product-data" style="display: none;">
+        
+        <section class="product-gallery">
+          <div class="product-gallery-main" id="product-image-main">
+            </div>
+          <div class="product-gallery-thumbnails" id="product-thumbnails">
+            </div>
+        </section>
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const API_BASE = "http://localhost:5000";
-            const container = document.getElementById('detalle-container');
-            const urlParams = new URLSearchParams(window.location.search);
-            const productoId = urlParams.get('id');
+        <section class="product-info">
+          <h1 id="product-name"></h1>
+          <p class="product-info-sku">SKU: <span id="product-sku"></span></p>
+          <p class="product-info-price" id="product-price"></p>
+          
+          <div class="product-variations">
+            <strong>Talla:</strong>
+            <div class="product-variations-options" id="product-tallas">
+              </div>
+            <p id="variation-error" style="color: red; display: none; margin-top: 0.5rem;">Por favor, selecciona una talla.</p>
+          </div>
+          
+          <button class="btn btn-add-cart-detail" id="btn-add-to-cart-detail">Añadir al carrito</button>
+          
+          <div class="product-info-description">
+            <h3>Descripción</h3>
+            <p id="product-description"></p>
+          </div>
+        </section>
 
-            if (!productoId) {
-                container.innerHTML = '<p class="error-state">Error: No se especificó un producto.</p>';
-                return;
-            }
+      </div>
+    </div>
+  </main>
 
-            fetch(`${API_BASE}/api/producto/${productoId}`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Producto no encontrado');
-                    return response.json();
-                })
-                .then(data => {
-                    const { producto, imagenes, variaciones } = data;
-                    
-                    document.title = `Aurora | ${producto.nombre_producto}`;
-                    
-                    let tallasHTML = '';
-                    if (variaciones && variaciones.length > 0) {
-                        tallasHTML = `
-                            <div class="mb-3">
-                                <strong>TALLE:</strong>
-                                <div class="tallas-selector mt-2">
-                                    ${variaciones.map(v => `<button class="talla-btn" data-sku="${v.sku_variacion}">${v.talla}</button>`).join('')}
-                                </div>
-                            </div>`;
-                    }
+  <footer class="footer">
+    <div class="container">
+      <nav class="footer-top">
+        <ul class="footer-menu">
+          <li><a href="../src/sobre_nosotros.html">Sobre Nosotros</a></li>
+          <li><a href="../src/envios.html">Envíos</a></li>
+          <li><a href="../src/cambios_devoluciones.html">Cambios y Devoluciones</a></li>
+          <li><a href="../src/contacto.html">Contacto</a></li>
+          <li><a href="../src/sucursales.html">Sucursales</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="container">
+      <div class="footer-bottom">
+        <p>© 2025, Aurora-Chile · Moda y Belleza</p>
+      </div>
+    </div>
+  </footer>
 
-                    container.innerHTML = `
-                        <div class="detalle-producto-grid">
-                            <div class="galeria-producto">
-                                <img id="imagen-principal" src="${imagenes[0] || 'https://via.placeholder.com/600'}" alt="${producto.nombre_producto}" class="galeria-imagen">
-                                ${imagenes.length > 1 ? `
-                                <div class="galeria-nav">
-                                    <button id="prev-img">&lt;</button>
-                                    <button id="next-img">&gt;</button>
-                                </div>` : ''}
-                            </div>
-                            <div class="info-producto">
-                                <h1>${producto.nombre_producto}</h1>
-                                <p class="precio">${formatCLP(producto.precio_producto)}</p>
-                                <p><strong>SKU:</strong> <span id="sku-display">${producto.sku}</span></p>
-                                ${tallasHTML}
-                                <div class="d-flex align-items-center gap-3 mt-4">
-                                    <div class="cantidad-selector">
-                                        <button id="qty-minus">-</button>
-                                        <input id="qty-input" type="text" value="1" readonly>
-                                        <button id="qty-plus">+</button>
-                                    </div>
-                                    <button id="add-to-cart-btn" class="btn btn-dark flex-grow-1">AÑADIR AL CARRITO</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="descripcion-section">
-                            <h4>Descripción</h4>
-                            <p>${producto.descripcion_producto || 'No hay descripción disponible para este producto.'}</p>
-                        </div>
-                    `;
-                    
-                    activarScripts(imagenes, producto, variaciones);
-                })
-                .catch(error => {
-                    console.error('Error al cargar el detalle del producto:', error);
-                    container.innerHTML = '<p class="error-state">El producto que buscas no existe o no está disponible.</p>';
-                });
+  <script type="module" src="../Public/js/cart.js"></script>
+  <script type="module" src="../Public/js/detalle_producto.js"></script>
 
-            function activarScripts(imagenes, producto, variaciones) {
-                const imgElement = document.getElementById('imagen-principal');
-                const prevBtn = document.getElementById('prev-img');
-                const nextBtn = document.getElementById('next-img');
-                let imagenActualIdx = 0;
-
-                if (prevBtn && nextBtn) {
-                    prevBtn.addEventListener('click', () => {
-                        imagenActualIdx = (imagenActualIdx - 1 + imagenes.length) % imagenes.length;
-                        imgElement.src = imagenes[imagenActualIdx];
-                    });
-                    nextBtn.addEventListener('click', () => {
-                        imagenActualIdx = (imagenActualIdx + 1) % imagenes.length;
-                        imgElement.src = imagenes[imagenActualIdx];
-                    });
-                }
-
-                const tallaBtns = document.querySelectorAll('.talla-btn');
-                const skuDisplay = document.getElementById('sku-display');
-                let tallaActiva = null;
-
-                tallaBtns.forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        if (tallaActiva) tallaActiva.classList.remove('active');
-                        this.classList.add('active');
-                        tallaActiva = this;
-                        skuDisplay.textContent = this.dataset.sku;
-                    });
-                });
-
-                const qtyInput = document.getElementById('qty-input');
-                document.getElementById('qty-plus').addEventListener('click', () => {
-                    qtyInput.value = parseInt(qtyInput.value) + 1;
-                });
-                document.getElementById('qty-minus').addEventListener('click', () => {
-                    if (parseInt(qtyInput.value) > 1) qtyInput.value--;
-                });
-
-                document.getElementById('add-to-cart-btn').addEventListener('click', function() {
-                    if (variaciones.length > 0 && !tallaActiva) {
-                        alert('Por favor, selecciona una talla.');
-                        return;
-                    }
-
-                    const item = {
-                        id: producto.id_producto,
-                        name: producto.nombre_producto,
-                        price: producto.precio_producto,
-                        image: imagenes[0],
-                        sku: tallaActiva ? tallaActiva.dataset.sku : producto.sku
-                    };
-                    addItem(item, parseInt(qtyInput.value));
-
-                    const prevText = this.textContent;
-                    this.textContent = '¡Añadido!';
-                    this.disabled = true;
-                    setTimeout(() => {
-                        this.textContent = 'AÑADIR AL CARRITO';
-                        this.disabled = false;
-                    }, 1000);
-                });
-            }
-        });
-    </script>
 </body>
 </html>

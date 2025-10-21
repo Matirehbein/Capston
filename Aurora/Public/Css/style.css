@@ -1269,3 +1269,60 @@ table.admin-table {
 .producto-link:hover {
     color: inherit;
 }
+/* Añade esto a /Public/Css/style.css */
+
+.producto-link-wrapper {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: block; 
+}
+
+.producto-link-wrapper:hover img {
+  opacity: 0.9;
+}
+
+.producto-link-wrapper:hover h3 {
+  color: var(--color-primary, #0056b3); /* O tu color primario */
+}
+
+/* --- Estilos para el Contador del Carrito --- */
+.icon-cart {
+  position: relative; /* Permite posicionar el badge */
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #d9534f; /* Color rojo de oferta */
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
+  font-weight: bold;
+  opacity: 0; /* Oculto por defecto */
+  transform: scale(0.5);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Muestra el badge si tiene un número mayor a 0 */
+.cart-badge.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* --- Animación para el Carrito --- */
+.icon-cart.shake {
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
