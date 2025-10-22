@@ -11,8 +11,7 @@ DROP INDEX IF EXISTS idx_oferta_producto_producto;
 DROP INDEX IF EXISTS idx_variacion_producto_prod;
 DROP INDEX IF EXISTS idx_inventario_variacion;
 DROP INDEX IF EXISTS idx_inventario_sucursal;
-DROP INDEX IF EXISTS idx_detalle_pedido_pedido;
-DROP INDEX IF EXISTS idx_detalle_pedido_variacion;
+
 
 -- Elimina foreign keys
 ALTER TABLE IF EXISTS conversacion        DROP CONSTRAINT IF EXISTS conversacion_usuario_fk;
@@ -98,6 +97,10 @@ CREATE TABLE pedido (
   id_pedido SERIAL PRIMARY KEY,
   estado_pedido VARCHAR(20) CHECK (estado_pedido IN ('creado','pagado','preparado','enviado','entregado')),
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  metodo_pago VARCHAR(50),
+  estado_pago VARCHAR(20) CHECK (estado_pago IN ('pendiente', 'aprobado', 'rechazado', 'reembolsado')),
+  total NUMERIC(10,2) DEFAULT 0 CHECK (total >= 0),
+  direccion_envio TEXT;
 );
 
 CREATE TABLE sucursal (
@@ -167,9 +170,27 @@ CREATE TABLE detalle_pedido (
   id_detalle SERIAL PRIMARY KEY,
   cantidad INT NOT NULL CHECK (cantidad > 0),
   precio_unitario NUMERIC(10,2) NOT NULL CHECK (precio_unitario >= 0)
+  subtotal NUMERIC(10,2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED;
+);
+
+
+CREATE TABLE pago (
+  id_pago SERIAL PRIMARY KEY,
+  id_pedido INT NOT NULL,
+  monto NUMERIC(10,2) NOT NULL CHECK (monto >= 0),
+  metodo_pago VARCHAR(50) NOT NULL,
+  estado_pago VARCHAR(20) CHECK (estado_pago IN ('pendiente', 'aprobado', 'rechazado', 'reembolsado')) DEFAULT 'pendiente',
+  fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  transaccion_id VARCHAR(100),
+  observaciones TEXT,
+
+  CONSTRAINT pago_pedido_fk FOREIGN KEY (id_pedido)
+    REFERENCES pedido(id_pedido)
+    ON DELETE CASCADE
 );
 
 --Generacion de fg keys
+
 ALTER TABLE conversacion
   ADD COLUMN id_usuario INT;
 
@@ -244,33 +265,7 @@ ALTER TABLE detalle_pedido
   FOREIGN KEY (id_variacion) REFERENCES variacion_producto(id_variacion) ON DELETE RESTRICT;
 
 
--- Agregar campos relacionados con pago y dirección
-ALTER TABLE pedido
-ADD COLUMN metodo_pago VARCHAR(50),
-ADD COLUMN estado_pago VARCHAR(20) CHECK (estado_pago IN ('pendiente', 'aprobado', 'rechazado', 'reembolsado')),
-ADD COLUMN total NUMERIC(10,2) DEFAULT 0 CHECK (total >= 0),
-ADD COLUMN direccion_envio TEXT;
 
-
--- Asegurar integridad de datos con subtotal calculado y actualización
-ALTER TABLE detalle_pedido
-ADD COLUMN subtotal NUMERIC(10,2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED;
-
-
-CREATE TABLE pago (
-  id_pago SERIAL PRIMARY KEY,
-  id_pedido INT NOT NULL,
-  monto NUMERIC(10,2) NOT NULL CHECK (monto >= 0),
-  metodo_pago VARCHAR(50) NOT NULL,
-  estado_pago VARCHAR(20) CHECK (estado_pago IN ('pendiente', 'aprobado', 'rechazado', 'reembolsado')) DEFAULT 'pendiente',
-  fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  transaccion_id VARCHAR(100),
-  observaciones TEXT,
-
-  CONSTRAINT pago_pedido_fk FOREIGN KEY (id_pedido)
-    REFERENCES pedido(id_pedido)
-    ON DELETE CASCADE
-);
 
 -- Creación de índices
 CREATE INDEX idx_conversacion_usuario        ON conversacion(id_usuario);
