@@ -2719,18 +2719,28 @@ def api_bulk_delete_productos_public():
         conn.close()
 
 
+
+# ===========================
+# API de la sección de Ofertas
+# ===========================
+
 @app.route("/api/ofertas_public", methods=["GET"])
 def api_list_ofertas_public():
     """
     Devuelve todas las ofertas vigentes con su información y sus productos.
+    --- MODIFICADO ---
+    Ahora incluye p.categoria_producto en los datos del producto.
     """
+    conn = None
+    cur = None
     try:
         conn = get_db_connection()
+        data = [] # Lista para guardar las ofertas formateadas
 
-        # Cursor 1: obtener todas las ofertas vigentes
+        # Cursor 1: obtener todas las ofertas vigentes (sin cambios)
         with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur_ofertas:
             cur_ofertas.execute("""
-                SELECT id_oferta, titulo, descripcion, descuento_pct, 
+                SELECT id_oferta, titulo, descripcion, descuento_pct,
                        fecha_inicio, fecha_fin
                 FROM oferta
                 WHERE vigente_bool = TRUE
@@ -2739,18 +2749,25 @@ def api_list_ofertas_public():
             """)
             ofertas = cur_ofertas.fetchall()
 
-        # Cursor 2: para obtener los productos por oferta
-        data = []
+        # Cursor 2: para obtener los productos por cada oferta
         with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur_prod:
             for o in ofertas:
+                # --- QUERY INTERNO MODIFICADO ---
+                # Añadimos p.categoria_producto a la selección
                 cur_prod.execute("""
-                    SELECT p.id_producto, p.nombre_producto, p.precio_producto, p.imagen_url, p.sku
+                    SELECT
+                        p.id_producto, p.nombre_producto, p.precio_producto,
+                        p.imagen_url, p.sku,
+                        p.categoria_producto  -- <-- ¡AÑADIDO!
                     FROM producto p
                     INNER JOIN oferta_producto op ON op.id_producto = p.id_producto
                     WHERE op.id_oferta = %s;
                 """, (o["id_oferta"],))
-                productos = cur_prod.fetchall()
+                # --- FIN QUERY MODIFICADO ---
 
+                productos_de_oferta = cur_prod.fetchall()
+
+                # Añadir la oferta formateada (incluyendo productos con categoría) a la lista final
                 data.append({
                     "id_oferta": o["id_oferta"],
                     "titulo": o["titulo"],
@@ -2758,15 +2775,19 @@ def api_list_ofertas_public():
                     "descuento_pct": float(o["descuento_pct"]),
                     "fecha_inicio": o["fecha_inicio"].isoformat(),
                     "fecha_fin": o["fecha_fin"].isoformat(),
-                    "productos": [dict(p) for p in productos]
+                    "productos": [dict(p) for p in productos_de_oferta] # Ahora 'p' incluye categoria_producto
                 })
 
-        conn.close()
         return jsonify(data), 200
 
     except Exception as e:
         print(f"❌ Error en /api/ofertas_public: {e}")
-        return jsonify({"error": str(e)}), 500
+        traceback.print_exc() # Imprime error detallado en consola Flask
+        return jsonify({"error": "Error al cargar ofertas"}), 500
+    finally:
+        # Cerrar conexión si se abrió
+        # (Los 'with' cierran los cursores automáticamente)
+        if conn: conn.close()
 
 # ===========================
 # RUN
