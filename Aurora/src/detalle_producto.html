@@ -7,100 +7,47 @@
   <link rel="stylesheet" href="../Public/Css/style.css" />
   
   <style>
-    .detalle-container {
-      max-width: 1200px;
-      margin: 2rem auto;
-      padding: 1rem;
-    }
-    .detalle-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 2rem;
-    }
-    .product-gallery {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-    .product-gallery-main img {
-      width: 100%;
-      max-height: 600px;
-      object-fit: cover;
-      border-radius: 8px;
-    }
-    .product-gallery-thumbnails {
-      display: flex;
-      gap: 0.5rem;
-      overflow-x: auto;
-    }
-    .product-gallery-thumbnails img {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 4px;
-      cursor: pointer;
-      opacity: 0.7;
-    }
-    .product-gallery-thumbnails img.active {
-      opacity: 1;
-      border: 2px solid var(--color-primary, #000);
-    }
-    .product-info h1 {
-      font-size: 2.5rem;
-      margin-bottom: 0.5rem;
-    }
-    .product-info-sku {
-      font-size: 0.9rem;
-      color: #666;
-      margin-bottom: 1rem;
-    }
-    .product-info-price {
-      font-size: 2rem;
-      color: var(--color-primary, #000);
-      margin-bottom: 1.5rem;
-    }
-    .product-info-description {
-      line-height: 1.6;
-      margin-bottom: 1.5rem;
-    }
-    .product-variations {
-      margin-bottom: 1.5rem;
-    }
-    .product-variations strong {
-      display: block;
-      margin-bottom: 0.5rem;
-    }
-    .product-variations-options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    .product-variations-options .btn-talla {
-      background: #f0f0f0;
-      border: 1px solid #ccc;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-    }
-    .product-variations-options .btn-talla.selected {
-      background: #000;
-      color: #fff;
-      border-color: #000;
-    }
-    .btn-add-cart-detail {
-      width: 100%;
-      padding: 1rem;
-    }
+    /* --- Tus estilos existentes --- */
+    .detalle-container { max-width: 1200px; margin: 2rem auto; padding: 1rem; }
+    .detalle-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+    .product-gallery { display: flex; flex-direction: column; gap: 1rem; }
+    .product-gallery-main img { width: 100%; max-height: 600px; object-fit: cover; border-radius: 8px; }
+    .product-gallery-thumbnails { display: flex; gap: 0.5rem; overflow-x: auto; }
+    .product-gallery-thumbnails img { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; cursor: pointer; opacity: 0.7; }
+    .product-gallery-thumbnails img.active { opacity: 1; border: 2px solid var(--color-primary, #000); }
+    .product-info h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .product-info-sku { font-size: 0.9rem; color: #666; margin-bottom: 1rem; }
+    .product-info-price { font-size: 2rem; color: var(--color-primary, #000); margin-bottom: 1.5rem; }
+    .product-info-description { line-height: 1.6; margin-bottom: 1.5rem; }
+    .product-variations { margin-bottom: 1.5rem; }
+    .product-variations strong { display: block; margin-bottom: 0.5rem; }
+    .product-variations-options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .product-variations-options .btn-talla { background: #f0f0f0; border: 1px solid #ccc; padding: 0.5rem 1rem; cursor: pointer; }
+    .product-variations-options .btn-talla.selected { background: #000; color: #fff; border-color: #000; }
+    .product-color-container { margin-bottom: 1.5rem; }
+    .product-color-container strong { display: block; margin-bottom: 0.5rem; }
+    .product-color-options { display: flex; align-items: center; gap: 0.75rem; }
+    #product-color-swatch { display: inline-block; width: 24px; height: 24px; border-radius: 50%; border: 1px solid #ccc; background-color: #f0f0f0; }
+    #product-color-name { font-size: 1rem; text-transform: capitalize; }
+    .product-stock-container { font-size: 0.9rem; color: #333; margin-bottom: 1.5rem; }
+    .product-stock-container.out-of-stock { color: red; font-weight: bold; }
+    #stock-error { color: red; display: none; margin-top: -1rem; margin-bottom: 1rem; font-size: 0.9rem; }
+    .product-actions { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; position: relative; }
+    .product-quantity-selector { display: flex; border: 1px solid #ccc; border-radius: 4px; }
+    .product-quantity-selector button { background-color: #f5f5f5; border: none; cursor: pointer; font-size: 1.25rem; font-weight: bold; width: 44px; height: 44px; line-height: 44px; }
+    .product-quantity-selector button:hover { background-color: #e0e0e0; }
+    .product-quantity-selector button:first-of-type { border-right: 1px solid #ccc; border-radius: 4px 0 0 4px; }
+    .product-quantity-selector button:last-of-type { border-left: 1px solid #ccc; border-radius: 0 4px 4px 0; }
+    #product-quantity-input { width: 50px; text-align: center; border: none; font-size: 1rem; font-weight: bold; height: 44px; box-sizing: border-box; -moz-appearance: textfield; }
+    #product-quantity-input::-webkit-outer-spin-button, #product-quantity-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .btn-add-cart-detail { flex-grow: 1; padding: 0.75rem 1rem; height: 46px; }
+    @media (min-width: 768px) { .detalle-grid { grid-template-columns: 1fr 1fr; } }
+    .loading-state, .error-state { text-align: center; padding: 4rem 1rem; }
 
-    @media (min-width: 768px) {
-      .detalle-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-    /* Estado de carga */
-    .loading-state, .error-state {
-      text-align: center;
-      padding: 4rem 1rem;
-    }
+    /* --- Tus estilos del modal (¡Asegúrate de tenerlos en style.css!) --- */
+    /* .modal-overlay { ... } */
+    /* .modal-content { ... } */
+    /* etc... */
   </style>
 </head>
 <body>
@@ -115,6 +62,7 @@
           <li><a href="../src/ofertas.html">Ofertas</a></li>
         </ul>
         <div class="header-actions">
+          <span id="nearest-branch-display" class="nearest-branch">Buscando sucursal...</span>
           <a href="../src/carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
           <a href="../src/login.html" class="icon-btn icon-login" aria-label="Login"></a>
         </div>
@@ -138,10 +86,8 @@
       <div class="detalle-grid" id="product-data" style="display: none;">
         
         <section class="product-gallery">
-          <div class="product-gallery-main" id="product-image-main">
-            </div>
-          <div class="product-gallery-thumbnails" id="product-thumbnails">
-            </div>
+          <div class="product-gallery-main" id="product-image-main"></div>
+          <div class="product-gallery-thumbnails" id="product-thumbnails"></div>
         </section>
 
         <section class="product-info">
@@ -151,12 +97,34 @@
           
           <div class="product-variations">
             <strong>Talla:</strong>
-            <div class="product-variations-options" id="product-tallas">
-              </div>
+            <div class="product-variations-options" id="product-tallas"></div>
             <p id="variation-error" style="color: red; display: none; margin-top: 0.5rem;">Por favor, selecciona una talla.</p>
           </div>
           
-          <button class="btn btn-add-cart-detail" id="btn-add-to-cart-detail">Añadir al carrito</button>
+          <div class="product-color-container" id="product-color-container" style="display: none;">
+            <strong>Color:</strong>
+            <div class="product-color-options">
+              <span id="product-color-swatch"></span>
+              <span id="product-color-name"></span>
+            </div>
+          </div>
+          
+          <div class="product-stock-container" id="product-stock-container" style="display: none;">
+            <span id="product-stock-display"></span>
+          </div>
+          
+          <div class="product-actions">
+            <div class="product-quantity-selector">
+              <button id="btn-quantity-minus" aria-label="Restar uno">-</button>
+              <input type="number" id="product-quantity-input" value="1" min="1" max="99" aria-label="Cantidad">
+              <button id="btn-quantity-plus" aria-label="Sumar uno">+</button>
+            </div>
+            <button class="btn btn-add-cart-detail" id="btn-add-to-cart-detail">Añadir al carrito</button>
+          </div>
+          
+          <p id="stock-error" style="display: none;">
+            Solo quedan <span id="stock-error-qty"></span> unidades disponibles.
+          </p>
           
           <div class="product-info-description">
             <h3>Descripción</h3>
@@ -169,27 +137,62 @@
   </main>
 
   <footer class="footer">
-    <div class="container">
-      <nav class="footer-top">
-        <ul class="footer-menu">
-          <li><a href="../src/sobre_nosotros.html">Sobre Nosotros</a></li>
-          <li><a href="../src/envios.html">Envíos</a></li>
-          <li><a href="../src/cambios_devoluciones.html">Cambios y Devoluciones</a></li>
-          <li><a href="../src/contacto.html">Contacto</a></li>
-          <li><a href="../src/sucursales.html">Sucursales</a></li>
-        </ul>
-      </nav>
-    </div>
-    <div class="footer-divider"></div>
-    <div class="container">
-      <div class="footer-bottom">
-        <p>© 2025, Aurora-Chile · Moda y Belleza</p>
-      </div>
-    </div>
-  </footer>
+     <div class="container">
+       <nav class="footer-top">
+         <ul class="footer-menu">
+           <li><a href="../src/sobre_nosotros.html">Sobre Nosotros</a></li>
+           <li><a href="../src/envios.html">Envíos</a></li>
+           <li><a href="../src/cambios_devoluciones.html">Cambios y Devoluciones</a></li>
+           <li><a href="../src/contacto.html">Contacto</a></li>
+           <li><a href="../src/sucursales.html">Sucursales</a></li>
+         </ul>
+       </nav>
+     </div>
+     <div class="footer-divider"></div>
+     <div class="container">
+       <div class="footer-bottom">
+         <p>© 2025, Aurora-Chile · Moda y Belleza</p>
+       </div>
+     </div>
+   </footer>
 
-  <script type="module" src="../Public/js/cart.js"></script>
+   <div id="added-to-cart-modal" class="modal-overlay">
+     <div class="modal-content">
+       <button id="modal-close-btn" class="modal-close" aria-label="Cerrar">&times;</button>
+       <h2>PRODUCTO AÑADIDO AL CARRITO</h2>
+       <div class="modal-grid">
+         <div class="added-item-details">
+           <img id="modal-item-img" src="" alt="Producto añadido" class="modal-item-image">
+           <div>
+             <h3 id="modal-item-name">Nombre Producto</h3>
+             <p id="modal-item-price" class="modal-item-price"></p>
+             <p class="modal-item-info">Color: <span id="modal-item-color"></span></p>
+             <p class="modal-item-info">Tamaño: <span id="modal-item-size"></span></p>
+             <p class="modal-item-info">Cantidad: <span id="modal-item-qty"></span></p>
+           </div>
+         </div>
+         <div class="cart-summary-modal">
+           <h3>Tu carrito</h3>
+           <p><span id="modal-cart-count">0</span> artículos</p>
+           <p>Coste total de los productos: <strong id="modal-cart-subtotal"></strong></p>
+           <p>Gastos de envío: <strong>Gratis</strong></p>
+           <hr>
+           <p><strong>Total:</strong> <strong id="modal-cart-total"></strong></p>
+           <a href="carrito.html" class="btn btn-primary btn-block">VER CARRITO</a>
+           <button id="modal-continue-shopping-btn" class="btn btn-secondary btn-block">SIGUE COMPRANDO</button>
+         </div>
+       </div>
+       <div class="recommendations-section">
+         <h3>Combina perfectamente con</h3>
+         <div id="modal-recommendations-grid" class="recommendations-grid">
+           <p id="modal-reco-loading">Cargando recomendaciones...</p>
+         </div>
+       </div>
+     </div>
+   </div>
+   <script type="module" src="../Public/js/cart.js"></script>
   <script type="module" src="../Public/js/detalle_producto.js"></script>
+  <script type="module" src="../Public/js/geolocation.js"></script>
 
 </body>
 </html>

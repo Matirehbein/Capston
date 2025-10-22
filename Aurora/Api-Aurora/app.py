@@ -1,4 +1,5 @@
 import re
+import traceback
 import os
 from datetime import datetime
 from functools import wraps
@@ -123,6 +124,64 @@ def menu_principal():
 @app.route("/index_options")
 def index_options():
     return render_template("index_options.html")
+
+# ---------------------------
+# Permisos de geolocalización (para sucursales)
+# ---------------------------
+
+# --- ▼▼▼ AÑADE ESTA NUEVA RUTA EN app.py ▼▼▼ ---
+
+@app.route("/api/sucursales_con_coords")
+def api_sucursales_con_coords():
+    """
+    Devuelve una lista de todas las sucursales con su ID, nombre, latitud y longitud.
+    Filtra las sucursales que no tengan coordenadas válidas.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # Selecciona solo las columnas necesarias y filtra las que no tienen lat/lon
+        cur.execute("""
+            SELECT id_sucursal, nombre_sucursal, latitud_sucursal, longitud_sucursal
+            FROM sucursal
+            WHERE latitud_sucursal IS NOT NULL AND longitud_sucursal IS NOT NULL
+            ORDER BY id_sucursal;
+        """)
+        sucursales = cur.fetchall()
+
+        # Convierte el resultado a una lista de diccionarios
+        # Asegúrate de que lat/lon sean números (float)
+        lista_sucursales = []
+        for s in sucursales:
+            try:
+                lista_sucursales.append({
+                    "id_sucursal": s["id_sucursal"],
+                    "nombre_sucursal": s["nombre_sucursal"],
+                    "latitud": float(s["latitud_sucursal"]),
+                    "longitud": float(s["longitud_sucursal"])
+                })
+            except (TypeError, ValueError):
+                # Ignora sucursales con coordenadas inválidas
+                print(f"Advertencia: Sucursal ID {s['id_sucursal']} tiene coordenadas inválidas.")
+                continue
+
+        return jsonify(lista_sucursales)
+
+    except Exception as e:
+        print(f"Error en /api/sucursales_con_coords: {e}")
+        traceback.print_exc() # Imprime el error detallado en la consola de Flask
+        return jsonify({"error": "Error al obtener sucursales"}), 500
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
+
+# No olvides importar traceback al inicio si no lo tienes:
+# import traceback
+# --- ▲▲▲ FIN NUEVA RUTA ▲▲▲ ---
+
 
 # ---------------------------
 # CRUD Productos
@@ -277,6 +336,76 @@ def api_nombres_por_categoria():
     finally:
         cur.close()
         conn.close()
+
+# ---------------------------
+# Buscar productos por color (carrito de compras)
+# ---------------------------
+
+# --- ▼▼▼ REEMPLAZA ESTA FUNCIÓN EN app.py ▼▼▼ ---
+
+import traceback # Asegúrate de tener esta importación al inicio de tu app.py
+
+@app.route("/api/productos_por_color")
+def api_productos_por_color():
+    color_buscado = request.args.get('color', '').strip()
+    exclude_id_str = request.args.get('exclude_id', None)
+
+    if not color_buscado:
+        return jsonify([])
+
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        query = """
+            SELECT DISTINCT p.id_producto, p.nombre_producto, p.precio_producto, p.imagen_url
+            FROM producto p
+            JOIN variacion_producto v ON p.id_producto = v.id_producto
+            WHERE v.color ILIKE %s
+        """
+        params = [f'%{color_buscado}%']
+
+        exclude_id_int = None
+        if exclude_id_str:
+            try:
+                exclude_id_int = int(exclude_id_str)
+                query += " AND p.id_producto != %s"
+                params.append(exclude_id_int)
+            except ValueError:
+                print(f"[API Color Warn] exclude_id ('{exclude_id_str}') no es un número válido. Ignorando exclusión.")
+
+        # --- CORRECCIÓN: Quitamos ORDER BY RANDOM() ---
+        query += " LIMIT 4;"
+        # --- FIN CORRECCIÓN ---
+
+        # (El código de debugging puede quedar si quieres)
+        print("\n--- [API Color Debug] ---")
+        try:
+            print("Query a ejecutar (mogrify):\n", cur.mogrify(query, tuple(params)).decode('utf-8'))
+        except Exception as me:
+            print("No se pudo usar mogrify. Query:", query); print("Params:", tuple(params)); print("Mogrify error:", me)
+
+        cur.execute(query, tuple(params))
+        productos = cur.fetchall()
+
+        print(f"Productos encontrados: {len(productos)}")
+        print("-------------------------\n")
+
+        return jsonify([dict(p) for p in productos])
+
+    except Exception as e:
+        print(f"\n--- ¡ERROR GRAVE EN /api/productos_por_color! ---")
+        traceback.print_exc()
+        print(f"Error específico: {type(e).__name__} - {e}")
+        print("--------------------------------------------------\n")
+        return jsonify({"error": "Error buscando productos por color"}), 500
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
+
+# --- ▲▲▲ FIN FUNCIÓN REEMPLAZADA ▲▲▲ ---
 
 
 # ---------------------------
@@ -2233,51 +2362,94 @@ def guardar_imagenes(id_producto):
 # Detalle de los productos en productos.html
 # ===========================
 
-## AGREGA ESTA NUEVA RUTA en app.py
+
+## REEMPLAZA ESTA RUTA COMPLETA EN app.py
+
+import traceback # Asegúrate de tener esta importación
 
 @app.route('/api/producto/<int:id_producto>')
 def api_detalle_producto(id_producto):
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    # --- NUEVO: Obtener sucursal_id de la URL ---
+    sucursal_id_str = request.args.get('sucursal_id', None)
+    sucursal_id = None
+    if sucursal_id_str:
+        try:
+            sucursal_id = int(sucursal_id_str)
+            print(f"[API Detalle Debug] Buscando stock para sucursal ID: {sucursal_id}") # DEBUG
+        except ValueError:
+            print(f"[API Detalle Warn] sucursal_id ('{sucursal_id_str}') inválido. Se calculará stock total.") # DEBUG
+    else:
+        print("[API Detalle Debug] No se proporcionó sucursal_id. Calculando stock total.") # DEBUG
+    # --- FIN NUEVO ---
 
+    conn = None
+    cur = None
     try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
         cur.execute("SELECT * FROM producto WHERE id_producto = %s", (id_producto,))
         producto = cur.fetchone()
 
         if not producto:
             return jsonify({"error": "Producto no encontrado"}), 404
 
+        # Obtener imágenes (sin cambios)
         todas_las_imagenes = [producto['imagen_url']] if producto['imagen_url'] else []
         cur.execute("SELECT url_imagen FROM producto_imagenes WHERE id_producto = %s ORDER BY orden", (id_producto,))
         imagenes_adicionales = [row['url_imagen'] for row in cur.fetchall()]
         todas_las_imagenes.extend(imagenes_adicionales)
 
+        # Obtener variaciones (sin cambios)
         cur.execute("""
-            SELECT talla, sku_variacion, color FROM variacion_producto 
-            WHERE id_producto = %s AND talla IS NOT NULL 
-            ORDER BY 
-                CASE 
-                    WHEN talla = 'XS' THEN 1 WHEN talla = 'S' THEN 2
-                    WHEN talla = 'M' THEN 3 WHEN talla = 'L' THEN 4
-                    WHEN talla = 'XL' THEN 5 ELSE 6
-                END;
+            SELECT talla, sku_variacion, color
+            FROM variacion_producto
+            WHERE id_producto = %s
+            ORDER BY
+                talla IS NULL DESC,
+                CASE WHEN talla = 'XS' THEN 1 WHEN talla = 'S' THEN 2
+                     WHEN talla = 'M' THEN 3 WHEN talla = 'L' THEN 4
+                     WHEN talla = 'XL' THEN 5 ELSE 6 END;
         """, (id_producto,))
         variaciones = cur.fetchall()
 
-        # Prepara los datos para enviar como JSON
+        # --- ▼▼▼ CÁLCULO DE STOCK MODIFICADO ▼▼▼ ---
+        stock_params = [id_producto]
+        stock_query = """
+            SELECT COALESCE(SUM(i.stock), 0) as stock_calculado
+            FROM inventario_sucursal i
+            JOIN variacion_producto v ON i.id_variacion = v.id_variacion
+            WHERE v.id_producto = %s
+        """
+        # Si SÍ tenemos un ID de sucursal válido, añadimos el filtro
+        if sucursal_id is not None:
+            stock_query += " AND i.id_sucursal = %s"
+            stock_params.append(sucursal_id)
+
+        print(f"[API Detalle Debug] Query Stock: {stock_query}") # DEBUG
+        print(f"[API Detalle Debug] Params Stock: {tuple(stock_params)}") # DEBUG
+        cur.execute(stock_query, tuple(stock_params))
+        stock_calculado = cur.fetchone()['stock_calculado']
+        print(f"[API Detalle Debug] Stock calculado: {stock_calculado}") # DEBUG
+        # --- ▲▲▲ FIN CÁLCULO MODIFICADO ▲▲▲ ---
+
         datos_producto = {
             "producto": dict(producto),
             "imagenes": todas_las_imagenes,
-            "variaciones": [dict(v) for v in variaciones]
+            "variaciones": [dict(v) for v in variaciones],
+            "stock_disponible": int(stock_calculado) # Usa el stock calculado (total o por sucursal)
         }
         return jsonify(datos_producto)
 
     except Exception as e:
-        print(f"Error en API de detalle de producto: {e}")
+        print(f"\n--- ¡ERROR GRAVE EN /api/producto/{id_producto}! ---")
+        traceback.print_exc()
+        print(f"Error específico: {type(e).__name__} - {e}")
+        print("--------------------------------------------------\n")
         return jsonify({"error": "Error interno del servidor"}), 500
     finally:
-        cur.close()
-        conn.close()
+        if cur: cur.close()
+        if conn: conn.close()
 
 #productos para la pag principal
 

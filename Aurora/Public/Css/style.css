@@ -1326,3 +1326,268 @@ table.admin-table {
   25% { transform: translateX(-5px); }
   75% { transform: translateX(5px); }
 }
+
+/* --- ESTILOS DEL CARRITO TIPO POP-UP --- */
+
+/* === INICIO: ESTILOS MODAL PRODUCTO AÑADIDO === */
+
+/* El fondo oscuro semi-transparente */
+.modal-overlay {
+  position: fixed; /* Fijo en la pantalla */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6); /* Fondo oscuro */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000; /* Asegura que esté por encima de todo */
+  opacity: 0; /* Oculto por defecto */
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* Hace visible el modal */
+.modal-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* El contenedor blanco del contenido */
+.modal-content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 800px; /* Ancho máximo */
+  width: 90%; /* Ancho responsivo */
+  max-height: 90vh; /* Alto máximo */
+  overflow-y: auto; /* Scroll si el contenido es muy alto */
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  transform: scale(0.95); /* Efecto zoom al aparecer */
+  transition: transform 0.3s ease;
+}
+
+.modal-overlay.visible .modal-content {
+  transform: scale(1);
+}
+
+/* Botón de cerrar (X) */
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #888;
+  cursor: pointer;
+  line-height: 1;
+}
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-content h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+/* Grid para detalles y resumen */
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Una columna por defecto */
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 600px) {
+  .modal-grid {
+    grid-template-columns: 1fr 1fr; /* Dos columnas en pantallas más grandes */
+  }
+}
+
+/* Detalles del item añadido */
+.added-item-details {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.modal-item-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+.added-item-details h3 {
+  font-size: 1.1rem;
+  margin: 0 0 0.3rem 0;
+}
+.modal-item-price {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+.modal-item-info {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 0.2rem 0;
+}
+
+/* Resumen del carrito en el modal */
+.cart-summary-modal {
+  background-color: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+}
+.cart-summary-modal h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+}
+.cart-summary-modal p {
+  margin: 0.5rem 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+}
+.cart-summary-modal hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 1rem 0;
+}
+.cart-summary-modal strong {
+  font-weight: bold;
+}
+/* Botones del modal */
+.btn-block {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 0.75rem;
+}
+.btn-secondary { /* Estilo para "Sigue Comprando" */
+  background-color: transparent;
+  color: var(--color-primary, #007bff);
+  border: 1px solid var(--color-primary, #007bff);
+}
+.btn-secondary:hover {
+  background-color: #f0f0f0;
+}
+
+
+/* Sección de recomendaciones */
+.recommendations-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eee;
+}
+.recommendations-section h3 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.recommendations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* Columnas responsivas */
+  gap: 1rem;
+}
+/* Estilo para cada recomendación (simple) */
+.recommendation-item {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  text-align: center;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 0.5rem;
+  transition: box-shadow 0.2s ease;
+}
+.recommendation-item:hover {
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.recommendation-item img {
+  width: 100%;
+  max-width: 100px; /* Tamaño máximo imagen */
+  height: auto;
+  aspect-ratio: 1 / 1; /* Mantiene proporción cuadrada */
+  object-fit: cover;
+  margin-bottom: 0.5rem;
+}
+.recommendation-item p {
+  font-size: 0.85rem;
+  margin: 0.2rem 0;
+  overflow: hidden; /* Evita nombres largos */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#modal-reco-loading {
+  text-align: center;
+  color: #888;
+  grid-column: 1 / -1; /* Ocupa todo el ancho */
+}
+
+
+/* === FIN: ESTILOS MODAL === */
+
+/* === INICIO: ESTILOS MODAL PRODUCTO AÑADIDO === */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+.modal-overlay.visible { opacity: 1; visibility: visible; }
+.modal-content { background-color: white; padding: 2rem; border-radius: 8px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.3s ease; }
+.modal-overlay.visible .modal-content { transform: scale(1); }
+.modal-close { position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 2rem; color: #888; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: #333; }
+.modal-content h2 { text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem; }
+.modal-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+@media (min-width: 600px) { .modal-grid { grid-template-columns: 1fr 1fr; } }
+.added-item-details { display: flex; gap: 1rem; align-items: flex-start; }
+.modal-item-image { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
+.added-item-details h3 { font-size: 1.1rem; margin: 0 0 0.3rem 0; }
+.modal-item-price { font-weight: bold; margin-bottom: 0.5rem; }
+.modal-item-info { font-size: 0.9rem; color: #555; margin: 0.2rem 0; }
+.cart-summary-modal { background-color: #f9f9f9; padding: 1rem; border-radius: 4px; }
+.cart-summary-modal h3 { margin: 0 0 1rem 0; font-size: 1.2rem; }
+.cart-summary-modal p { margin: 0.5rem 0; display: flex; justify-content: space-between; font-size: 0.95rem; }
+.cart-summary-modal hr { border: none; border-top: 1px solid #ddd; margin: 1rem 0; }
+.cart-summary-modal strong { font-weight: bold; }
+.btn-block { display: block; width: 100%; text-align: center; margin-top: 0.75rem; }
+.btn-secondary { background-color: transparent; color: var(--color-primary, #007bff); border: 1px solid var(--color-primary, #007bff); }
+.btn-secondary:hover { background-color: #f0f0f0; }
+.recommendations-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #eee; }
+.recommendations-section h3 { text-align: center; margin-bottom: 1.5rem; }
+.recommendations-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
+.recommendation-item { text-decoration: none; color: inherit; display: block; text-align: center; border: 1px solid #eee; border-radius: 4px; padding: 0.5rem; transition: box-shadow 0.2s ease; }
+.recommendation-item:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.recommendation-item img { width: 100%; max-width: 100px; height: auto; aspect-ratio: 1 / 1; object-fit: cover; margin-bottom: 0.5rem; }
+.recommendation-item p { font-size: 0.85rem; margin: 0.2rem 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#modal-reco-loading { text-align: center; color: #888; grid-column: 1 / -1; }
+/* === FIN: ESTILOS MODAL === */
+
+/* === Añade esto a style.css === */
+
+.header-actions {
+  /* Asegúrate de que los elementos se alineen verticalmente */
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* Espacio entre elementos */
+}
+
+.nearest-branch {
+  font-size: 0.9em; /* Tamaño un poco más pequeño */
+  color: #555; /* Color discreto */
+  /* Opcional: icono de ubicación */
+  /* padding-left: 18px; */
+  /* background: url('/path/to/location-icon.svg') no-repeat left center; */
+  /* background-size: 14px 14px; */
+  white-space: nowrap; /* Evita que el nombre se parta en dos líneas */
+}
+
+.nearest-branch a { /* Si decides hacerla clickeable */
+  color: inherit;
+  text-decoration: none;
+}
+.nearest-branch a:hover {
+  text-decoration: underline;
+}
+
+/* === Fin estilos === */

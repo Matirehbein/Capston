@@ -7,6 +7,7 @@
   <title>Aurora | Moda Elegante</title>
   <link rel="stylesheet" href="/Public/Css/style.css"/>
 </head>
+
 <body>
     <header>
     <div class="container">
@@ -20,6 +21,7 @@
         </ul>
 
         <div class="header-actions">
+          <span id="nearest-branch-display" class="nearest-branch">Buscando sucursal...</span>
           <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
           <a href="../src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
           <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
@@ -158,5 +160,6 @@
     })();
   </script>
 
+<script type="module" src="../Public/js/geolocation.js"></script>
 </body>
 </html>
