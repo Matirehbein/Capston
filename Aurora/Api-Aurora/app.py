@@ -2362,25 +2362,24 @@ def guardar_imagenes(id_producto):
 # Detalle de los productos en productos.html
 # ===========================
 
-
 ## REEMPLAZA ESTA RUTA COMPLETA EN app.py
 
-import traceback # Asegúrate de tener esta importación
+import datetime
+import traceback
 
 @app.route('/api/producto/<int:id_producto>')
 def api_detalle_producto(id_producto):
-    # --- NUEVO: Obtener sucursal_id de la URL ---
     sucursal_id_str = request.args.get('sucursal_id', None)
     sucursal_id = None
     if sucursal_id_str:
         try:
             sucursal_id = int(sucursal_id_str)
-            print(f"[API Detalle Debug] Buscando stock para sucursal ID: {sucursal_id}") # DEBUG
+            print(f"[API Detalle Debug] Buscando stock para sucursal ID: {sucursal_id}")
         except ValueError:
-            print(f"[API Detalle Warn] sucursal_id ('{sucursal_id_str}') inválido. Se calculará stock total.") # DEBUG
+            print(f"[API Detalle Warn] sucursal_id ('{sucursal_id_str}') inválido.")
+            sucursal_id = None # Asegurar que sea None si es inválido
     else:
-        print("[API Detalle Debug] No se proporcionó sucursal_id. Calculando stock total.") # DEBUG
-    # --- FIN NUEVO ---
+        print("[API Detalle Debug] No se proporcionó sucursal_id. Calculando stock total.")
 
     conn = None
     cur = None
@@ -2388,14 +2387,32 @@ def api_detalle_producto(id_producto):
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-        cur.execute("SELECT * FROM producto WHERE id_producto = %s", (id_producto,))
-        producto = cur.fetchone()
+        # --- QUERY MODIFICADO PARA INCLUIR OFERTA ---
+        # Selecciona datos del producto Y datos de oferta si existe y está vigente
+        cur.execute("""
+            SELECT
+                p.*,
+                o.descuento_pct,
+                o.fecha_fin AS oferta_fecha_fin
+            FROM producto p
+            LEFT JOIN oferta_producto op ON p.id_producto = op.id_producto
+            LEFT JOIN oferta o ON op.id_oferta = o.id_oferta
+                 AND CURRENT_DATE BETWEEN o.fecha_inicio AND o.fecha_fin
+                 AND o.vigente_bool = TRUE
+            WHERE p.id_producto = %s
+            LIMIT 1; -- Asegura obtener solo una fila para el producto base
+        """, (id_producto,))
+        producto_data = cur.fetchone()
+        # --- FIN QUERY MODIFICADO ---
 
-        if not producto:
+        if not producto_data:
             return jsonify({"error": "Producto no encontrado"}), 404
 
+        # Convertir a diccionario mutable para añadir/modificar datos
+        producto = dict(producto_data)
+
         # Obtener imágenes (sin cambios)
-        todas_las_imagenes = [producto['imagen_url']] if producto['imagen_url'] else []
+        todas_las_imagenes = [producto.get('imagen_url')] if producto.get('imagen_url') else []
         cur.execute("SELECT url_imagen FROM producto_imagenes WHERE id_producto = %s ORDER BY orden", (id_producto,))
         imagenes_adicionales = [row['url_imagen'] for row in cur.fetchall()]
         todas_las_imagenes.extend(imagenes_adicionales)
@@ -2405,39 +2422,50 @@ def api_detalle_producto(id_producto):
             SELECT talla, sku_variacion, color
             FROM variacion_producto
             WHERE id_producto = %s
-            ORDER BY
-                talla IS NULL DESC,
-                CASE WHEN talla = 'XS' THEN 1 WHEN talla = 'S' THEN 2
-                     WHEN talla = 'M' THEN 3 WHEN talla = 'L' THEN 4
-                     WHEN talla = 'XL' THEN 5 ELSE 6 END;
+            ORDER BY talla IS NULL DESC, CASE WHEN talla = 'XS' THEN 1 WHEN talla = 'S' THEN 2 WHEN talla = 'M' THEN 3 WHEN talla = 'L' THEN 4 WHEN talla = 'XL' THEN 5 ELSE 6 END;
         """, (id_producto,))
         variaciones = cur.fetchall()
 
-        # --- ▼▼▼ CÁLCULO DE STOCK MODIFICADO ▼▼▼ ---
+        # Cálculo de stock (total o por sucursal - sin cambios)
         stock_params = [id_producto]
-        stock_query = """
-            SELECT COALESCE(SUM(i.stock), 0) as stock_calculado
-            FROM inventario_sucursal i
-            JOIN variacion_producto v ON i.id_variacion = v.id_variacion
-            WHERE v.id_producto = %s
-        """
-        # Si SÍ tenemos un ID de sucursal válido, añadimos el filtro
+        stock_query = "SELECT COALESCE(SUM(i.stock), 0) as stock_calculado FROM inventario_sucursal i JOIN variacion_producto v ON i.id_variacion = v.id_variacion WHERE v.id_producto = %s"
         if sucursal_id is not None:
             stock_query += " AND i.id_sucursal = %s"
             stock_params.append(sucursal_id)
-
-        print(f"[API Detalle Debug] Query Stock: {stock_query}") # DEBUG
-        print(f"[API Detalle Debug] Params Stock: {tuple(stock_params)}") # DEBUG
         cur.execute(stock_query, tuple(stock_params))
         stock_calculado = cur.fetchone()['stock_calculado']
-        print(f"[API Detalle Debug] Stock calculado: {stock_calculado}") # DEBUG
-        # --- ▲▲▲ FIN CÁLCULO MODIFICADO ▲▲▲ ---
+
+        # --- NUEVO: CALCULAR PRECIO DE OFERTA ---
+        precio_original = float(producto.get('precio_producto', 0))
+        descuento = producto.get('descuento_pct') # Puede ser None
+        precio_oferta = None # Por defecto no hay
+
+        if descuento is not None:
+            try:
+                descuento_float = float(descuento)
+                if 0 < descuento_float <= 100:
+                     precio_oferta = round(precio_original * (1 - descuento_float / 100.0))
+                     producto['descuento_pct'] = descuento_float # Asegura float
+                     producto['precio_oferta'] = precio_oferta # Añade al diccionario
+                     print(f"[API Detalle Debug] Precio oferta calculado: {precio_oferta}") # DEBUG
+                else:
+                    # Descuento inválido, tratar como si no hubiera oferta
+                     producto['descuento_pct'] = None
+                     producto['precio_oferta'] = None
+            except (ValueError, TypeError):
+                 producto['descuento_pct'] = None
+                 producto['precio_oferta'] = None
+        else:
+            producto['descuento_pct'] = None
+            producto['precio_oferta'] = None
+        # --- FIN CÁLCULO PRECIO OFERTA ---
 
         datos_producto = {
-            "producto": dict(producto),
+            # Pasamos el diccionario 'producto' que ahora puede contener 'precio_oferta' y 'descuento_pct'
+            "producto": producto,
             "imagenes": todas_las_imagenes,
             "variaciones": [dict(v) for v in variaciones],
-            "stock_disponible": int(stock_calculado) # Usa el stock calculado (total o por sucursal)
+            "stock_disponible": int(stock_calculado)
         }
         return jsonify(datos_producto)
 
@@ -2457,45 +2485,108 @@ def api_detalle_producto(id_producto):
 # API Productos (JSON - PUBLIC)
 # ===========================
 
+## REEMPLAZA ESTA RUTA COMPLETA EN app.py (VERSIÓN CON TRIM/LOWER)
+
 @app.route("/api/productos_public", methods=["GET"])
 def api_list_productos_public():
-    """Lista productos con stock agregado (como en tu index) + búsqueda + filtro de categoría (versión pública)."""
     q = (request.args.get("q") or "").strip()
     categoria = (request.args.get("categoria") or "").strip()
 
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    print(f"\n--- [API Productos Public Recibido] ---")
+    print(f"Parámetro 'q': '{q}'")
+    print(f"Parámetro 'categoria': '{categoria}'")
 
-    base_sql = """
-        SELECT p.id_producto, p.sku, p.nombre_producto, p.descripcion_producto,
-            p.categoria_producto, p.precio_producto, p.imagen_url,
-            COALESCE(SUM(i.stock),0) as stock
-        FROM producto p
-        LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
-        LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
-    """
-    where = []
-    params = []
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    if q:
-        where.append("(p.sku ILIKE %s OR p.nombre_producto ILIKE %s)")
-        params += [f"%{q}%", f"%{q}%"]
-    if categoria and categoria.lower() != "todas":
-        where.append("p.categoria_producto ILIKE %s")
-        params.append(categoria)
+        base_sql = """
+            SELECT
+                p.id_producto, p.sku, p.nombre_producto, p.descripcion_producto,
+                p.categoria_producto, p.precio_producto, p.imagen_url,
+                (SELECT COALESCE(SUM(i_sub.stock), 0)
+                 FROM variacion_producto v_sub
+                 JOIN inventario_sucursal i_sub ON i_sub.id_variacion = v_sub.id_variacion
+                 WHERE v_sub.id_producto = p.id_producto
+                ) as stock,
+                o.descuento_pct,
+                o.fecha_fin
+            FROM producto p
+            LEFT JOIN oferta_producto op ON p.id_producto = op.id_producto
+            LEFT JOIN oferta o ON op.id_oferta = o.id_oferta
+                 AND CURRENT_DATE BETWEEN o.fecha_inicio AND o.fecha_fin
+                 AND o.vigente_bool = TRUE
+        """
 
-    if where:
-        base_sql += " WHERE " + " AND ".join(where)
+        where_clauses = []
+        params = []
 
-    base_sql += " GROUP BY p.id_producto ORDER BY p.id_producto;"
+        if q:
+            where_clauses.append("(p.sku ILIKE %s OR p.nombre_producto ILIKE %s)")
+            params.extend([f"%{q}%", f"%{q}%"])
 
-    cur.execute(base_sql, params)
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+        if categoria:
+            # --- CORRECCIÓN MÁS ROBUSTA ---
+            # Compara quitando espacios y convirtiendo a minúsculas en ambos lados
+            where_clauses.append("TRIM(LOWER(p.categoria_producto)) = LOWER(%s)")
+            params.append(categoria) # El valor de la URL ya viene sin espacios por .strip()
+            # --- FIN CORRECCIÓN ---
+            print(f"Aplicando filtro EXACTO (lower/trim) por categoría: {categoria}")
 
-    data = [dict(r) for r in rows]
-    return jsonify(data), 200
+        if where_clauses:
+            final_query = base_sql + " WHERE " + " AND ".join(where_clauses)
+        else:
+            final_query = base_sql
+
+        final_query += " ORDER BY p.id_producto;"
+
+        print("Query SQL final a ejecutar:\n", cur.mogrify(final_query, tuple(params)).decode('utf-8', 'ignore')) # DEBUG con ignore
+
+        cur.execute(final_query, tuple(params))
+        rows = cur.fetchall()
+        print(f"Productos encontrados: {len(rows)}")
+        print("------------------------------------\n")
+
+        # --- Lógica para calcular precio final (sin cambios) ---
+        data = []
+        processed_ids = set()
+        for r in rows:
+            product_id = r['id_producto']
+            if product_id in processed_ids: continue
+
+            producto_dict = dict(r)
+            precio_original = float(producto_dict.get('precio_producto', 0))
+            descuento = producto_dict.get('descuento_pct')
+
+            if descuento is not None:
+                try:
+                    descuento_float = float(descuento)
+                    precio_con_descuento = precio_original * (1 - descuento_float / 100.0)
+                    producto_dict['precio_oferta'] = round(precio_con_descuento)
+                    producto_dict['descuento_pct'] = descuento_float
+                except (ValueError, TypeError):
+                    producto_dict['precio_oferta'] = None; producto_dict['descuento_pct'] = None
+            else:
+                 producto_dict['precio_oferta'] = None; producto_dict['descuento_pct'] = None
+
+            data.append(producto_dict)
+            processed_ids.add(product_id)
+        # --- FIN LÓGICA PRECIO FINAL ---
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        print(f"❌ Error en /api/productos_public: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Error al cargar productos"}), 500
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
+
+# No olvides importar traceback si no lo tienes:
+# import traceback
 
 
 @app.route("/api/productos_public", methods=["POST"])

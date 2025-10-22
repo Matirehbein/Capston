@@ -1591,3 +1591,195 @@ table.admin-table {
 }
 
 /* === Fin estilos === */
+
+/* === Añade esto a style.css === */
+
+.producto-precio-container {
+  /* Contenedor para ambos precios */
+  margin-bottom: 0.75rem; /* Espacio antes del botón */
+  min-height: 2.5em; /* Reserva espacio vertical para evitar saltos */
+  display: flex;
+  flex-direction: column; /* Pone un precio sobre otro */
+  align-items: center; /* Centra los precios */
+}
+
+.producto-precio,
+.producto-precio-oferta {
+  font-size: 1.1rem; /* Tamaño normal/oferta */
+  font-weight: bold;
+  color: var(--color-text-primary, #333); /* Color principal */
+  margin: 0.1em 0; /* Poco espacio vertical entre precios */
+}
+
+.producto-precio-oferta {
+  color: var(--color-oferta, red); /* Color destacado para ofertas */
+}
+
+.producto-precio-original {
+  font-size: 0.9rem; /* Más pequeño */
+  color: #888; /* Color grisáceo */
+  text-decoration: line-through; /* Tachado */
+  margin: 0.1em 0;
+}
+
+.descuento-tag {
+  display: inline-block;
+  background-color: var(--color-oferta, red);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+  vertical-align: middle; /* Alinea con el precio */
+}
+
+/* Ajusta el h3 si los precios ocupan más espacio */
+.producto h3 {
+  min-height: 2.4em; /* Dale un poco más de altura mínima por si acaso */
+}
+
+/* === Fin estilos precios oferta === */
+
+
+
+
+/* === INICIO: ESTILOS MEGA MENÚ (CORREGIDO) === */
+
+/* Contenedor del item de navegación */
+.nav-item-with-megamenu {
+  position: relative;
+}
+
+/* El mega menú desplegable */
+.mega-menu {
+  position: absolute; /* Posición absoluta respecto al LI */
+  top: 100%; /* Justo debajo del item */
+  left: 0; /* Alineado a la izquierda del LI */
+  right: 0; /* Intenta estirarse hasta la derecha */
+  width: 100vw; /* Ocupa todo el ancho de la ventana */
+  max-width: 1200px; /* Limita el ancho máximo (ajusta al de tu .container si es diferente) */
+  margin-left: auto; /* Centra el max-width */
+  margin-right: auto; /* Centra el max-width */
+  transform: translateX(-50%); /* Centra el menú relativo al LI */
+  left: 50%; /* Punto de inicio para el centrado */
+  background-color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 8px 8px;
+  padding: 1.5rem 0; /* Padding vertical */
+  z-index: 999;
+
+  /* Estado oculto */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-10px); /* Ajusta transformación inicial */
+  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+/* Estado visible */
+.nav-item-with-megamenu .mega-menu.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0); /* Ajusta transformación final */
+  pointer-events: auto;
+}
+
+/* Contenido interno (usa tu clase .container para alineación) */
+.mega-menu-content {
+  /* No necesita width si .mega-menu ya lo controla y usas .container */
+  padding: 0 1rem; /* Añade padding horizontal si es necesario */
+  box-sizing: border-box;
+}
+
+.mega-menu-content h4 {
+  font-size: 0.9rem; 
+  color: black; 
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #000000;
+  text-transform: uppercase;
+  letter-spacing: 0.5px; /* Menos espaciado */
+}
+
+/* La lista de categorías */
+.mega-menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  column-count: 4; /* Prueba con 4 columnas, ajusta según veas */
+  column-gap: 1.5rem; /* Menos espacio entre columnas */
+}
+
+.mega-menu-list li {
+  margin-bottom: 0.5rem; /* Menos espacio vertical */
+  /* Evita que los items se rompan entre columnas */
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Reemplaza la regla .mega-menu-list a existente con esta */
+.header-content .nav-links .nav-item-with-megamenu .mega-menu .mega-menu-list li a {
+  text-decoration: none;
+  color: #000000 !important; /* Forza el color negro */
+  font-size: 0.9rem;
+  display: block;
+  padding: 0.3rem 0;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+}
+
+/* Mantén la regla hover como estaba o usa esta más específica */
+.header-content .nav-links .nav-item-with-megamenu .mega-menu .mega-menu-list li a:hover {
+  color: var(--color-primary, #007bff);
+  font-weight: 500;
+}
+
+
+/* Adaptar columnas en pantallas pequeñas */
+@media (max-width: 992px) { /* Ajusta el breakpoint si es necesario */
+  .mega-menu {
+     max-width: 90%; /* Ajusta max-width */
+  }
+  .mega-menu-list {
+    column-count: 3; /* 3 columnas */
+  }
+}
+@media (max-width: 768px) {
+  .mega-menu {
+      /* Quizás quieras que ocupe menos ancho o se posicione diferente */
+      max-width: none;
+      width: auto; /* Ancho automático basado en contenido */
+      left: 0; /* Resetear posicionamiento */
+      right: auto;
+      transform: translateX(0) translateY(-10px); /* Resetear transformación */
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15); /* Sombra diferente */
+  }
+   .nav-item-with-megamenu .mega-menu.visible {
+        transform: translateX(0) translateY(0);
+   }
+  .mega-menu-list {
+    column-count: 2; /* 2 columnas */
+  }
+   .mega-menu-content {
+      padding: 0 1.5rem; /* Más padding interno en móvil */
+   }
+}
+@media (max-width: 480px) {
+  .mega-menu-list {
+    column-count: 1; /* 1 columna */
+  }
+}
+
+/* === FIN: ESTILOS MEGA MENÚ (CORREGIDO) === */
+
+/* Estilo de la categoria de la Card de cada producto */
+
+.producto-categoria {
+  font-size: 0.85em; /* Tamaño más pequeño */
+  color: #979797;      /* Color gris */
+  text-align: center;
+  margin-top: 0.5rem; /* Espacio sobre la categoría */
+  margin-bottom: 0; /* Sin espacio extra debajo */
+  text-transform: capitalize; /* Primera letra en mayúscula */
+}

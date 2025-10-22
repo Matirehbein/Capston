@@ -1,4 +1,3 @@
-  
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Aurora | Moda Elegante</title>
   <link rel="stylesheet" href="/Public/Css/style.css"/>
-</head>
+  </head>
 
 <body>
     <header>
@@ -16,7 +15,35 @@
 
         <ul class="nav-links">
           <li><a href="/src/colecciones.html">Colecciones</a></li>
-          <li><a href="/src/productos.html">Productos</a></li>
+
+          <li class="nav-item-with-megamenu"> 
+            <a href="/src/productos.html">Productos</a>
+
+            
+            <div class="mega-menu">
+              <div class="mega-menu-content container"> 
+                <h4>Categorías</h4>
+                <ul class="mega-menu-list">
+                  
+                  <li><a href="/src/productos.html#categoria=Abrigos">Abrigos</a></li>
+                  <li><a href="/src/productos.html#categoria=Accesorios">Accesorios</a></li>
+                  <li><a href="/src/productos.html#categoria=Calzado">Calzado</a></li>
+                  <li><a href="/src/productos.html#categoria=Chaquetas">Chaquetas</a></li>
+                  <li><a href="/src/productos.html#categoria=Joyas">Joyas</a></li>
+                  <li><a href="/src/productos.html#categoria=Pantalones">Pantalones</a></li>
+                  <li><a href="/src/productos.html#categoria=Parkas">Parkas</a></li>
+                  <li><a href="/src/productos.html#categoria=Polerones">Polerones</a></li>
+                  <li><a href="/src/productos.html#categoria=Poleras">Poleras</a></li>
+                  <li><a href="/src/productos.html#categoria=Ropa interior">Ropa interior</a></li>
+                  <li><a href="/src/productos.html#categoria=Top">Top</a></li>
+                  <li><a href="/src/productos.html#categoria=Traje de baño">Traje de baño</a></li>
+                  
+                </ul>
+              </div>
+            </div>
+        
+          </li>
+          
           <li><a href="/src/ofertas.html">Ofertas</a></li>
         </ul>
 
@@ -25,16 +52,16 @@
           <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
           <a href="../src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
           <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
-          <li id="admin-menu-btn" style="display:inline;">
-            <a href="../src/main_menu.html">Admin</a>
-          </li>
+          
+          <span id="admin-menu-btn" style="display:none;"> 
+             <a href="../src/main_menu.html" class="icon-btn">Admin</a> 
+          </span>
         </div>
       </div>
     </div>
   </header>
 
   <main>
-    <!-- Hero -->
     <section class="hero" id="inicio">
       <div class="container">
         <div class="hero-content">
@@ -45,7 +72,6 @@
       </div>
     </section>
 
-    <!-- Colecciones -->
     <section id="colecciones">
       <div class="container">
         <div class="section-title">
@@ -60,42 +86,35 @@
               <p>Tonos suaves y diseños fluidos</p>
             </div>
           </div>
+          
         </div>
       </div>
     </section>
   </main>
 
-  <!-- Chatbot Aurora -->
-<link rel="stylesheet" href="../Public/css/chatbot.css"><!-- ajusta may/min según tus carpetas -->
-
-<div class="chatbot-container">
-  <button class="chatbot-btn" id="openChat">
-    <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" alt="Aurora" />
-  </button>
-
-  <div class="chat-window" id="chatWindow">
-    <div class="chat-header">
-      <h3>Asistente Aurora</h3>
-      <span id="closeChat">&times;</span>
-    </div>
-
-    <div class="chat-body" id="chatBody">
-      <div class="bot-message">
-        <p>👋 ¡Hola! Soy Aurora. ¿En qué te puedo ayudar hoy?</p>
+  
+  <link rel="stylesheet" href="/Public/Css/chatbot.css">
+  <div class="chatbot-container">
+    <button class="chatbot-btn" id="openChat">
+      <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" alt="Aurora" />
+    </button>
+    <div class="chat-window" id="chatWindow">
+      <div class="chat-header">
+        <h3>Asistente Aurora</h3>
+        <span id="closeChat">&times;</span>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="bot-message"><p>👋 ¡Hola! Soy Aurora. ¿En qué te puedo ayudar hoy?</p></div>
+      </div>
+      <div class="chat-footer">
+        <input type="text" id="userInput" placeholder="Escribe tu mensaje..." />
+        <button id="sendBtn">Enviar</button>
       </div>
     </div>
-
-    <div class="chat-footer">
-      <input type="text" id="userInput" placeholder="Escribe tu mensaje..." />
-      <button id="sendBtn">Enviar</button>
-    </div>
   </div>
-</div>
-
-<script src="../Public/js/chatbot.js"></script> <!-- ajusta may/min -->
+  <script src="/Public/Js/chatbot.js"></script>
 
 
-  <!-- Footer -->
   <footer class="footer">
     <div class="container">
       <nav class="footer-top">
@@ -108,9 +127,7 @@
         </ul>
       </nav>
     </div>
-
     <div class="footer-divider"></div>
-
     <div class="container">
       <div class="footer-bottom">
         <p>© 2025, Aurora-chile· Moda y Belleza</p>
@@ -118,48 +135,49 @@
     </div>
   </footer>
 
-  <script type="module" src="../Public/js/colores.js"></script>
-  <link rel="stylesheet" href="./Public/Css/chatbot.css">
-  <script src="./Public/Js/chatbot.js"></script>
-
-
+  
+  <script type="module" src="/Public/Js/colores.js"></script> 
   <script>
     (async function checkUserRole() {
       try {
-        const res = await fetch("http://127..0.1:5000/api/session_info", {
-          method: "GET",
-          credentials: "include"
+        // CORREGIDO: URL API (quitado un punto extra) y verifica el puerto 5000
+        const res = await fetch("http://localhost:5000/api/session_info", {
+          method: "GET", credentials: "include"
         });
-
-        if (!res.ok) {
-          console.error("Fallo consultando sesión:", res.status, await res.text());
-          return;
-        }
-
+        if (!res.ok) { console.error("Fallo consultando sesión:", res.status, await res.text()); return; }
         const data = await res.json();
         console.log("session_info:", data);
 
-        if (data.logged_in& (data.rol === "admin" || data.rol === "soporte")) {
-    const btn = document.getElementById("admin-menu-btn");
-            if (btn) btn.style.display = "block";
+        const adminBtnSpan = document.getElementById("admin-menu-btn");
+        const welcomeMsg = document.getElementById("welcome-msg");
+        const loginBtn = document.getElementById("login-btn");
 
-          // Mostrar mensaje de bienvenida
-          const welcome = document.getElementById("welcome-msg");
-          if (welcome) {
-            welcome.textContent = `Hola, ${data.nombre} ${data.apellido_paterno}`;
-            welcome.style.display = "inline";
-          }
+        // Lógica simplificada para mostrar/ocultar
+        if (data.logged_in) {
+            if (welcomeMsg) {
+                 welcomeMsg.textContent = `Hola, ${data.nombre || ''} ${data.apellido_paterno || ''}`.trim();
+                 welcomeMsg.style.display = "inline";
+            }
+            if (loginBtn) loginBtn.style.display = "none"; // Oculta login si está logueado
 
-          // Ocultar login si está logueado
-          const loginBtn = document.getElementById("login-btn");
-          if (loginBtn) loginBtn.style.display = "none";
+            // Muestra admin solo si es admin o soporte
+            if (adminBtnSpan && (data.rol === "admin" || data.rol === "soporte")) {
+                adminBtnSpan.style.display = "inline"; // O 'block' o 'inline-block' según tu CSS
+            } else if (adminBtnSpan) {
+                adminBtnSpan.style.display = "none"; // Oculta si no es admin/soporte
+            }
+        } else {
+             // Si no está logueado
+             if (welcomeMsg) welcomeMsg.style.display = "none";
+             if (loginBtn) loginBtn.style.display = "inline-block"; // Muestra login
+             if (adminBtnSpan) adminBtnSpan.style.display = "none"; // Oculta admin
         }
-      } catch (err) {
-        console.error("Error verificando sesión:", err);
-      }
+      } catch (err) { console.error("Error verificando sesión:", err); }
     })();
   </script>
 
-<script type="module" src="../Public/js/geolocation.js"></script>
+  <script type="module" src="/Public/Js/navigation.js"></script> 
+  <script type="module" src="/Public/Js/geolocation.js"></script>
+
 </body>
 </html>
