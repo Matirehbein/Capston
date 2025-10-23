@@ -11,37 +11,132 @@
             padding: 15px;
             text-align: center;
             background-color: #fff;
-            height: 100%;
+            height: 100%; /* Asegura altura consistente */
+            display: flex; /* Flexbox para alinear contenido */
+            flex-direction: column;
+            justify-content: space-between; /* Espacia contenido */
         }
         .producto-card img {
             max-width: 100px;
+            max-height: 100px; /* Limita altura imagen */
+            object-fit: contain; /* Evita distorsión */
             margin-bottom: 10px;
+            margin-left: auto; /* Centra imagen */
+            margin-right: auto;
+        }
+        .producto-card h5 {
+            font-size: 0.95rem; /* Nombre un poco más pequeño */
+            margin-bottom: 0.5rem;
+            flex-grow: 1; /* Permite que el nombre ocupe espacio si es largo */
+        }
+        .producto-card p {
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        .category-section {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+        }
+        .category-filters .btn {
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .category-filters .btn.active {
+            background-color: #0d6efd; /* Color primario de Bootstrap */
+            color: white;
+            border-color: #0d6efd;
         }
     </style>
 </head>
 <body class="bg-light">
 
 <div class="container mt-5">
-    <h1 class="mb-4">Stock en {{ sucursal.nombre_sucursal }}</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Stock en {{ sucursal.nombre_sucursal }}</h1>
+        <a href="{{ url_for('crud_sucursales') }}" class="btn btn-secondary">Volver al Listado</a>
+    </div>
 
-    <div class="row">
-        {% for p in productos %}
-        <div class="col-md-3 mb-4">
-            <div class="producto-card">
-                {% if p.imagen_url %}
-                    <img src="{{ p.imagen_url }}" alt="{{ p.nombre_producto }}">
-                {% endif %}
-                <h5>{{ p.nombre_producto }}</h5>
-                <p><strong>Precio:</strong> ${{ "%.2f"|format(p.precio_producto) }}</p>
-                <p><strong>Stock:</strong> {{ p.stock }}</p>
-            </div>
-        </div>
+    <div class="category-filters mb-4">
+        <button class="btn btn-outline-primary active" data-category="all">Mostrar Todo</button>
+        {% for cat in categorias %}
+            {% set cat_slug = cat | lower | replace(' ', '-') | replace('á', 'a') | replace('é', 'e') | replace('í', 'i') | replace('ó', 'o') | replace('ú', 'u') %}
+            <button class="btn btn-outline-primary" data-category="{{ cat_slug }}">{{ cat }}</button>
         {% endfor %}
     </div>
 
-    <a href="{{ url_for('crud_sucursales') }}" class="btn btn-secondary mt-3">Volver al CRUD de Sucursales</a>
+    <div id="product-sections-container">
+        {% if productos_agrupados %}
+            {% for categoria, productos_en_categoria in productos_agrupados.items() %}
+                {% set cat_slug = categoria | lower | replace(' ', '-') | replace('á', 'a') | replace('é', 'e') | replace('í', 'i') | replace('ó', 'o') | replace('ú', 'u') %}
+                <section class="category-section" id="section-{{ cat_slug }}">
+                    <h2>{{ categoria }}</h2>
+                    <div class="row">
+                        {% for p in productos_en_categoria %}
+                            <div class="col-md-3 col-sm-6 mb-4 product-item">
+                                <div class="producto-card">
+                                    <div>
+                                        {% if p.imagen_url %}
+                                            <img src="{{ p.imagen_url }}" alt="{{ p.nombre_producto }}">
+                                        {% else %}
+                                            {# Asume que tienes un placeholder en static/imagenes #}
+                                            <img src="{{ url_for('static', filename='imagenes/placeholder.jpg') }}" alt="Sin imagen">
+                                        {% endif %}
+                                        <h5>{{ p.nombre_producto }}</h5>
+                                    </div>
+                                    <div>
+                                        {# --- CORRECCIÓN AQUÍ: Quitamos | format_clp --- #}
+                                        <p><strong>Precio:</strong> ${{ p.precio_producto }}</p>
+                                        {# --- FIN CORRECCIÓN --- #}
+                                        <p><strong>Stock:</strong> {{ p.stock_en_sucursal }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <p>No hay productos en esta categoría con stock en esta sucursal.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info" role="alert">
+              No hay productos con stock disponible en esta sucursal.
+            </div>
+        {% endif %}
+    </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterButtons = document.querySelectorAll('.category-filters .btn');
+        const productSections = document.querySelectorAll('.category-section');
+
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const selectedCategory = this.dataset.category;
+
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+
+                productSections.forEach(section => {
+                    if (selectedCategory === 'all') {
+                        section.style.display = 'block';
+                    } else {
+                        const sectionId = `section-${selectedCategory}`;
+                        if (section.id === sectionId) {
+                            section.style.display = 'block';
+                        } else {
+                            section.style.display = 'none';
+                        }
+                    }
+                });
+            });
+        });
+    });
+</script>
+
 </body>
 </html>

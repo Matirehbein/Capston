@@ -44,10 +44,6 @@
     @media (min-width: 768px) { .detalle-grid { grid-template-columns: 1fr 1fr; } }
     .loading-state, .error-state { text-align: center; padding: 4rem 1rem; }
 
-    /* --- Tus estilos del modal (¡Asegúrate de tenerlos en style.css!) --- */
-    /* .modal-overlay { ... } */
-    /* .modal-content { ... } */
-    /* etc... */
   </style>
 </head>
 <body>
@@ -58,16 +54,12 @@
 
         <ul class="nav-links">
           <li><a href="/src/colecciones.html">Colecciones</a></li>
-
-          <li class="nav-item-with-megamenu"> 
+          <li class="nav-item-with-megamenu">
             <a href="/src/productos.html">Productos</a>
-
-            
             <div class="mega-menu">
-              <div class="mega-menu-content container"> 
+              <div class="mega-menu-content container">
                 <h4>Categorías</h4>
                 <ul class="mega-menu-list">
-                  
                   <li><a href="/src/productos.html#categoria=Abrigos">Abrigos</a></li>
                   <li><a href="/src/productos.html#categoria=Accesorios">Accesorios</a></li>
                   <li><a href="/src/productos.html#categoria=Calzado">Calzado</a></li>
@@ -80,19 +72,27 @@
                   <li><a href="/src/productos.html#categoria=Ropa interior">Ropa interior</a></li>
                   <li><a href="/src/productos.html#categoria=Top">Top</a></li>
                   <li><a href="/src/productos.html#categoria=Traje de baño">Traje de baño</a></li>
-                  
                 </ul>
               </div>
             </div>
-        
           </li>
-          
           <li><a href="/src/ofertas.html">Ofertas</a></li>
         </ul>
+
         <div class="header-actions">
           <span id="nearest-branch-display" class="nearest-branch">Buscando sucursal...</span>
-          <a href="../src/carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
-          <a href="../src/login.html" class="icon-btn icon-login" aria-label="Login"></a>
+          <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+          <a href="/src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
+
+          <button id="logout-btn" class="icon-btn icon-logout" aria-label="Logout" style="display: none; background: none; border: none; cursor: pointer; padding: 0; vertical-align: middle;">
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+
+          <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
+
+          <span id="admin-menu-btn" style="display:none;">
+             <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light">Panel Admin</a>
+          </span>
         </div>
       </div>
     </div>
@@ -222,6 +222,77 @@
   <script type="module" src="../Public/js/detalle_producto.js"></script>
   <script type="module" src="../Public/js/geolocation.js"></script>
   <script type="module" src="/Public/Js/navigation.js"></script> 
+
+  <!-- Script para el botón de admin según el tipo de sesión -->
+  <script>
+    (async function checkUserSessionAndSetupUI() {
+      const adminBtnSpan = document.getElementById("admin-menu-btn");
+      const welcomeMsg = document.getElementById("welcome-msg");
+      const loginBtn = document.getElementById("login-btn");
+      const logoutBtn = document.getElementById("logout-btn"); // Botón Logout
+
+      // Ocultar/mostrar por defecto mientras se verifica
+      // Asegurarse de que los elementos existan antes de acceder a style
+      if(adminBtnSpan) adminBtnSpan.style.display = "none";
+      if(welcomeMsg) welcomeMsg.style.display = "none";
+      if(loginBtn) loginBtn.style.display = "inline-block"; // Mostrar Login por defecto
+      if(logoutBtn) logoutBtn.style.display = "none"; // Ocultar Logout por defecto
+
+      try {
+        const res = await fetch("http://localhost:5000/api/session_info", {
+          method: "GET", credentials: "include"
+        });
+
+        // Manejar error de red o del servidor
+        if (!res.ok) {
+          console.error("Fallo consultando sesión:", res.status, await res.text());
+          // Mantener estado "no logueado" (ya está por defecto)
+          return;
+        }
+
+        const data = await res.json();
+        console.log("session_info recibida:", data); // Log para depurar
+
+        // --- LÓGICA PRINCIPAL ---
+        if (data.logged_in) {
+            // Usuario LOGUEADO
+            if (welcomeMsg) {
+                 welcomeMsg.textContent = `Hola, ${data.nombre || ''} ${data.apellido_paterno || ''}`.trim();
+                 welcomeMsg.style.display = "inline";
+            }
+            if (loginBtn) loginBtn.style.display = "none"; // Ocultar Login
+            if (logoutBtn) logoutBtn.style.display = "inline-block"; // Mostrar Logout
+
+            // --- CONTROL POR ROL PARA BOTÓN ADMIN ---
+            if (adminBtnSpan && (data.rol === "admin" || data.rol === "soporte")) {
+                adminBtnSpan.style.display = "inline"; // O 'block' o 'inline-block' según tu CSS
+                console.log("Usuario es Admin/Soporte, mostrando botón Admin.");
+            } else if (adminBtnSpan) {
+                adminBtnSpan.style.display = "none"; // Oculta si es 'cliente' u otro rol
+                console.log(`Usuario es ${data.rol}, ocultando botón Admin.`);
+            }
+            // --- FIN CONTROL POR ROL ---
+
+        } else {
+             // Usuario NO LOGUEADO (los defaults ya lo manejan)
+             console.log("Usuario no logueado.");
+        }
+      } catch (err) {
+        console.error("Error crítico verificando sesión:", err);
+        // Fallback a estado no logueado en caso de error grave
+        // (Los defaults ya lo manejan)
+      }
+
+      // Listener para el botón Logout (añadir solo una vez)
+      if (logoutBtn && !logoutBtn.dataset.listenerAttached) { // Evita añadir múltiples listeners
+          logoutBtn.addEventListener('click', () => {
+              window.location.href = 'http://localhost:5000/logout'; // Redirige a Flask para logout
+          });
+          logoutBtn.dataset.listenerAttached = 'true'; // Marcar que ya tiene listener
+      }
+
+    })();
+  </script>
 
 </body>
 </html>

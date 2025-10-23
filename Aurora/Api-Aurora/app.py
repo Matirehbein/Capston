@@ -1138,30 +1138,95 @@ def stock_sucursales():
 # CRUD Sucursales: Ruta para el detalle por Sucursal
 # ===========================
 
+## REEMPLAZA ESTA RUTA COMPLETA EN app.py
+
+import traceback # Asegúrate de tener esta importación
+
 @app.route("/stock_sucursal/<int:id_sucursal>")
 def detalle_sucursal(id_sucursal):
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    # Traer sucursal
-    cur.execute("SELECT * FROM sucursal WHERE id_sucursal = %s", (id_sucursal,))
-    sucursal = cur.fetchone()
+        # 1. Obtener datos de la sucursal (sin cambios)
+        cur.execute("SELECT * FROM sucursal WHERE id_sucursal = %s", (id_sucursal,))
+        sucursal = cur.fetchone()
+        if not sucursal:
+            flash(f"Sucursal con ID {id_sucursal} no encontrada.", "danger")
+            return redirect(url_for('crud_sucursales')) # O a donde prefieras
 
-    # Traer productos con stock en esta sucursal
-    cur.execute("""
-        SELECT p.id_producto, p.nombre_producto, p.imagen_url, p.precio_producto,
-            COALESCE(i.stock, 0) as stock
-        FROM producto p
-        LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto
-        LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion AND i.id_sucursal = %s
-        ORDER BY p.id_producto;
-    """, (id_sucursal,))
-    productos = cur.fetchall()
+        # 2. Obtener lista de categorías CON stock en ESTA sucursal
+        cur.execute("""
+            SELECT DISTINCT p.categoria_producto
+            FROM producto p
+            JOIN variacion_producto v ON p.id_producto = v.id_producto
+            JOIN inventario_sucursal i ON v.id_variacion = i.id_variacion
+            WHERE i.id_sucursal = %s AND i.stock > 0 AND p.categoria_producto IS NOT NULL
+            ORDER BY p.categoria_producto;
+        """, (id_sucursal,))
+        # Guardamos solo los nombres de categoría, tratando 'None' explícitamente si fuera necesario
+        categorias_con_stock = [row['categoria_producto'] for row in cur.fetchall()]
 
-    cur.close()
-    conn.close()
-    return render_template("sucursales/detalle_sucursal.html", sucursal=sucursal, productos=productos)
+        # (Opcional) Añadir categoría para productos sin categoría asignada si tienen stock
+        cur.execute("""
+            SELECT 1 FROM producto p
+            JOIN variacion_producto v ON p.id_producto = v.id_producto
+            JOIN inventario_sucursal i ON v.id_variacion = i.id_variacion
+            WHERE i.id_sucursal = %s AND i.stock > 0 AND p.categoria_producto IS NULL
+            LIMIT 1;
+        """, (id_sucursal,))
+        if cur.fetchone():
+            categorias_con_stock.append("Sin Categoría") # O el nombre que prefieras
 
+        # 3. Obtener TODOS los productos CON stock en ESTA sucursal, ordenados por categoría
+        #    Agregamos el stock POR PRODUCTO en esta sucursal específica
+        cur.execute("""
+            SELECT
+                p.id_producto, p.nombre_producto, p.imagen_url, p.precio_producto,
+                p.categoria_producto,
+                COALESCE(SUM(i.stock), 0) as stock_en_sucursal
+            FROM producto p
+            JOIN variacion_producto v ON p.id_producto = v.id_producto
+            JOIN inventario_sucursal i ON v.id_variacion = i.id_variacion
+            WHERE i.id_sucursal = %s AND i.stock > 0
+            GROUP BY p.id_producto, p.categoria_producto -- Agrupamos por producto para sumar su stock
+            ORDER BY p.categoria_producto NULLS LAST, p.nombre_producto; -- Ordena, poniendo Sin Categoría al final
+        """, (id_sucursal,))
+        productos_en_stock = cur.fetchall()
+
+        # 4. Agrupar productos por categoría en un diccionario
+        productos_por_categoria = {cat: [] for cat in categorias_con_stock}
+        for p in productos_en_stock:
+            categoria_actual = p['categoria_producto'] if p['categoria_producto'] else "Sin Categoría"
+            if categoria_actual in productos_por_categoria:
+                productos_por_categoria[categoria_actual].append(dict(p))
+            # (Si no estuviera en categorias_con_stock, podría ser un caso raro, podrías añadirlo aquí si quieres ser extra seguro)
+            # elif categoria_actual not in productos_por_categoria:
+            #    productos_por_categoria[categoria_actual] = [dict(p)]
+            #    if categoria_actual not in categorias_con_stock: # Añadir a la lista si faltaba
+            #       categorias_con_stock.append(categoria_actual)
+
+
+        # 5. Pasar datos a la plantilla
+        return render_template(
+            "sucursales/detalle_sucursal.html",
+            sucursal=sucursal,
+            categorias=categorias_con_stock, # La lista ordenada de nombres de categoría
+            productos_agrupados=productos_por_categoria # El diccionario {categoria: [productos...]}
+        )
+
+    except Exception as e:
+        print(f"❌ Error en /stock_sucursal/{id_sucursal}: {e}")
+        traceback.print_exc()
+        flash("Ocurrió un error al cargar el stock de la sucursal.", "danger")
+        return redirect(url_for('crud_sucursales')) # Redirigir en caso de error
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
+
+        
 # ===========================
 # CRUD USUARIOS
 # ===========================
