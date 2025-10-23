@@ -199,15 +199,25 @@ async function handleMercadoPagoCheckout(btn) {
     if (!amount || amount <= 0) {
         alert("Tu carrito está vacío."); return;
     }
-    const mpUrl = $("#cart-container")?.dataset?.mercadopago || "http://localhost:3010/mercadopago/create_preference";
-    const items = getCart().map((p) => ({
-        id: p.sku, 
-        title: `${p.name} (Talla: ${p.variation?.talla || 'Única'})`,
-        unit_price: Math.round(p.price),
-        quantity: Number(p.qty) || 1, // Asegura que sea número
-        currency_id: "CLP",
-        picture_url: p.image || undefined
-    }));
+    
+    const mpUrl =
+  document.querySelector("#cart-container")?.dataset?.mercadopago ||
+  "http://localhost:3010/api/mercadopago/create";  // ← con /api
+
+
+const items = getCart().map(p => ({
+  id: String(p.sku),
+  title: `${p.name} (Talla: ${p.variation?.talla || 'Única'})`,
+  unit_price: Math.max(1, Math.round(Number(String(p.price).replace(/[^\d.-]/g, '')) || 0)),
+  quantity: Math.max(1, Number(p.qty) || 1),
+  currency_id: 'CLP',
+  picture_url: p.image || undefined
+}));
+await fetch('http://localhost:3010/api/mercadopago/create', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ items })
+});
 
     btn.setAttribute("disabled", "disabled");
     const oldText = btn.textContent;
@@ -238,5 +248,3 @@ async function handleMercadoPagoCheckout(btn) {
 // Ejecuta renderCart cuando la página cargue
 document.addEventListener("DOMContentLoaded", renderCart);
 
-// Vuelve a renderizar si el localStorage cambia
-window.addEventListener("storage", renderCart);
