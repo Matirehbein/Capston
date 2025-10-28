@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Aurora | Moda Elegante</title>
   <link rel="stylesheet" href="/Public/Css/style.css"/>
-  </head>
+  <link rel="stylesheet" href="/Public/Css/chatbot.css"> 
+</head>
 
 <body>
     <header>
@@ -15,16 +16,12 @@
 
         <ul class="nav-links">
           <li><a href="/src/colecciones.html">Colecciones</a></li>
-
-          <li class="nav-item-with-megamenu"> 
+          <li class="nav-item-with-megamenu">
             <a href="/src/productos.html">Productos</a>
-
-            
             <div class="mega-menu">
-              <div class="mega-menu-content container"> 
+              <div class="mega-menu-content container">
                 <h4>Categorías</h4>
                 <ul class="mega-menu-list">
-                  
                   <li><a href="/src/productos.html#categoria=Abrigos">Abrigos</a></li>
                   <li><a href="/src/productos.html#categoria=Accesorios">Accesorios</a></li>
                   <li><a href="/src/productos.html#categoria=Calzado">Calzado</a></li>
@@ -37,25 +34,51 @@
                   <li><a href="/src/productos.html#categoria=Ropa interior">Ropa interior</a></li>
                   <li><a href="/src/productos.html#categoria=Top">Top</a></li>
                   <li><a href="/src/productos.html#categoria=Traje de baño">Traje de baño</a></li>
-                  
                 </ul>
               </div>
             </div>
-        
           </li>
-          
           <li><a href="/src/ofertas.html">Ofertas</a></li>
         </ul>
 
         <div class="header-actions">
-          <span id="nearest-branch-display" class="nearest-branch">Buscando sucursal...</span>
-          <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
-          <a href="../src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
-          <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
+          <!-- seleccionar sucursal -->
+          <div class="branch-selector">
           
-          <span id="admin-menu-btn" style="display:none;"> 
-             <a href="../src/main_menu.html" class="icon-btn">Admin</a> 
+          <button id="branch-display-btn" class="branch-display-button" type="button">
+            📍 Buscando...
+          </button>
+          <div id="branch-list-dropdown" class="branch-dropdown-menu" style="display: none;">
+            
+            <div class="dropdown-loading">Cargando sucursales...</div>
+          </div>
+        </div>
+
+        <!-- Seccion del carrito -->
+          <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+
+          <!-- Seccion del login/register del usuario -->
+          <a href="/src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
+          <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
+
+          <!-- Seccion de perfil del usuario -->
+          <a href="../src/perfil.html" id="perfil-menu-btn" class="icon-btn" style="display: none;" aria-label="Mi perfil">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </a>
+
+          <!-- Seccion de logout del usuario -->
+          <button id="logout-btn" class="icon-btn icon-logout" aria-label="Logout" style="display: none; background: none; border: none; cursor: pointer; padding: 0; vertical-align: middle;">
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+
+          <!-- Seccion del Panel Admin -->
+          <span id="admin-menu-btn" style="display:none;">
+             <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light">Panel Admin</a>
           </span>
+
         </div>
       </div>
     </div>
@@ -72,28 +95,58 @@
       </div>
     </section>
 
-    <section id="colecciones">
-      <div class="container">
-        <div class="section-title">
-          <h2>Colecciones Aurora</h2>
-          <p>Nuestras últimas colecciones diseñadas para inspirar y empoderar</p>
+<section id="colecciones">
+  <div class="container">
+    <div class="section-title">
+      <h2>Colecciones Aurora</h2>
+      <p>Nuestras últimas colecciones diseñadas para inspirar y empoderar</p>
+    </div>
+
+    <div class="colecciones-carousel">
+      <button class="carousel-btn prev" aria-label="Anterior">&#10094;</button>
+
+      <div class="carousel-track">
+        <div class="coleccion-card">
+          <img src="../Public/imagenes/BannerPrimavera.png" alt="Colección Primavera - tonos suaves y diseños fluidos" class="banner-img">
+          <div class="coleccion-overlay">
+            <h3>Primavera</h3>
+            <p>Tonos suaves y diseños fluidos</p>
+          </div>
         </div>
 
-        <div class="colecciones-grid">
-          <div class="coleccion-card">
-            <div class="coleccion-overlay">
-              <h3>Primavera</h3>
-              <p>Tonos suaves y diseños fluidos</p>
-            </div>
+        <div class="coleccion-card">
+          <img src="../Public/imagenes/BannerVerano.jpeg" alt="Colección Verano - colores vivos y telas ligeras" class="banner-img">
+          <div class="coleccion-overlay">
+            <h3>Verano</h3>
+            <p>Colores vivos y telas ligeras</p>
           </div>
-          
+        </div>
+
+        <div class="coleccion-card">
+          <img src="../Public/imagenes/bannerOtoño.jpg" alt="Colección Otoño - texturas cálidas y tonos tierra" class="banner-img">
+          <div class="coleccion-overlay">
+            <h3>Otoño</h3>
+            <p>Texturas cálidas y tonos tierra</p>
+          </div>
+        </div>
+
+        <div class="coleccion-card">
+          <img src="../Public/imagenes/BannerInvierno..png" alt="Colección Invierno - estilo y abrigo en cada detalle" class="banner-img">
+          <div class="coleccion-overlay">
+            <h3>Invierno</h3>
+            <p>Estilo y abrigo en cada detalle</p>
+          </div>
         </div>
       </div>
-    </section>
+
+      <button class="carousel-btn next" aria-label="Siguiente">&#10095;</button>
+    </div>
+  </div>
+</section>
+
   </main>
 
-  
-  <link rel="stylesheet" href="/Public/Css/chatbot.css">
+
   <div class="chatbot-container">
     <button class="chatbot-btn" id="openChat">
       <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" alt="Aurora" />
@@ -112,6 +165,7 @@
       </div>
     </div>
   </div>
+ 
   <script src="/Public/Js/chatbot.js"></script>
 
 
@@ -135,48 +189,76 @@
     </div>
   </footer>
 
-  
   <script type="module" src="/Public/Js/colores.js"></script> 
-  <script>
-    (async function checkUserRole() {
-      try {
-        // CORREGIDO: URL API (quitado un punto extra) y verifica el puerto 5000
-        const res = await fetch("http://localhost:5000/api/session_info", {
-          method: "GET", credentials: "include"
-        });
-        if (!res.ok) { console.error("Fallo consultando sesión:", res.status, await res.text()); return; }
-        const data = await res.json();
-        console.log("session_info:", data);
 
-        const adminBtnSpan = document.getElementById("admin-menu-btn");
-        const welcomeMsg = document.getElementById("welcome-msg");
-        const loginBtn = document.getElementById("login-btn");
+  <!-- Script para el botón de admin según el tipo de sesión -->
+<script>
+(async function checkUserSessionAndSetupUI() {
+  const adminBtnSpan = document.getElementById("admin-menu-btn");
+  const perfilBtnSpan = document.getElementById("perfil-menu-btn"); // ← nuevo
+  const welcomeMsg = document.getElementById("welcome-msg");
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
 
-        // Lógica simplificada para mostrar/ocultar
-        if (data.logged_in) {
-            if (welcomeMsg) {
-                 welcomeMsg.textContent = `Hola, ${data.nombre || ''} ${data.apellido_paterno || ''}`.trim();
-                 welcomeMsg.style.display = "inline";
-            }
-            if (loginBtn) loginBtn.style.display = "none"; // Oculta login si está logueado
+  // Estado inicial (por defecto: no logueado)
+  if (adminBtnSpan) adminBtnSpan.style.display = "none";
+  if (perfilBtnSpan) perfilBtnSpan.style.display = "none"; // ← ocultar perfil
+  if (welcomeMsg) welcomeMsg.style.display = "none";
+  if (loginBtn) loginBtn.style.display = "inline-block";
+  if (logoutBtn) logoutBtn.style.display = "none";
 
-            // Muestra admin solo si es admin o soporte
-            if (adminBtnSpan && (data.rol === "admin" || data.rol === "soporte")) {
-                adminBtnSpan.style.display = "inline"; // O 'block' o 'inline-block' según tu CSS
-            } else if (adminBtnSpan) {
-                adminBtnSpan.style.display = "none"; // Oculta si no es admin/soporte
-            }
-        } else {
-             // Si no está logueado
-             if (welcomeMsg) welcomeMsg.style.display = "none";
-             if (loginBtn) loginBtn.style.display = "inline-block"; // Muestra login
-             if (adminBtnSpan) adminBtnSpan.style.display = "none"; // Oculta admin
-        }
-      } catch (err) { console.error("Error verificando sesión:", err); }
-    })();
-  </script>
+  try {
+    const res = await fetch("http://localhost:5000/api/session_info", {
+      method: "GET",
+      credentials: "include"
+    });
 
-  <script type="module" src="/Public/Js/navigation.js"></script> 
+    if (!res.ok) {
+      console.error("Error al consultar sesión:", res.status);
+      return;
+    }
+
+    const data = await res.json();
+    console.log("session_info recibida:", data);
+
+    if (data.logged_in) {
+      // --- Usuario logueado ---
+      if (welcomeMsg) {
+        welcomeMsg.textContent = `Hola, ${data.nombre || ''} ${data.apellido_paterno || ''}`.trim();
+        welcomeMsg.style.display = "inline";
+      }
+      if (loginBtn) loginBtn.style.display = "none";
+      if (logoutBtn) logoutBtn.style.display = "inline-block";
+      if (perfilBtnSpan) perfilBtnSpan.style.display = "inline"; // ← mostrar "Mi perfil"
+
+      // --- Mostrar botón Admin solo si corresponde ---
+      if (adminBtnSpan && (data.rol === "admin" || data.rol === "soporte")) {
+        adminBtnSpan.style.display = "inline";
+        console.log("Usuario es Admin/Soporte, mostrando botón Admin.");
+      }
+
+    } else {
+      // --- Usuario no logueado ---
+      console.log("Usuario no logueado.");
+      if (perfilBtnSpan) perfilBtnSpan.style.display = "none"; // ← aseguramos ocultarlo
+    }
+
+  } catch (err) {
+    console.error("Error verificando sesión:", err);
+  }
+
+  // Listener para logout
+  if (logoutBtn && !logoutBtn.dataset.listenerAttached) {
+    logoutBtn.addEventListener('click', () => {
+      window.location.href = 'http://localhost:5000/logout';
+    });
+    logoutBtn.dataset.listenerAttached = 'true';
+  }
+})();
+</script>
+
+
+  <script type="module" src="/Public/Js/navigation.js"></script>
   <script type="module" src="/Public/Js/geolocation.js"></script>
 
 </body>

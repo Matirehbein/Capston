@@ -1,6 +1,6 @@
-CREATE DATABASE aurora;
+ CREATE DATABASE aurora;
 
--- Elimina índices opcionales
+ -- Elimina índices opcionales
 DROP INDEX IF EXISTS idx_conversacion_usuario;
 DROP INDEX IF EXISTS idx_ticket_conversacion;
 DROP INDEX IF EXISTS uniq_ticket_activo_por_prioridad;
@@ -96,11 +96,11 @@ CREATE TABLE cupon (
 CREATE TABLE pedido (
   id_pedido SERIAL PRIMARY KEY,
   estado_pedido VARCHAR(20) CHECK (estado_pedido IN ('creado','pagado','preparado','enviado','entregado')),
-  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  metodo_pago VARCHAR(50),
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  metodo_pago VARCHAR(50) NOT NULL,
   estado_pago VARCHAR(20) CHECK (estado_pago IN ('pendiente', 'aprobado', 'rechazado', 'reembolsado')),
   total NUMERIC(10,2) DEFAULT 0 CHECK (total >= 0),
-  direccion_envio TEXT;
+  direccion_envio TEXT
 );
 
 CREATE TABLE sucursal (
@@ -169,8 +169,8 @@ CREATE TABLE inventario_sucursal (
 CREATE TABLE detalle_pedido (
   id_detalle SERIAL PRIMARY KEY,
   cantidad INT NOT NULL CHECK (cantidad > 0),
-  precio_unitario NUMERIC(10,2) NOT NULL CHECK (precio_unitario >= 0)
-  subtotal NUMERIC(10,2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED;
+  precio_unitario NUMERIC(10,2) NOT NULL CHECK (precio_unitario >= 0),
+  subtotal NUMERIC(10,2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED
 );
 
 

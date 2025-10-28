@@ -108,6 +108,7 @@ color: var(--color-blanco);
     gap: 20px;
     margin: 0;
     padding: 0;
+    margin-left: 1.5rem;
   }
 
   .nav-links a {
@@ -125,7 +126,8 @@ color: var(--color-blanco);
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 0.75rem;
+    margin-left:auto;
   }
   
   .icon-btn img {
@@ -1783,3 +1785,259 @@ table.admin-table {
   margin-bottom: 0; /* Sin espacio extra debajo */
   text-transform: capitalize; /* Primera letra en mayúscula */
 }
+
+/* === CARRUSEL DE COLECCIONES === */
+.colecciones-carousel {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  margin: 40px auto;
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.6s ease-in-out;
+}
+
+.coleccion-card {
+  min-width: 100%;
+  height: 350px;
+  background-size: cover;
+  background-position: center;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.coleccion-overlay {
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  transition: background 0.3s;
+}
+
+.coleccion-overlay:hover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.coleccion-overlay h3 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.coleccion-overlay p {
+  font-size: 1.1rem;
+  font-weight: 300;
+}
+
+/* Botones */
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.8);
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 8px 15px;
+  border-radius: 50%;
+  transition: background 0.3s ease;
+  z-index: 5;
+}
+
+.carousel-btn:hover {
+  background: rgba(255,255,255,1);
+}
+
+.carousel-btn.prev { left: 10px; }
+.carousel-btn.next { right: 10px; }
+
+/* === INICIO: ESTILOS SELECTOR DE SUCURSAL === */
+
+.branch-selector {
+  position: relative; /* Contenedor para el menú */
+  z-index: 1001; /* Asegura que esté sobre el modal del carrito si se superponen */
+}
+
+.branch-display-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-family: inherit; /* Hereda la fuente del header */
+  font-size: 0.9em;
+  color: #DDD; /* Color de texto (ajusta si tu header es de otro color) */
+  white-space: nowrap; /* Evita que el nombre se parta */
+  transition: background-color 0.2s ease;
+}
+
+.branch-display-button:hover {
+  background-color: rgba(255, 255, 255, 0.1); /* Ligero hover */
+}
+
+/* El menú desplegable */
+.branch-dropdown-menu {
+  display: none; /* Oculto por defecto, JS lo controla */
+  position: absolute;
+  top: 110%; /* Un poco debajo del botón */
+  right: 0; /* Alineado a la derecha */
+  min-width: 220px; /* Ancho mínimo */
+  background-color: white;
+  color: black;
+  border-radius: 6px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  padding: 0.5rem 0;
+}
+
+.dropdown-loading,
+.branch-dropdown-header {
+  padding: 0.5rem 1rem;
+  font-size: 0.85em;
+  color: #888;
+}
+
+.branch-dropdown-divider {
+  height: 1px;
+  background-color: #eee;
+  margin: 0.5rem 0;
+}
+
+/* Enlaces dentro del menú */
+a.branch-option,
+a.branch-geo-option {
+  display: block;
+  padding: 0.6rem 1rem;
+  color: #333;
+  text-decoration: none;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+a.branch-option:hover,
+a.branch-geo-option:hover {
+  background-color: #f4f4f4;
+}
+
+a.branch-option.active {
+  font-weight: bold;
+  color: var(--color-primary, #007bff); /* Destaca la sucursal activa */
+  background-color: #f0f7ff;
+}
+
+/* === FIN: ESTILOS SELECTOR DE SUCURSAL === */
+
+
+/* === COLORES.JS para arreglar el contraste de colores dependiendo en el tema elegido en la configuración del Admin === */
+
+/* === INICIO: VARIABLES DE TEMA Y CORRECCIÓN DE CONTRASTE === */
+
+/* 1. Tema Base (Aurora - Claro) */
+:root, [data-theme="aurora"] {
+  /* ▼▼▼ CAMBIA ESTA LÍNEA ▼▼▼ */
+  --header-bg: #1a1616; /* Un color café (puedes cambiar este hex) */
+  /* ▲▲▲ FIN CAMBIO ▲▲▲ */
+
+  --header-text: #FAFFF2; /* Texto claro para contrastar con el café */
+  --header-text-hover-bg: rgba(255, 255, 255, 0.1); /* Hover sutil claro */
+}
+
+/* 2. Tema Olive (Verde Oscuro) */
+[data-theme="olive"] {
+  --header-bg: #344e41; /* Fondo verde oscuro */
+  --header-text: #fafaf5; /* Texto claro */
+  --header-text-hover-bg: rgba(255, 255, 255, 0.1); /* Hover sutil claro */
+}
+
+/* 3. Tema Noir (Muy Oscuro) */
+[data-theme="noir"] {
+  --header-bg: #18181b; /* Fondo muy oscuro */
+  --header-text: #f4f4f5; /* Texto claro */
+  --header-text-hover-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* 4. Tema Ocean (Azul Oscuro) */
+[data-theme="ocean"] {
+  --header-bg: #0e1722; /* Fondo azul oscuro */
+  --header-text: #eff5fb; /* Texto azul claro */
+  --header-text-hover-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* 5. Aplicar variables al Header */
+/* Asumo que el fondo azul que mencionaste es este */
+.header-content {
+  /* ... tus estilos existentes ... */
+  background-color: var(--header-bg);
+  color: var(--header-text); /* Color de texto por defecto del header */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 6. Aplicar variables a los enlaces de navegación principales */
+.header-content .nav-links a {
+    color: var(--header-text); /* Texto de Colecciones, Productos, Ofertas */
+}
+
+/* 7. Aplicar variables a los botones/texto problemáticos en header-actions */
+.header-actions .branch-display-button,
+.header-actions #welcome-msg,
+.header-actions #admin-menu-btn a,
+.header-actions a[href*="perfil.html"]  /* <-- ESTA LÍNEA AÑADE "Mi perfil" */
+{
+  /* Forzar el color del texto del tema */
+  color: var(--header-text) !important; 
+  
+  /* Resetear/unificar estilos de botón */
+  background: none !important; /* <-- QUITA el fondo fijo del botón "Mi perfil" */
+  border: 1px solid transparent; 
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* 8. Estilos Hover usando variables (ahora incluye "Mi perfil") */
+.header-actions .branch-display-button:hover,
+.header-actions #logout-btn:hover,
+.header-actions #admin-menu-btn a:hover,
+.header-actions a[href*="perfil.html"]:hover {
+  background-color: var(--header-text-hover-bg);
+}
+
+/* 9. Asegurar que los iconos SVG (logout, login, cart) también tomen el color */
+.header-actions .icon-btn svg,
+.header-actions #logout-btn svg {
+    stroke: var(--header-text) !important; /* Para iconos SVG como el de logout */
+}
+
+/* Si tus iconos .icon-cart y .icon-login son background-image, necesitarás 
+   reglas separadas para cambiar la imagen (filtro) */
+[data-theme="olive"] .icon-cart,
+[data-theme="olive"] .icon-login,
+[data-theme="noir"] .icon-cart,
+[data-theme="noir"] .icon-login,
+[data-theme="ocean"] .icon-cart,
+[data-theme="ocean"] .icon-login {
+    /* Si son oscuros, inviértelos para que se vean blancos */
+    filter: invert(1) brightness(1.5);
+    /* Ajusta 'brightness' si 'invert(1)' los deja grises */
+}
+
+
+/* === FIN: Corrección de Contraste === */
+

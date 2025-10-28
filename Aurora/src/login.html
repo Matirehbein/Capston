@@ -5,24 +5,113 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aurora | Login</title>
   <link rel="stylesheet" href="/Public/Css/login.css">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
   <style>
+    /* --- Tus estilos <style> existentes --- */
     .password-rules { font-size: 0.85em; margin-top: 5px; }
     .rule { color: red; }
     .rule.valid { color: green; }
     .strength-bar { height: 8px; width: 100%; background: #ddd; border-radius: 4px; margin-top: 5px; }
     .strength-fill { height: 100%; width: 0; border-radius: 4px; transition: width 0.3s; }
     .strength-text { font-size: 0.85em; margin-top: 3px; }
-    /* Estilo para el mensaje de error del servidor */
-    .server-error { 
-        padding: 10px; 
-        background-color: #fce4e4; 
-        border: 1px solid #fcc; 
-        color: #d32f2f; 
-        border-radius: 4px; 
-        margin-bottom: 10px;
-        font-size: 0.9em;
-        text-align: center;
+    .server-error { padding: 10px; background-color: #fce4e4; border: 1px solid #fcc; color: #d32f2f; border-radius: 4px; margin-bottom: 15px; font-size: 0.9em; text-align: center; }
+    .error-msg { font-size: 0.85em; color: red; display: none; min-height: 20px; }
+
+    /* --- ▼▼▼ ESTILOS ACTUALIZADOS ▼▼▼ --- */
+    body {
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        min-height: 100vh; padding: 40px 15px; box-sizing: border-box;
+        background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
+    .box {
+        background-color: white; padding: 30px 40px; border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 800px; width: 100%;
+        box-sizing: border-box; margin-bottom: 40px;
+    }
+    
+    /* Estilos base para inputs y selects (TU CSS PUEDE SOBREESCRIBIR ESTO) */
+    #register input[type="text"], #register input[type="email"], #register input[type="password"],
+    #register input[type="tel"], #register select,
+    #login input[type="email"], #login input[type="password"] {
+        width: 100%;
+        padding: 12px 15px; border: 1px solid #ccc;
+        border-radius: 4px; box-sizing: border-box;
+        font-size: 1rem; margin-bottom: 0;
+    }
+
+    /* Contenedor para input + icono */
+    .input-group { position: relative; margin-bottom: 20px; width: 100%; }
+    .input-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #aaa; pointer-events: none; z-index: 2; width: 16px; text-align: center; }
+
+    /* --- ▼▼▼ CORRECCIÓN AQUÍ ▼▼▼ --- */
+    /* Ajuste padding y ANCHO para inputs CON icono */
+    .input-group input[type="text"],
+    .input-group input[type="email"],
+    .input-group input[type="password"],
+    .input-group input[type="tel"] {
+      padding-left: 45px !important;
+      width: 100% !important; /* <-- Se añade !important para forzar el ancho */
+      box-sizing: border-box;
+    }
+    /* --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ --- */
+    
+    .input-group.select-group select {
+      padding-left: 40px !important;
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23cccccc%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+      background-repeat: no-repeat; background-position: right 15px center; background-size: 10px auto;
+    }
+    .input-group.select-group .input-icon { left: 15px; }
+    
+    /* Títulos de formulario */
+    #register h2, #login h2 {
+        text-align: center; margin-bottom: 30px; font-size: 1.8em;
+        color: #333; font-weight: 600; grid-column: 1 / -1;
+    }
+
+    /* Área de validación contraseña */
+    .password-validation-area { margin-bottom: 20px; padding-left: 5px; }
+    .error-msg, #password-error { margin-top: -10px; margin-bottom: 20px; }
+
+    /* Botón Submit */
+    #register button[type="submit"], #login button[type="submit"] {
+      margin-top: 15px; padding: 12px; font-size: 1.1em;
+      width: 100%; box-sizing: border-box;
+    }
+    /* El botón de registro ocupa 2 columnas en la grilla */
+    #register button[type="submit"] { grid-column: 1 / -1; }
+
+    /* Enlace "Volver" */
+    .back { margin-top: 25px; text-align: center; }
+    .back a { color: #555; text-decoration: none; font-size: 0.9em; }
+    .back a:hover { text-decoration: underline; }
+
+    /* --- Grilla para formulario de registro --- */
+    .form-grid-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 20px; /* Sin gap vertical (manejado por .input-group), 20px horizontal */
+        align-items: start;
+    }
+    .grid-span-2 { grid-column: 1 / -1; }
+    
+    /* --- Responsividad --- */
+    @media (max-width: 768px) {
+        .box { max-width: 500px; padding: 25px 20px; }
+        /* Vuelve a 1 columna */
+        .form-grid-container {
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+        /* Resetea el span */
+        .grid-span-2 { grid-column: 1; }
+        /* Re-introduce el margen inferior para espaciado en 1 columna */
+        .input-group { margin-bottom: 18px; }
+        .error-msg, #password-error, .password-validation-area { margin-bottom: 18px; }
+    }
+    /* --- ▲▲▲ FIN NUEVOS ESTILOS ▲▲▲ --- */
   </style>
 </head>
 <body>
@@ -33,85 +122,128 @@
       <button class="tab-btn" onclick="openTab('register', this)">Registro</button>
     </div>
 
-    <!-- Formulario de Login -->
     <form id="login" class="active" method="POST" action="http://localhost:5000/login">
-      <input type="email" name="email_usuario" placeholder="Correo" required>
-      <input type="password" name="password" placeholder="Contraseña" required>
+        <h2 style="text-align: center; margin-bottom: 30px; font-size: 1.8em; color: #333; font-weight: 600;">Iniciar Sesión</h2>
+        <div class="input-group">
+            <i class="fas fa-envelope input-icon"></i>
+            <input type="email" name="email_usuario" placeholder="Correo" required>
+        </div>
+        <div class="input-group">
+            <i class="fas fa-lock input-icon"></i>
+            <input type="password" name="password" placeholder="Contraseña" required>
+        </div>
       <button type="submit">Entrar</button>
     </form>
 
-    <!-- Formulario de Registro -->
     <form id="register" method="POST" action="http://localhost:5000/register">
-      <!-- Mensaje de error de registro (se muestra si viene de Flask) -->
-      <div id="register-server-error-container"></div>
-      
-      <input type="text" name="nombre_usuario" placeholder="Nombre" required>
-      <input type="text" name="apellido_paterno" placeholder="Apellido Paterno" required>
-      <input type="text" name="apellido_materno" placeholder="Apellido Materno" required>
-      
-      <!-- Correo Electrónico Principal -->
-      <input type="email" name="email_usuario" id="register-email" placeholder="Correo Electrónico" required>
-      <div id="email-exists-error" class="error-msg" style="color:red; font-size:0.85em; display:none; min-height: 20px;">
-        ⚠️ Este correo ya está en uso.
-      </div>
-      <input type="email" name="email_confirm" placeholder="Confirmar Correo Electrónico" required>
-      <input type="text" name="calle" placeholder="Calle">
-      <input type="text" name="numero_calle" placeholder="Número de Calle">
+        <div class="form-grid-container">
+          
+          <h2 class="grid-span-2">Crea tu cuenta</h2>
+          
+          <div id="register-server-error-container" class="grid-span-2"></div>
 
+          <div class="input-group">
+            <i class="fas fa-user input-icon"></i>
+            <input type="text" name="nombre_usuario" placeholder="Nombre" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-user input-icon"></i>
+            <input type="text" name="apellido_paterno" placeholder="Apellido Paterno" required>
+          </div>
 
-      <!-- Región -->
-      <select id="region" name="region" required>
-      <option value="">Selecciona Región</option>
-    
-        <option value="Arica y Parinacota">Arica y Parinacota</option>
-        <option value="Tarapacá">Tarapacá</option>
-        <option value="Antofagasta">Antofagasta</option>
-        <option value="Atacama">Atacama</option>
-        <option value="Coquimbo">Coquimbo</option>
-        <option value="Valparaíso">Valparaíso</option>
-        <option value="Metropolitana">Metropolitana</option>
-        <option value="O'Higgins">O'Higgins</option>
-        <option value="Maule">Maule</option>
-        <option value="Ñuble">Ñuble</option>
-        <option value="Biobío">Biobío</option>
-        <option value="La Araucanía">La Araucanía</option>
-        <option value="Los Ríos">Los Ríos</option>
-        <option value="Los Lagos">Los Lagos</option>
-        <option value="Aysén">Aysén</option>
-        <option value="Magallanes y Antártica Chilena">Magallanes y Antártica Chilena</option>
-    
-      </select>
+          <div class="input-group grid-span-2">
+            <i class="fas fa-user input-icon"></i>
+            <input type="text" name="apellido_materno" placeholder="Apellido Materno" required>
+          </div>
+          
+          <div class="input-group">
+            <i class="fas fa-envelope input-icon"></i>
+            <input type="email" name="email_usuario" id="register-email" placeholder="Correo Electrónico" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-envelope input-icon"></i>
+            <input type="email" name="email_confirm" placeholder="Confirmar Correo Electrónico" required>
+          </div>
+          
+          <div id="email-exists-error" class="error-msg grid-span-2" style="color:red; font-size:0.85em; display:none; min-height: 20px;">
+            ⚠️ Este correo ya está en uso.
+          </div>
 
-      <!-- Ciudad -->
-      <select id="ciudad" name="ciudad" required>
-        <option value="">Selecciona Ciudad</option>
-      </select>
+          <div class="input-group">
+            <i class="fas fa-map-marker-alt input-icon"></i>
+            <input type="text" name="calle" placeholder="Calle">
+          </div>
+          <div class="input-group">
+            <i class="fas fa-hashtag input-icon"></i>
+            <input type="text" name="numero_calle" placeholder="Número de Calle">
+          </div>
 
-      <!-- Comuna -->
-      <select id="comuna" name="comuna" required>
-        <option value="">Selecciona Comuna</option>
-      </select>
+          <div class="input-group select-group">
+            <i class="fas fa-map input-icon"></i>
+            <select id="region" name="region" required>
+              <option value="">Selecciona Región</option>
+              <option value="Arica y Parinacota">Arica y Parinacota</option>
+              <option value="Tarapacá">Tarapacá</option>
+              <option value="Antofagasta">Antofagasta</option>
+              <option value="Atacama">Atacama</option>
+              <option value="Coquimbo">Coquimbo</option>
+              <option value="Valparaíso">Valparaíso</option>
+              <option value="Metropolitana">Metropolitana</option>
+              <option value="O'Higgins">O'Higgins</option>
+              <option value="Maule">Maule</option>
+              <option value="Ñuble">Ñuble</option>
+              <option value="Biobío">Biobío</option>
+              <option value="La Araucanía">La Araucanía</option>
+              <option value="Los Ríos">Los Ríos</option>
+              <option value="Los Lagos">Los Lagos</option>
+              <option value="Aysén">Aysén</option>
+              <option value="Magallanes y Antártica Chilena">Magallanes y Antártica Chilena</option>
+            </select>
+          </div>
+          <div class="input-group select-group">
+            <i class="fas fa-city input-icon"></i>
+            <select id="ciudad" name="ciudad" required>
+              <option value="">Selecciona Ciudad</option>
+            </select>
+          </div>
 
-      <input type="text" name="telefono" id="register-telefono" placeholder="Número Telefónico" required>
-      <div id="telefono-exists-error" class="error-msg" style="color:red; font-size:0.85em; display:none; min-height: 20px;">
-        ⚠️ Este número telefónico ya está en uso.
-      </div>
+          <div class="input-group select-group"> 
+            <i class="fas fa-map-pin input-icon"></i>
+            <select id="comuna" name="comuna" required>
+              <option value="">Selecciona Comuna</option>
+            </select>
+          </div>
+          <div class="input-group"> 
+            <i class="fas fa-phone input-icon"></i>
+            <input type="tel" name="telefono" id="register-telefono" placeholder="Número Telefónico (9 dígitos)" required pattern="[0-9]{9}" title="El teléfono debe tener 9 dígitos." maxlength="9">
+          </div>
+           <div id="telefono-exists-error" class="error-msg grid-span-2" style="color:red; font-size:0.85em; display:none; min-height: 20px;">
+            ⚠️ Este número telefónico ya está en uso.
+          </div>
 
-      <!-- Contraseña -->
-      <input type="password" id="password" name="password" placeholder="Contraseña" required>
-      <div class="password-rules">
-        <div id="rule-length" class="rule">6–24 caracteres</div>
-        <div id="rule-uppercase" class="rule">Al menos una mayúscula</div>
-        <div id="rule-number" class="rule">Al menos un número</div>
-        <div id="rule-special" class="rule">Al menos un carácter especial</div>
-      </div>
-      <div class="strength-bar"><div id="strength-fill" class="strength-fill"></div></div>
-      <div id="strength-text" class="strength-text">Débil</div>
+          <div class="input-group">
+            <i class="fas fa-lock input-icon"></i>
+            <input type="password" id="password" name="password" placeholder="Contraseña" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-lock input-icon"></i>
+            <input type="password" id="password_confirm" name="password_confirm" placeholder="Confirmar Contraseña" required>
+          </div>
+          
+          <div class="password-validation-area grid-span-2">
+              <div class="password-rules">
+                <div id="rule-length" class="rule">6–24 caracteres</div>
+                <div id="rule-uppercase" class="rule">Al menos una mayúscula</div>
+                <div id="rule-number" class="rule">Al menos un número</div>
+                <div id="rule-special" class="rule">Al menos un carácter especial</div>
+              </div>
+              <div class="strength-bar"><div id="strength-fill" class="strength-fill"></div></div>
+              <div id="strength-text" class="strength-text">Débil</div>
+          </div>
+          <div id="password-error" class="grid-span-2" style="color: red; font-size: 0.85em; min-height: 20px;"></div>
+          <button type="submit" name="registrar" class="grid-span-2">Terminar Registro de Cuenta</button>
 
-      <input type="password" id="password_confirm" name="password_confirm" placeholder="Confirmar Contraseña" required>
-      <div id="password-error" style="color: red; font-size: 0.85em; margin-top: 5px; min-height: 20px;"></div>
-
-      <button type="submit" name="registrar">Terminar Registro de Cuenta</button>
+        </div> 
     </form>
 
     <div class="back">
@@ -166,19 +298,27 @@ passConfirm.addEventListener("input", validatePasswords);
 passwordInput.addEventListener("input", () => {
   const val = passwordInput.value;
   let score = 0;
+  let passwordIsValid = true; // Flag para validación de submit
 
   // Validaciones visuales
   if (val.length >= 6 && val.length <= 24) { ruleLength.classList.add("valid"); score++; }
-  else { ruleLength.classList.remove("valid"); }
+  else { ruleLength.classList.remove("valid"); passwordIsValid = false; }
 
   if (/[A-Z]/.test(val)) { ruleUppercase.classList.add("valid"); score++; }
-  else { ruleUppercase.classList.remove("valid"); }
+  else { ruleUppercase.classList.remove("valid"); passwordIsValid = false; }
 
   if (/\d/.test(val)) { ruleNumber.classList.add("valid"); score++; }
-  else { ruleNumber.classList.remove("valid"); }
+  else { ruleNumber.classList.remove("valid"); passwordIsValid = false; }
 
   if (/[^A-Za-z0-9]/.test(val)) { ruleSpecial.classList.add("valid"); score++; }
-  else { ruleSpecial.classList.remove("valid"); }
+  else { ruleSpecial.classList.remove("valid"); passwordIsValid = false; }
+  
+  // Marcar input para validación de submit
+  if (!passwordIsValid && val.length > 0) {
+      passwordInput.dataset.invalidRules = "true";
+  } else {
+      delete passwordInput.dataset.invalidRules;
+  }
 
   // Barra de fuerza visual
   let width = (score / 4) * 100;
@@ -200,89 +340,22 @@ passwordInput.addEventListener("input", () => {
 // REGIÓN - CIUDAD - COMUNA
 // ==========================
 const ciudadesPorRegion = {
-  // ... (Tu objeto ciudadesPorRegion se mantiene igual)
-  "Arica y Parinacota": {
-    "Arica": ["Arica Centro", "Azapa", "Chacalluta"],
-    "Putre": ["Putre Centro", "Quebrada de Acha", "Belén"],
-    "Camarones": ["Codpa", "Cuya", "Caleta Vítor"]
-  },
-  "Tarapacá": {
-    "Iquique": ["Alto Hospicio", "Iquique Centro", "Playa Brava"],
-    "Pozo Almonte": ["Pozo Almonte Urbano", "La Tirana", "Pampa del Tamarugal"],
-    "Pica": ["Matilla", "Llanos de Pica", "Valle de Quisma"]
-  },
-  "Antofagasta": {
-    "Antofagasta": ["Antofagasta Centro", "Sector Norte", "La Chimba"],
-    "Calama": ["Calama Central", "Oasis", "Chiu Chiu"],
-    "Tocopilla": ["Tocopilla Urbano", "Barriles", "María Elena"]
-  },
-  "Atacama": {
-    "Copiapó": ["Copiapó Centro", "Tierra Amarilla", "Paipote"],
-    "Vallenar": ["Vallenar Urbano", "Huasco", "Freirina"],
-    "Chañaral": ["Chañaral Central", "El Salado", "Diego de Almagro"]
-  },
-  "Coquimbo": {
-    "La Serena": ["La Serena Centro", "Las Compañías", "Coquimbo"],
-    "Ovalle": ["Ovalle Central", "Samo Alto", "Monte Patria"],
-    "Illapel": ["Illapel Urbano", "Los Vilos", "Salamanca"]
-  },
-  "Valparaíso": {
-    "Valparaíso": ["Playa Ancha", "Cerro Alegre", "Almendral"],
-    "Viña del Mar": ["Reñaca", "Centro", "Miraflores"],
-    "San Antonio": ["San Antonio Centro", "Cartagena", "Algarrobo"],
-  },
-  "Metropolitana": { 
-    "Santiago": ["Cerrillos", "Cerro Navia", "Conchalí", "El Bosque", "Estación Central", "Huechuraba",
-    "Independencia", "La Cisterna","La Florida","La Granja","La Pintana", "La Reina","Las Condes", "Lo Barnechea", "Lo Espejo",
-    "Lo Prado","Macul", "Maipú","Ñuñoa", "Pedro Aguirre Cerda","Peñalolén","Providencia","Pudahuel", "Quilicura", "Quinta Normal", "Recoleta", "Renca",
-    "San Joaquín", "San Miguel", "San Ramón", "Santiago", "Vitacura"],
-    "Cordillera": ["Puente Alto", "San José de Maipo", "Pirque"]
-  },
-  "O'Higgins": {
-    "Rancagua": ["Rancagua Centro", "Machalí", "Graneros"],
-    "San Fernando": ["San Fernando Urbano", "Chimbarongo", "Peralillo"],
-    "Rengo": ["Rengo Centro", "Requínoa", "Malloa"]
-  },
-  "Maule": {
-    "Talca": ["Talca Centro", "Maule", "San Clemente"],
-    "Curicó": ["Curicó Urbano", "Molina", "Romeral"],
-    "Linares": ["Linares Central", "Parral", "San Javier"]
-  },
-  "Ñuble": {
-    "Chillán": ["Chillán Viejo", "San Carlos", "Quillón"],
-    "Bulnes": ["Bulnes Urbano", "San Ignacio", "El Carmen"],
-    "Yungay": ["Yungay Centro", "Pemuco", "Cabrero"]
-  },
-  "Biobío": {
-    "Concepción": ["Talcahuano", "San Pedro de la Paz", "Chiguayante"],
-    "Los Ángeles": ["Los Ángeles Centro", "Mulchén", "Nacimiento"],
-    "Arauco": ["Lebu", "Cañete", "Curanipe"]
-  },
-  "La Araucanía": {
-    "Temuco": ["Padre Las Casas", "Villarrica", "Pucón"],
-    "Angol": ["Angol Urbano", "Renaico", "Collipulli"],
-    "Lautaro": ["Lautaro Central", "Carahue", "Nueva Imperial"]
-  },
-  "Los Ríos": {
-    "Valdivia": ["Valdivia Centro", "Lanco", "Panguipulli"],
-    "La Unión": ["Río Bueno", "Futrono", "Lago Ranco"],
-    "Mariquina": ["San José de la Mariquina", "Máfil", "Corral"]
-  },
-  "Los Lagos": {
-    "Puerto Montt": ["Puerto Varas", "Frutillar", "Llanquihue"],
-    "Osorno": ["Osorno Urbano", "Río Negro", "Purranque"],
-    "Castro": ["Ancud", "Chonchi", "Quellón"]
-  },
-  "Aysén": {
-    "Coyhaique": ["Coyhaique Centro", "Puerto Aysén", "Puerto Cisnes"],
-    "Chile Chico": ["Chile Chico Urbano", "Cochrane", "Villa O'Higgins"],
-    "Melinka": ["Puerto Aguirre", "Puerto Chacabuco", "Lago Verde"]
-  },
-  "Magallanes y Antártica Chilena": {
-    "Punta Arenas": ["Punta Arenas Central", "Puerto Natales", "Porvenir"],
-    "Puerto Williams": ["Puerto Williams Centro", "Cabo de Hornos", "Timaukel"],
-    "Primavera": ["Cerro Sombrero", "Pampa Guanaco", "Bahía Inútil"]
-  }
+  "Arica y Parinacota": { "Arica": ["Arica Centro", "Azapa", "Chacalluta"], "Putre": ["Putre Centro", "Quebrada de Acha", "Belén"], "Camarones": ["Codpa", "Cuya", "Caleta Vítor"] },
+  "Tarapacá": { "Iquique": ["Alto Hospicio", "Iquique Centro", "Playa Brava"], "Pozo Almonte": ["Pozo Almonte Urbano", "La Tirana", "Pampa del Tamarugal"], "Pica": ["Matilla", "Llanos de Pica", "Valle de Quisma"] },
+  "Antofagasta": { "Antofagasta": ["Antofagasta Centro", "Sector Norte", "La Chimba"], "Calama": ["Calama Central", "Oasis", "Chiu Chiu"], "Tocopilla": ["Tocopilla Urbano", "Barriles", "María Elena"] },
+  "Atacama": { "Copiapó": ["Copiapó Centro", "Tierra Amarilla", "Paipote"], "Vallenar": ["Vallenar Urbano", "Huasco", "Freirina"], "Chañaral": ["Chañaral Central", "El Salado", "Diego de Almagro"] },
+  "Coquimbo": { "La Serena": ["La Serena Centro", "Las Compañías", "Coquimbo"], "Ovalle": ["Ovalle Central", "Samo Alto", "Monte Patria"], "Illapel": ["Illapel Urbano", "Los Vilos", "Salamanca"] },
+  "Valparaíso": { "Valparaíso": ["Playa Ancha", "Cerro Alegre", "Almendral"], "Viña del Mar": ["Reñaca", "Centro", "Miraflores"], "San Antonio": ["San Antonio Centro", "Cartagena", "Algarrobo"] },
+  "Metropolitana": { "Santiago": ["Cerrillos", "Cerro Navia", "Conchalí", "El Bosque", "Estación Central", "Huechuraba", "Independencia", "La Cisterna","La Florida","La Granja","La Pintana", "La Reina","Las Condes", "Lo Barnechea", "Lo Espejo", "Lo Prado","Macul", "Maipú","Ñuñoa", "Pedro Aguirre Cerda","Peñalolén","Providencia","Pudahuel", "Quilicura", "Quinta Normal", "Recoleta", "Renca", "San Joaquín", "San Miguel", "San Ramón", "Santiago", "Vitacura"], "Cordillera": ["Puente Alto", "San José de Maipo", "Pirque"] },
+  "O'Higgins": { "Rancagua": ["Rancagua Centro", "Machalí", "Graneros"], "San Fernando": ["San Fernando Urbano", "Chimbarongo", "Peralillo"], "Rengo": ["Rengo Centro", "Requínoa", "Malloa"] },
+  "Maule": { "Talca": ["Talca Centro", "Maule", "San Clemente"], "Curicó": ["Curicó Urbano", "Molina", "Romeral"], "Linares": ["Linares Central", "Parral", "San Javier"] },
+  "Ñuble": { "Chillán": ["Chillán Viejo", "San Carlos", "Quillón"], "Bulnes": ["Bulnes Urbano", "San Ignacio", "El Carmen"], "Yungay": ["Yungay Centro", "Pemuco", "Cabrero"] },
+  "Biobío": { "Concepción": ["Talcahuano", "San Pedro de la Paz", "Chiguayante"], "Los Ángeles": ["Los Ángeles Centro", "Mulchén", "Nacimiento"], "Arauco": ["Lebu", "Cañete", "Curanipe"] },
+  "La Araucanía": { "Temuco": ["Padre Las Casas", "Villarrica", "Pucón"], "Angol": ["Angol Urbano", "Renaico", "Collipulli"], "Lautaro": ["Lautaro Central", "Carahue", "Nueva Imperial"] },
+  "Los Ríos": { "Valdivia": ["Valdivia Centro", "Lanco", "Panguipulli"], "La Unión": ["Río Bueno", "Futrono", "Lago Ranco"], "Mariquina": ["San José de la Mariquina", "Máfil", "Corral"] },
+  "Los Lagos": { "Puerto Montt": ["Puerto Varas", "Frutillar", "Llanquihue"], "Osorno": ["Osorno Urbano", "Río Negro", "Purranque"], "Castro": ["Ancud", "Chonchi", "Quellón"] },
+  "Aysén": { "Coyhaique": ["Coyhaique Centro", "Puerto Aysén", "Puerto Cisnes"], "Chile Chico": ["Chile Chico Urbano", "Cochrane", "Villa O'Higgins"], "Melinka": ["Puerto Aguirre", "Puerto Chacabuco", "Lago Verde"] },
+  "Magallanes y Antártica Chilena": { "Punta Arenas": ["Punta Arenas Central", "Puerto Natales", "Porvenir"], "Puerto Williams": ["Puerto Williams Centro", "Cabo de Hornos", "Timaukel"], "Primavera": ["Cerro Sombrero", "Pampa Guanaco", "Bahía Inútil"] }
 };
 
 document.getElementById("region").addEventListener("change", e => {
@@ -315,7 +388,6 @@ document.getElementById("ciudad").addEventListener("change", e => {
 // ===================================================
 // LÓGICA DE VALIDACIÓN DE CORREO Y MANEJO DE ERRORES
 // ===================================================
-
 const emailInput = document.getElementById("register-email");
 const emailError = document.getElementById("email-exists-error");
 const registerErrorContainer = document.getElementById("register-server-error-container");
@@ -330,13 +402,11 @@ emailInput.addEventListener("blur", async () => {
     return;
   }
   
-  // Ocultamos el mensaje de error de servidor si el usuario está interactuando
   if (registerErrorContainer.textContent.includes("correo")) {
       registerErrorContainer.innerHTML = '';
   }
 
   try {
-    // Usamos el endpoint GET que definimos en Flask
     const res = await fetch(`http://localhost:5000/check_email?email=${encodeURIComponent(email)}`);
     const data = await res.json();
 
@@ -351,7 +421,6 @@ emailInput.addEventListener("blur", async () => {
     }
   } catch (err) {
     console.error("Error al verificar correo asíncrono:", err);
-    // Permitir el envío si hay error de red, la validación final la hará Flask
   }
 });
 
@@ -382,19 +451,18 @@ registerForm.addEventListener("submit", (e) => {
   // Validar correo asíncrono
   if (emailInput.dataset.invalid === "true") {
     e.preventDefault();
-    // Muestra el mensaje de error y enfoca el input
     emailError.style.display = "block"; 
     emailInput.focus();
+    return; // Detiene el envío
   }
 
   // Bloquear envío si el teléfono ya existe
-if (telefonoInput.dataset.invalid === "true") {
+  if (telefonoInput.dataset.invalid === "true") {
     e.preventDefault();
     telefonoError.style.display = "block";
     telefonoInput.focus();
-    return;
-}
-
+    return; // Detiene el envío
+  }
 
   // Si pasa todas las validaciones de cliente, se envía a Flask.
 });
@@ -419,48 +487,62 @@ document.addEventListener("DOMContentLoaded", function() {
         errorMessage = `⚠️ Contraseña inválida: ${msg}`;
     }
     if (error === 'telefono_exists') {
-    errorMessage = "⛔ **Error de Registro:** El número telefónico ingresado ya está asociado a otra cuenta. Por favor, utiliza otro.";
+        errorMessage = "⛔ Error:El número telefónico ingresado ya está asociado a otra cuenta. Por favor, utiliza otro.";
     }
 
-    // Puedes añadir más errores aquí según los que definas en Flask
-
-    if (errorMessage && tab === 'register') {
-        // Muestra el mensaje de error en el contenedor y cambia a la pestaña de registro
+    if (errorMessage && tab === 'register' && registerErrorContainer) {
         registerErrorContainer.innerHTML = `<div class="server-error">${errorMessage}</div>`;
         const registerTabBtn = document.querySelector(".tab-btn[onclick*='register']");
-        openTab('register', registerTabBtn);
-
-        // Opcional: limpiar la URL para que el mensaje no se muestre al refrescar
+        if (registerTabBtn) openTab('register', registerTabBtn);
         history.replaceState(null, '', window.location.pathname); 
     }
-
     
+    // Activa la pestaña correcta si viene en la URL (ej. de login.html?tab=register)
+    const initialTab = urlParams.get('tab');
+    if (initialTab && !errorMessage) { // Solo si no es un error ya manejado
+        const tabBtn = document.querySelector(`.tab-btn[onclick*='${initialTab}']`);
+        if (tabBtn) openTab(initialTab, tabBtn);
+        // Limpiar URL si no era un error
+        if(urlParams.get('src')) {
+             history.replaceState(null, '', window.location.pathname);
+        }
+    }
 });
 
+// VALIDAR TELÉFONO
 const telefonoInput = document.getElementById("register-telefono");
 const telefonoError = document.getElementById("telefono-exists-error");
 
 telefonoInput.addEventListener("blur", async () => {
     const telefono = telefonoInput.value.trim();
-    if (!telefono) {
-        telefonoError.style.display = "none";
-        telefonoInput.style.border = "";
-        delete telefonoInput.dataset.invalid;
+    // Limpia errores anteriores
+    telefonoError.style.display = "none";
+    telefonoInput.style.border = "";
+    delete telefonoInput.dataset.invalid;
+
+    if (!telefono) return; // No hacer nada si está vacío
+
+    // Validar formato primero
+    if (!/^[0-9]{9}$/.test(telefono)) {
+        telefonoError.textContent = "⚠️ El teléfono debe tener 9 dígitos.";
+        telefonoError.style.display = "block";
+        telefonoInput.style.border = "2px solid red";
+        telefonoInput.dataset.invalid = "true";
         return;
+    }
+
+    if (registerErrorContainer.textContent.includes("telefónico")) {
+        registerErrorContainer.innerHTML = '';
     }
 
     try {
         const res = await fetch(`http://localhost:5000/check_telefono?telefono=${encodeURIComponent(telefono)}`);
         const data = await res.json();
-
         if (data.exists) {
+            telefonoError.textContent = "⚠️ Este número telefónico ya está en uso.";
             telefonoError.style.display = "block";
             telefonoInput.style.border = "2px solid red";
             telefonoInput.dataset.invalid = "true";
-        } else {
-            telefonoError.style.display = "none";
-            telefonoInput.style.border = "";
-            delete telefonoInput.dataset.invalid;
         }
     } catch (err) {
         console.error("Error al verificar teléfono asíncrono:", err);
@@ -468,7 +550,6 @@ telefonoInput.addEventListener("blur", async () => {
 });
 
 </script>
-
 
 </body>
 </html>
