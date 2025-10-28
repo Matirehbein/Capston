@@ -42,21 +42,43 @@
         </ul>
 
         <div class="header-actions">
-          <span id="nearest-branch-display" class="nearest-branch">Buscando sucursal...</span>
+          <!-- seleccionar sucursal -->
+          <div class="branch-selector">
+          
+          <button id="branch-display-btn" class="branch-display-button" type="button">
+            📍 Buscando...
+          </button>
+          <div id="branch-list-dropdown" class="branch-dropdown-menu" style="display: none;">
+            
+            <div class="dropdown-loading">Cargando sucursales...</div>
+          </div>
+        </div>
+
+        <!-- Seccion del carrito -->
           <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+
+          <!-- Seccion del login/register del usuario -->
           <a href="/src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
-          <span id="perfil-menu-btn" style="display:none;">
-            <a href="../src/perfil.html" class="btn btn-sm btn-outline-light">Mi perfil</a>
-          </span>
+          <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
+
+          <!-- Seccion de perfil del usuario -->
+          <a href="../src/perfil.html" id="perfil-menu-btn" class="icon-btn" style="display: none;" aria-label="Mi perfil">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </a>
+
+          <!-- Seccion de logout del usuario -->
           <button id="logout-btn" class="icon-btn icon-logout" aria-label="Logout" style="display: none; background: none; border: none; cursor: pointer; padding: 0; vertical-align: middle;">
              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
           </button>
 
-          <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
-
+          <!-- Seccion del Panel Admin -->
           <span id="admin-menu-btn" style="display:none;">
              <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light">Panel Admin</a>
           </span>
+
         </div>
       </div>
     </div>

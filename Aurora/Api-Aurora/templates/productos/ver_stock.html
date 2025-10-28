@@ -5,7 +5,7 @@
     <title>Gestión de Stock - {{ producto.nombre_producto }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .producto-header { display: flex; align-items: center; gap: 20px; } /* Se quita el margin-bottom */
+        .producto-header { display: flex; align-items: center; gap: 20px; }
         .producto-header img { max-width: 100px; border-radius: 8px; }
         .talla-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem; }
         .total-stock-display { font-size: 1.2rem; font-weight: bold; }
@@ -59,11 +59,12 @@
             </div>
         </div>
         <div class="card-body">
+            
             {% if usa_tallas %}
                 <form action="{{ url_for('actualizar_stock_por_tallas', id_producto=producto.id_producto) }}" method="POST">
                     <input type="hidden" name="id_sucursal" value="{{ s.id_sucursal }}">
                     <h6 class="card-title">Actualizar Stock por Tallas</h6>
-                    <p class="card-text text-muted small">Modifica las cantidades y haz clic en "Actualizar Stock". Esto cambiará el stock total de la sucursal.</p>
+                    <p class="card-text text-muted small">Modifica las cantidades y haz clic en "Actualizar Stock".</p>
                     
                     <div class="talla-grid mb-3">
                         {% for talla in tallas_disponibles %}
@@ -77,14 +78,29 @@
                         <button type="submit" class="btn btn-success">Actualizar Stock</button>
                     </div>
                 </form>
+            
             {% else %}
-                <p class="text-center text-muted">Este producto no se gestiona por tallas.</p>
+                <form action="{{ url_for('actualizar_stock_estandar', id_producto=producto.id_producto) }}" method="POST">
+                    <input type="hidden" name="id_sucursal" value="{{ s.id_sucursal }}">
+                    <h6 class="card-title">Actualizar Stock Estándar</h6>
+                    <p class="card-text text-muted small">Este producto no se gestiona por tallas. Ingresa el stock total para esta sucursal.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="stock_estandar_{{ s.id_sucursal }}">Stock Estándar</label>
+                            <input type="number" min="0" value="{{ stock_base_sucursal[s.id_sucursal] | int }}" name="stock_estandar" class="form-control" id="stock_estandar_{{ s.id_sucursal }}">
+                        </div>
+                        <div class="col-md-8 d-flex align-items-end justify-content-end">
+                            <button type="submit" class="btn btn-success">Actualizar Stock</button>
+                        </div>
+                    </div>
+                </form>
             {% endif %}
-        </div>
+            </div>
     </div>
     {% endfor %}
 
-    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
