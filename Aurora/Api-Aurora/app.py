@@ -1,21 +1,41 @@
 import re
 import traceback
 import os
-from datetime import datetime, date # Asegúrate de importar date
+from datetime import datetime, date
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
 import psycopg2
 import psycopg2.extras
 from psycopg2 import errors
-from psycopg2 import pool  # <-- 1. IMPORTACIÓN AÑADIDA
+from psycopg2 import pool  # <-- 1. Importación del Pool (ya la tenías)
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 import json
-from datetime import datetime, date
-# import datetime # ya importado arriba
+# from datetime import datetime, date # Duplicado, ya está arriba
+
+# --- ▼▼▼ NUEVAS IMPORTACIONES PARA CORREO Y TOKENS ▼▼▼ ---
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
+# --- ▲▲▲ FIN NUEVAS IMPORTACIONES ▲▲▲ ---
+
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+app.secret_key = "supersecretkey" # ¡Mantén esto seguro y secreto!
+
+# --- ▼▼▼ NUEVO: CONFIGURACIÓN DE FLASK-MAIL ▼▼▼ ---
+# (Usa la Contraseña de Aplicación de 16 dígitos, no tu contraseña real)
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USERNAME'] = 'painless199388@gmail.com' # <--- REEMPLAZA ESTO
+app.config['MAIL_PASSWORD'] = 'djrl xfiz wbmb fger' # <--- REEMPLAZA ESTO (la de 16 dígitos)
+app.config['MAIL_DEFAULT_SENDER'] = ('Aurora', 'painless199388@gmail.com') # Nombre amigable
+mail = Mail(app)
+# --- ▲▲▲ FIN CONFIGURACIÓN MAIL ▲▲▲ ---
+
+# --- ▼▼▼ NUEVO: CONFIGURACIÓN DE SERIALIZER (TOKEN) ▼▼▼ ---
+s = URLSafeTimedSerializer(app.secret_key)
+# --- ▲▲▲ FIN SERIALIZER ▲▲▲ ---
 
 
 # Constantes para categorías y tallas (SIN CAMBIOS)
@@ -29,9 +49,6 @@ TALLAS_CALZADO = [str(i) for i in range(35, 47)]
 # ===========================
 @app.route("/api/session_info")
 def api_session_info():
-    """
-    Devuelve la información de sesión del usuario logueado.
-    """
     if "user_id" not in session:
         return jsonify({"logged_in": False})
     return jsonify({
@@ -52,7 +69,7 @@ app.config['PG_USER'] = "postgres"
 app.config['PG_PASSWORD'] = "duoc"
 
 
-# --- ▼▼▼ 2. CREAR EL POOL DE CONEXIONES ▼▼▼ ---
+# --- POOL DE CONEXIONES (Tu código, SIN CAMBIOS) ---
 try:
     db_pool = psycopg2.pool.SimpleConnectionPool(
         1, 20, # minconn=1, maxconn=20
@@ -65,18 +82,14 @@ try:
 except psycopg2.OperationalError as e:
     print(f"❌ ERROR: No se pudo crear el pool de conexiones a PostgreSQL: {e}")
     db_pool = None
-# --- ▲▲▲ FIN POOL ▲▲▲ ---
+# --- FIN POOL ---
 
 
-# --- ▼▼▼ 3. MODIFICAR get_db_connection() ▼▼▼ ---
+# --- FUNCIONES DE CONEXIÓN CON POOL (Tu código, SIN CAMBIOS) ---
 def get_db_connection():
-    """
-    Obtiene una conexión del pool de conexiones.
-    """
     if db_pool:
         return db_pool.getconn()
     else:
-        # Fallback de emergencia si el pool falló al iniciar
         print("Error: db_pool no está inicializado. Creando conexión de emergencia.")
         return psycopg2.connect(
             host=app.config['PG_HOST'],
@@ -84,18 +97,13 @@ def get_db_connection():
             user=app.config['PG_USER'],
             password=app.config['PG_PASSWORD']
         )
-# --- ▲▲▲ FIN FUNCIÓN MODIFICADA ▲▲▲ ---
 
-# --- ▼▼▼ 4. AÑADIR FUNCIÓN return_db_connection() ▼▼▼ ---
 def return_db_connection(conn):
-    """
-    Devuelve una conexión al pool.
-    """
     if db_pool:
         db_pool.putconn(conn)
     else:
-        conn.close() # Cierra la conexión de emergencia
-# --- ▲▲▲ FIN FUNCIÓN AÑADIDA ▲▲▲ ---
+        conn.close()
+# --- FIN FUNCIONES DE CONEXIÓN ---
 
 # Decoradores (SIN CAMBIOS)
 def login_required(fn):
@@ -153,8 +161,7 @@ def index_options():
 # ---------------------------
 @app.route("/api/sucursales_con_coords")
 def api_sucursales_con_coords():
-    conn = None
-    cur = None
+    conn = None; cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -183,10 +190,8 @@ def api_sucursales_con_coords():
         traceback.print_exc()
         return jsonify({"error": "Error al obtener sucursales"}), 500
     finally:
-        # --- ▼▼▼ 5. BLOQUE FINALLY MODIFICADO ▼▼▼ ---
         if cur: cur.close()
-        if conn: return_db_connection(conn)
-        # --- ▲▲▲ FIN BLOQUE MODIFICADO ▲▲▲ ---
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 # ---------------------------
 # CRUD Productos (CON POOL)
@@ -241,7 +246,7 @@ def crud_productos():
         return redirect(url_for("index_options"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos/nombres_por_categoria")
 @login_required
@@ -262,7 +267,7 @@ def api_nombres_por_categoria():
         return jsonify({"nombres": [], "error": str(e)}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos_por_color")
 def api_productos_por_color():
@@ -292,9 +297,10 @@ def api_productos_por_color():
         return jsonify({"error": "Error buscando productos por color"}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/add", methods=["POST"])
+@login_required # Añadido decorador
 def add_producto():
     conn = None; cur = None
     try:
@@ -324,10 +330,11 @@ def add_producto():
         flash(f"❌ Ocurrió un error al agregar el producto: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_productos"))
 
 @app.route("/edit/<int:id>", methods=["POST"])
+@login_required # Añadido decorador
 def edit_producto(id):
     conn = None; cur = None
     try:
@@ -351,10 +358,11 @@ def edit_producto(id):
         flash(f"Error al editar producto: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_productos"))
 
 @app.route("/edit_stock/<int:id>", methods=["POST"])
+@login_required # Añadido decorador
 def edit_stock(id):
     id_sucursal = request.form["id_sucursal"]
     stock = request.form["stock"]
@@ -380,10 +388,11 @@ def edit_stock(id):
         flash(f"Error al editar stock: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_productos"))
 
 @app.route("/delete/<int:id>", methods=["POST"])
+@login_required # Añadido decorador
 def delete_producto(id):
     conn = None; cur = None
     try:
@@ -397,52 +406,33 @@ def delete_producto(id):
         flash(f"Error al eliminar producto: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_productos"))
-
-
-
-## REEMPLAZA ESTA RUTA COMPLETA EN app.py
 
 @app.route("/ver_stock/<int:id_producto>")
 @login_required
 def ver_stock(id_producto):
-    conn = None
-    cur = None
+    conn = None; cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
-        # 1. Obtener información del producto
         cur.execute("SELECT * FROM producto WHERE id_producto = %s", (id_producto,))
         producto = cur.fetchone()
         if not producto:
             flash("Producto no encontrado.", "danger")
             return redirect(url_for("crud_productos"))
-
-        # 2. Determinar las tallas disponibles
         categoria = (producto["categoria_producto"] or "").strip()
         tallas_disponibles = []
-        if categoria in CATEGORIAS_ROPA:
-            tallas_disponibles = TALLAS_ROPA
-        elif categoria in CATEGORIAS_CALZADO:
-            tallas_disponibles = TALLAS_CALZADO
-        
+        if categoria in CATEGORIAS_ROPA: tallas_disponibles = TALLAS_ROPA
+        elif categoria in CATEGORIAS_CALZADO: tallas_disponibles = TALLAS_CALZADO
         usa_tallas = bool(tallas_disponibles)
-
-        # 3. Obtener todas las sucursales
         cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal")
         sucursales = cur.fetchall()
-
-        # 4. Obtener el stock
         stock_por_talla = {}
         stock_total_sucursal = {}
-        stock_base_sucursal = {} # Para stock sin talla (Estándar)
-
+        stock_base_sucursal = {} # <-- NUEVO
         for s in sucursales:
-            id_sucursal = s["id_sucursal"] # <-- Aquí se obtiene correctamente
-            
-            # Obtener stock POR TALLA (XS, S, M...)
+            id_sucursal = s["id_sucursal"]
             cur.execute("""
                 SELECT v.talla, COALESCE(i.stock, 0) as stock
                 FROM variacion_producto v
@@ -452,112 +442,68 @@ def ver_stock(id_producto):
             stock_tallas_sucursal = {row['talla']: row['stock'] for row in cur.fetchall()}
             stock_por_talla[id_sucursal] = stock_tallas_sucursal
             
-            # Obtener stock de la variación BASE (talla IS NULL)
             cur.execute("""
                 SELECT COALESCE(i.stock, 0) as stock
                 FROM variacion_producto v
                 LEFT JOIN inventario_sucursal i ON v.id_variacion = i.id_variacion AND i.id_sucursal = %s
-                WHERE v.id_producto = %s AND v.talla IS NULL
-                LIMIT 1;
+                WHERE v.id_producto = %s AND v.talla IS NULL LIMIT 1;
             """, (id_sucursal, id_producto))
             stock_base_row = cur.fetchone()
+            stock_base_sucursal[s['id_sucursal']] = stock_base_row['stock'] if stock_base_row else 0 # <-- CORREGIDO
+            stock_total_sucursal[s['id_sucursal']] = sum(stock_tallas_sucursal.values()) + stock_base_sucursal[s['id_sucursal']] # <-- CORREGIDO
             
-            # --- ▼▼▼ CORRECCIÓN AQUÍ ▼▼▼ ---
-            # Usar s['id_sucursal'] en lugar de s.id_sucursal
-            stock_base_sucursal[s['id_sucursal']] = stock_base_row['stock'] if stock_base_row else 0
-            
-            # Calcular el stock TOTAL de la sucursal
-            # Usar s['id_sucursal'] aquí también
-            stock_total_sucursal[s['id_sucursal']] = sum(stock_tallas_sucursal.values()) + stock_base_sucursal[s['id_sucursal']]
-            # --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
-
-        # 5. Calcular stock total del producto
         stock_total_producto = sum(stock_total_sucursal.values())
-        
         return render_template(
             "productos/ver_stock.html",
-            producto=producto,
-            sucursales=sucursales,
-            usa_tallas=usa_tallas,
-            tallas_disponibles=tallas_disponibles,
-            stock_por_talla=stock_por_talla,
-            stock_total_sucursal=stock_total_sucursal,
-            stock_total_producto=stock_total_producto,
-            stock_base_sucursal=stock_base_sucursal # Pasa el stock base
+            producto=producto, sucursales=sucursales, usa_tallas=usa_tallas,
+            tallas_disponibles=tallas_disponibles, stock_por_talla=stock_por_talla,
+            stock_total_sucursal=stock_total_sucursal, stock_total_producto=stock_total_producto,
+            stock_base_sucursal=stock_base_sucursal # <-- NUEVO
         )
-    
     except Exception as e:
         print(f"Error en ver_stock: {e}"); traceback.print_exc()
         flash("Error al cargar stock", "danger")
         return redirect(url_for("crud_productos"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # Devuelve al pool
+        if conn: return_db_connection(conn) # <-- USA POOL
 
-
-# --- ▼▼▼ AÑADE ESTA NUEVA RUTA EN app.py ▼▼▼ ---
-
+# --- ▼▼▼ NUEVA RUTA (tal como te la pasé) ▼▼▼ ---
 @app.route("/productos/<int:id_producto>/actualizar_stock_estandar", methods=["POST"])
 @login_required
 def actualizar_stock_estandar(id_producto):
-    """
-    Actualiza el stock para la variación "base" (talla IS NULL) de un producto
-    en una sucursal específica.
-    """
     id_sucursal = request.form.get("id_sucursal")
-    stock_estandar = request.form.get("stock_estandar", 0) # 0 si no se envía
-
+    stock_estandar = request.form.get("stock_estandar", 0)
     if not id_sucursal:
         flash("❌ Error: No se especificó una sucursal.", "danger")
         return redirect(url_for("ver_stock", id_producto=id_producto))
-
-    conn = None
-    cur = None
+    conn = None; cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
-        # 1. Encontrar la ID de la variación base (donde talla es NULL)
-        cur.execute("""
-            SELECT id_variacion FROM variacion_producto
-            WHERE id_producto = %s AND talla IS NULL
-            LIMIT 1;
-        """, (id_producto,))
-        
+        cur.execute("SELECT id_variacion FROM variacion_producto WHERE id_producto = %s AND talla IS NULL LIMIT 1;", (id_producto,))
         variacion = cur.fetchone()
-        
         if not variacion:
-            # Si el producto no tiene ni siquiera una variación base (creada al añadir producto),
-            # esto es un error, pero podríamos crearla aquí si quisiéramos.
-            # Por ahora, asumimos que se creó al añadir el producto.
             flash("❌ Error: No se encontró la variación base del producto.", "danger")
             raise Exception("No se encontró variación base (talla NULL)")
-
         id_variacion_base = variacion['id_variacion']
-
-        # 2. Insertar o actualizar el stock para esa variación base en la sucursal
         cur.execute("""
             INSERT INTO inventario_sucursal (id_sucursal, id_variacion, stock)
             VALUES (%s, %s, %s)
             ON CONFLICT (id_sucursal, id_variacion)
             DO UPDATE SET stock = EXCLUDED.stock;
         """, (id_sucursal, id_variacion_base, stock_estandar))
-
         conn.commit()
         flash("✅ Stock estándar actualizado correctamente.", "success")
-
     except Exception as e:
         if conn: conn.rollback()
-        print(f"❌ Error al actualizar stock estándar: {e}")
-        traceback.print_exc()
+        print(f"❌ Error al actualizar stock estándar: {e}"); traceback.print_exc()
         flash(f"❌ Error al actualizar el stock: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # Devuelve al pool
-
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("ver_stock", id_producto=id_producto))
-
-# --- ▲▲▲ FIN NUEVA RUTA ▲▲▲ ---    
+# --- ▲▲▲ FIN NUEVA RUTA ▲▲▲ ---
 
 @app.route("/productos/<int:id_producto>/actualizar_stock_por_tallas", methods=["POST"])
 @login_required
@@ -608,7 +554,7 @@ def actualizar_stock_por_tallas(id_producto):
         flash(f"❌ Error al actualizar el stock: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 @app.route("/guardar_stock_sucursales/<int:id_producto>", methods=["POST"])
@@ -624,15 +570,14 @@ def guardar_stock_sucursales(id_producto):
              return redirect(url_for("ver_stock", id_producto=id_producto))
         variacion_id = variacion_row[0]
         
-        cur.execute("SELECT COALESCE(SUM(i.stock),0) FROM producto p LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion WHERE p.id_producto = %s", (id_producto,))
+        cur.execute("SELECT COALESCE(SUM(i.stock),0) FROM producto p LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion WHERE p.id_producto = %s", (id_producto,)) # ID estaba mal
         stock_max = cur.fetchone()[0]
         
         total_nuevo = 0
         for key, val in request.form.items():
             if key.startswith("stock_"): total_nuevo += int(val)
         
-        # Esta validación es problemática si se reasigna stock, la comento
-        # if total_nuevo > stock_max:
+        # if total_nuevo > stock_max: # Validación comentada
         #     flash(f"❌ No puedes asignar {total_nuevo} unidades. El máximo permitido es {stock_max}.")
         #     return redirect(url_for("ver_stock", id_producto=id_producto))
         
@@ -651,7 +596,7 @@ def guardar_stock_sucursales(id_producto):
         flash(f"Error al guardar stock: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 @app.route("/update_stock/<int:id_producto>/<int:id_sucursal>", methods=["POST"])
@@ -679,7 +624,7 @@ def update_stock_sucursal(id_producto, id_sucursal):
         flash(f"Error al actualizar stock: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 # ---------------------------
@@ -729,7 +674,7 @@ def crud_sucursales():
         return redirect(url_for("index_options"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/sucursales/comunas_por_region")
 @login_required
@@ -749,7 +694,7 @@ def api_comunas_por_region():
         return jsonify({"comunas": [], "error": str(e)}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/sucursales/nombres_por_comuna")
 @login_required
@@ -772,9 +717,10 @@ def api_nombres_por_comuna():
         return jsonify({"nombres": [], "error": str(e)}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/add_sucursal", methods=["POST"])
+@login_required # Añadido decorador
 def add_sucursal():
     conn = None; cur = None
     try:
@@ -796,7 +742,7 @@ def add_sucursal():
         flash(f"Error al añadir sucursal: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_sucursales"))
 
 @app.route('/api/check_telefono_sucursal', methods=['GET'])
@@ -820,7 +766,7 @@ def check_telefono_sucursal():
         return jsonify({'exists': False}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route('/api/check_direccion_sucursal', methods=['GET'])
 @login_required
@@ -843,9 +789,10 @@ def check_direccion_sucursal():
         return jsonify({'exists': False}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/editar_sucursal/<int:id_sucursal>", methods=["POST"])
+@login_required # Añadido decorador
 def editar_sucursal(id_sucursal):
     conn = None; cur = None
     try:
@@ -869,10 +816,11 @@ def editar_sucursal(id_sucursal):
         flash(f"Error al editar sucursal: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_sucursales"))
 
 @app.route("/eliminar_sucursal/<int:id_sucursal>", methods=["POST"])
+@login_required # Añadido decorador
 def eliminar_sucursal(id_sucursal):
     conn = None; cur = None
     try:
@@ -886,10 +834,11 @@ def eliminar_sucursal(id_sucursal):
         flash(f"Error al eliminar sucursal: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_sucursales"))
 
 @app.route("/stock_sucursales")
+@login_required # Añadido decorador
 def stock_sucursales():
     conn = None; cur = None
     try:
@@ -904,9 +853,10 @@ def stock_sucursales():
         return redirect(url_for("crud_sucursales"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/stock_sucursal/<int:id_sucursal>")
+@login_required # Añadido decorador
 def detalle_sucursal(id_sucursal):
     conn = None; cur = None
     try:
@@ -991,7 +941,7 @@ def crud_usuarios():
         return redirect(url_for("index_options"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/usuarios/add", methods=["POST"])
 @login_required
@@ -1028,7 +978,7 @@ def add_usuario():
         flash(f"❌ Error: {str(e)}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_usuarios"))
 
 @app.route("/usuarios/edit/<int:id_usuario>", methods=["POST"])
@@ -1081,7 +1031,7 @@ def edit_usuario(id_usuario):
         flash(f"❌ Error: {str(e)}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_usuarios"))
 
 @app.route("/usuarios/delete/<int:id_usuario>", methods=["POST"])
@@ -1099,7 +1049,7 @@ def delete_usuario(id_usuario):
         flash(f"❌ Error: {str(e)}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_usuarios"))
 
 @app.route("/usuarios/view/<int:id_usuario>")
@@ -1118,7 +1068,7 @@ def view_usuario(id_usuario):
         return redirect(url_for("crud_usuarios"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 # ===========================
 # CRUD OFERTAS 
@@ -1167,14 +1117,14 @@ def crud_ofertas():
         cur.execute("SELECT DISTINCT titulo FROM oferta ORDER BY titulo;")
         titulos_ofertas = [row['titulo'] for row in cur.fetchall()]
         filtros_activos = { 'q': filtro_id, 'estado': filtro_estado, 'titulo': filtro_titulo, 'producto': filtro_producto, 'descuento': filtro_descuento }
-        return render_template("ofertas/crud_ofertas.html", ofertas=ofertas, productos=productos, titulos_ofertas=titulos_ofertas, filtros_activos=filtros_activos, now=datetime.now)
+        return render_template("ofertas/crud_ofertas.html", ofertas=ofertas, productos=productos, titulos_ofertas=titulos_ofertas, filtros_activos=filtros_activos, now=datetime.now()) # <-- CORREGIDO
     except Exception as e:
         print(f"Error en crud_ofertas: {e}"); traceback.print_exc()
         flash("Error al cargar ofertas", "danger")
         return redirect(url_for("index_options"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/ofertas/titulos_por_estado")
 @login_required
@@ -1196,7 +1146,7 @@ def api_titulos_por_estado():
         return jsonify({"titulos": [], "error": str(e)}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/ofertas/add", methods=["POST"])
 @login_required
@@ -1226,7 +1176,7 @@ def add_oferta():
         flash(f"❌ Error al agregar la oferta: {str(e)}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_ofertas"))
 
 @app.route("/ofertas/edit/<int:id_oferta>", methods=["GET", "POST"])
@@ -1273,7 +1223,7 @@ def edit_oferta(id_oferta):
         return redirect(url_for("crud_ofertas"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/ofertas/delete/<int:id_oferta>", methods=["POST"])
 @login_required
@@ -1291,7 +1241,7 @@ def delete_oferta(id_oferta):
         flash(f"❌ Error al eliminar la oferta: {str(e)}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_ofertas"))
 
 @app.route("/ofertas/view/<int:id_oferta>")
@@ -1310,18 +1260,17 @@ def view_oferta(id_oferta):
             WHERE o.id_oferta = %s GROUP BY o.id_oferta;
         """, (id_oferta,))
         oferta = cur.fetchone()
-        # 'producto' no está definido aquí, así que lo quito
-        return render_template("ofertas/crud_ofertas.html", ofertas=oferta, now=datetime.datetime.now) # Era 'datetime.now'
+        return render_template("ofertas/crud_ofertas.html", ofertas=oferta, now=datetime.now()) # <-- CORREGIDO
     except Exception as e:
         print(f"Error en view_oferta: {e}"); traceback.print_exc()
         flash("Error al ver oferta", "danger")
         return redirect(url_for("crud_ofertas"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 # ===========================
-# HELPERS
+# HELPERS (CON POOL)
 # ===========================
 def get_user_by_email(email):
     conn = None; cur = None
@@ -1339,7 +1288,7 @@ def get_user_by_email(email):
         print(f"Error en get_user_by_email: {e}"); return None
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 def create_user(data):
     email_norm = (data.get("email_usuario") or "").strip().lower()
@@ -1365,7 +1314,7 @@ def create_user(data):
             email_norm, "cliente", password_hash,
             data.get("calle"), data.get("numero_calle"), data.get("region"),
             data.get("ciudad"), data.get("comuna"), data.get("telefono"),
-            datetime.datetime.now() # Corregido
+            datetime.now() # Corregido
         )
         cur.execute(query, values)
         new_id = cur.fetchone()[0]
@@ -1379,7 +1328,7 @@ def create_user(data):
         return False, f"Error de servidor: {e}"
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 def do_login(email, password):
     if not email or not password:
@@ -1396,7 +1345,6 @@ def do_login(email, password):
     return True, None
 
 def do_register(data):
-    # Esta función parece no usarse, 'register' tiene su propia lógica
     if not data.get("nombre_usuario") or not data.get("email_usuario") or not data.get("password"):
         return False, "Nombre, correo y contraseña son obligatorios."
     ok, result = create_user(data)
@@ -1406,34 +1354,31 @@ def do_register(data):
     return True, None
 
 # ===========================
-# RUTAS AUTENTICACIÓN
+# RUTAS AUTENTICACIÓN (CON POOL)
 # ===========================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
         return send_from_directory(SRC_DIR, "login.html")
     
-    # POST
     email = (request.form.get("email_usuario") or "").strip()
     password = (request.form.get("password") or "").strip()
     if not email or not password:
         return redirect(url_for("login") + "?error=missing&tab=login&src=login")
     
-    # do_login maneja la obtención de usuario y validación
+    # do_login ya usa el pool (a través de get_user_by_email)
     ok, msg = do_login(email, password) 
     
     if not ok:
         if msg == "Credenciales inválidas.":
              return redirect(url_for("login") + "?error=bad_password&tab=login&src=login")
         else:
-             # Asumimos 'user_not_found' u otro error
              return redirect(url_for("login") + "?error=user_not_found&tab=login&src=login")
 
-    # Si do_login fue exitoso, la sesión ya está seteada
     return redirect(FRONTEND_MAIN_URL)
 
 # ===========================
-# RUTAS Registro
+# RUTAS Registro (CON POOL)
 # ===========================
 def validar_password(password):
     if not password: return False, "Debes ingresar una contraseña."
@@ -1461,7 +1406,6 @@ def register():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Validar teléfono y email
         cur.execute("SELECT 1 FROM usuario WHERE telefono = %s LIMIT 1;", (data.get("telefono"),))
         if cur.fetchone() is not None:
             return redirect(url_for("login") + "?error=telefono_exists&tab=register&src=register")
@@ -1483,7 +1427,7 @@ def register():
         conn.commit()
         
         # 3. Auto-login y Redirección
-        do_login(data.get("email_usuario"), data.get("password")) # Haz login después de registrar
+        do_login(data.get("email_usuario"), data.get("password"))
         return redirect(FRONTEND_MAIN_URL)
 
     except Exception as e:
@@ -1492,10 +1436,10 @@ def register():
         return redirect(url_for("login") + f"?error=unknown&tab=register&src=register&msg={e}")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 # ===========================
-# Validar Email/Teléfono en registro (Async)
+# Validar Email/Teléfono en registro (Async) (CON POOL)
 # ===========================
 @app.route('/check_email', methods=['GET'])
 def check_email():
@@ -1514,7 +1458,7 @@ def check_email():
         return jsonify({'exists': False}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route('/check_telefono', methods=['GET'])
 def check_telefono():
@@ -1532,7 +1476,7 @@ def check_telefono():
         return jsonify({'exists': False}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/logout")
 def logout():
@@ -1542,12 +1486,10 @@ def logout():
 @app.route("/perfil")
 @login_required
 def perfil():
-    conn = None; cur = None # Usar pool para perfil también
+    conn = None; cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        # Puedes hacer una consulta a la DB aquí si quieres datos frescos
-        # O simplemente usar la sesión
         return f"""
         <h1>Perfil</h1>
         <ul>
@@ -1562,10 +1504,10 @@ def perfil():
         return "Error al cargar perfil"
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 # ===========================
-# API Productos (JSON) - (Admin)
+# API Productos (JSON) - (Admin) (CON POOL)
 # ===========================
 @app.route("/api/productos", methods=["GET"])
 def api_list_productos():
@@ -1597,7 +1539,7 @@ def api_list_productos():
         return jsonify({"error": str(e)}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos", methods=["POST"])
 def api_create_producto():
@@ -1625,7 +1567,7 @@ def api_create_producto():
         if conn: conn.rollback(); return jsonify({"error": str(e)}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos/<int:id_producto>", methods=["PUT", "PATCH"])
 def api_update_producto(id_producto):
@@ -1655,7 +1597,7 @@ def api_update_producto(id_producto):
         if conn: conn.rollback(); return jsonify({"error": str(e)}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos/<int:id_producto>", methods=["DELETE"])
 def api_delete_producto(id_producto):
@@ -1671,7 +1613,7 @@ def api_delete_producto(id_producto):
         if conn: conn.rollback(); return jsonify({"error": str(e)}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos/bulk_delete", methods=["POST"])
 def api_bulk_delete_productos():
@@ -1688,10 +1630,10 @@ def api_bulk_delete_productos():
         if conn: conn.rollback(); return jsonify({"error": str(e)}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 # ===========================
-# Gestión de Imágenes (Admin)
+# Gestión de Imágenes (Admin) (CON POOL)
 # ===========================
 @app.route('/producto/<int:id_producto>/imagenes', methods=['GET'])
 @login_required
@@ -1712,7 +1654,7 @@ def gestionar_imagenes(id_producto):
         return redirect(url_for('crud_productos'))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route('/producto/<int:id_producto>/guardar_imagenes', methods=['POST'])
 @login_required
@@ -1737,11 +1679,11 @@ def guardar_imagenes(id_producto):
         flash(f"❌ Error al guardar las imágenes: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for('gestionar_imagenes', id_producto=id_producto))
 
 # ===========================
-# API Detalle Producto (Público)
+# API Detalle Producto (Público) (CON POOL)
 # ===========================
 @app.route('/api/producto/<int:id_producto>')
 def api_detalle_producto(id_producto):
@@ -1802,10 +1744,10 @@ def api_detalle_producto(id_producto):
         return jsonify({"error": "Error interno del servidor"}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 # ===========================
-# API Productos (Público)
+# API Productos (Público) (CON POOL)
 # ===========================
 @app.route("/api/productos_public", methods=["GET"])
 def api_list_productos_public():
@@ -1858,7 +1800,7 @@ def api_list_productos_public():
         return jsonify({"error": "Error al cargar productos"}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/ofertas_public", methods=["GET"])
 def api_list_ofertas_public():
@@ -1893,10 +1835,10 @@ def api_list_ofertas_public():
         print(f"❌ Error en /api/ofertas_public: {e}"); traceback.print_exc()
         return jsonify({"error": "Error al cargar ofertas"}), 500
     finally:
-        if conn: return_db_connection(conn) # <-- CAMBIO
+        if conn: return_db_connection(conn) # <-- USA POOL
 
 # ===========================
-# RUN
+# RUN (SIN CAMBIOS)
 # ===========================
 if __name__ == "__main__":
     app.run(host="localhost", port=5000, debug=True)
