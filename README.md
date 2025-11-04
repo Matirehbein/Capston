@@ -35,6 +35,11 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
     
 ---
 
+5.- NUEVO
+    llamada de servidor a servidor con npm i node-fetch
+
+
+
 ## Instalación en un entorno externo de la app de Flask (CRUD)
 
 1. Ir a la ruta del proyecto:

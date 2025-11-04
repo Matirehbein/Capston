@@ -1,3 +1,4 @@
+import json
 import re
 import traceback
 import os
@@ -7,22 +8,28 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 import psycopg2
 import psycopg2.extras
 from psycopg2 import errors
-from psycopg2 import pool  # <-- 1. Importación del Pool (ya la tenías)
+from psycopg2 import pool 
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
-import json
-# from datetime import datetime, date # Duplicado, ya está arriba
+import requests
 
-# --- ▼▼▼ NUEVAS IMPORTACIONES PARA CORREO Y TOKENS ▼▼▼ ---
+
+
+# --- CONFIGURACIÓN DE CHILEXPRESS ---
+# ¡Guarda tu clave aquí! (Mejor aún si usas variables de entorno)
+CHILEXPRESS_API_KEY = "0deb3ba124ad400bbdd586324006c7e8"
+CHILEXPRESS_BASE_URL = "https://api.chilexpress.cl/georeference/v1"
+# --- FIN CONFIGURACIÓN ---
+
+# --- NUEVAS IMPORTACIONES PARA CORREO Y TOKENS ---
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
-# --- ▲▲▲ FIN NUEVAS IMPORTACIONES ▲▲▲ ---
 
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey" # ¡Mantén esto seguro y secreto!
 
-# --- ▼▼▼ NUEVO: CONFIGURACIÓN DE FLASK-MAIL ▼▼▼ ---
+# ---  CONFIGURACIÓN DE FLASK-MAIL  ---
 # (Usa la Contraseña de Aplicación de 16 dígitos, no tu contraseña real)
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
@@ -31,11 +38,11 @@ app.config['MAIL_USERNAME'] = 'painless199388@gmail.com' # <--- REEMPLAZA ESTO
 app.config['MAIL_PASSWORD'] = 'djrl xfiz wbmb fger' # <--- REEMPLAZA ESTO (la de 16 dígitos)
 app.config['MAIL_DEFAULT_SENDER'] = ('Aurora', 'painless199388@gmail.com') # Nombre amigable
 mail = Mail(app)
-# --- ▲▲▲ FIN CONFIGURACIÓN MAIL ▲▲▲ ---
+# ---  FIN CONFIGURACIÓN MAIL ---
 
-# --- ▼▼▼ NUEVO: CONFIGURACIÓN DE SERIALIZER (TOKEN) ▼▼▼ ---
+# --- NUEVO: CONFIGURACIÓN DE SERIALIZER (TOKEN)  ---
 s = URLSafeTimedSerializer(app.secret_key)
-# --- ▲▲▲ FIN SERIALIZER ▲▲▲ ---
+# ---  FIN SERIALIZER  ---
 
 
 # Constantes para categorías y tallas (SIN CAMBIOS)
@@ -105,13 +112,20 @@ def return_db_connection(conn):
         conn.close()
 # --- FIN FUNCIONES DE CONEXIÓN ---
 
-# Decoradores (SIN CAMBIOS)
+# --- ▼▼▼ DECORADORES (CORREGIDOS) ▼▼▼ ---
 def login_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
+            # Si la petición es a una API (como crear-pedido), devuelve un error JSON
+            if request.path.startswith('/api/'):
+                 return jsonify({"error": "No autorizado. Debes iniciar sesión."}), 401
+            
+            # Si NO es una API, redirige a la página de login
             flash("⚠️ Debes iniciar sesión.", "warning")
             return redirect(url_for("login"))
+            
+        # Si el usuario sí tiene sesión, simplemente ejecuta la función
         return fn(*args, **kwargs)
     return wrapper
 
@@ -119,9 +133,106 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "rol_usuario" not in session or session["rol_usuario"] not in ["admin", "soporte"]:
+            # Si es API, devuelve error JSON
+            if request.path.startswith('/api/'):
+                 return jsonify({"error": "Acceso denegado. Requiere rol de administrador."}), 403
+            
+            # Si no, redirige
             return redirect(url_for("menu_principal"))
         return f(*args, **kwargs)
     return decorated_function
+# --- ▲▲▲ FIN DECORADORES ▲▲▲ ---
+
+# ===========================
+# RUTAS api Chilexpress
+# ===========================
+
+# ===========================
+# Chilexpress: Regiones
+# ===========================
+@app.route('/api/chilexpress/regiones', methods=['GET'])
+def get_chilexpress_regiones():
+    """
+    Endpoint proxy para obtener todas las regiones de Chilexpress.
+    El frontend llamará a esta ruta.
+    """
+    headers = {
+        'Ocp-Apim-Subscription-Key': CHILEXPRESS_API_KEY,
+        'Cache-Control': 'no-cache'
+    }
+    api_url = f"{CHILEXPRESS_BASE_URL}/regions"
+    
+    try:
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status() # Lanza un error si la respuesta no es 200 OK
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        print(f"Error al llamar a la API de Chilexpress (Regiones): {e}")
+        return jsonify({"error": "No se pudo conectar al servicio de envíos"}), 500
+    
+
+# ===========================
+# Chilexpress: Comunas
+# ===========================
+
+@app.route('/api/chilexpress/comunas', methods=['GET'])
+def get_chilexpress_comunas():
+    """
+    Endpoint proxy para obtener comunas basado en un regionCode.
+    El frontend llamará a esta ruta.
+    Ej: /api/chilexpress/comunas?regionCode=13
+    """
+    region_code = request.args.get('regionCode')
+    if not region_code:
+        return jsonify({"error": "Se requiere 'regionCode'"}), 400
+
+    headers = {
+        'Ocp-Apim-Subscription-Key': CHILEXPRESS_API_KEY,
+        'Cache-Control': 'no-cache'
+    }
+    api_url = f"{CHILEXPRESS_BASE_URL}/communes?regionCode={region_code}"
+    
+    try:
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        print(f"Error al llamar a la API de Chilexpress (Comunas): {e}")
+        return jsonify({"error": "No se pudo conectar al servicio de envíos"}), 500
+    
+
+# ===========================
+# Chilexpress: Calles
+# ===========================
+
+@app.route('/api/chilexpress/calles', methods=['GET'])
+def get_chilexpress_calles():
+    """
+    Endpoint proxy para buscar calles en una comuna.
+    Ej: /api/chilexpress/calles?communeName=SANTIAGO&streetName=ALAMEDA
+    """
+    commune_name = request.args.get('communeName')
+    street_name = request.args.get('streetName')
+    
+    if not commune_name or not street_name:
+        return jsonify({"error": "Se requiere 'communeName' y 'streetName'"}), 400
+
+    headers = {
+        'Ocp-Apim-Subscription-Key': CHILEXPRESS_API_KEY,
+        'Cache-Control': 'no-cache'
+    }
+    # El endpoint de streets usa el nombre de la calle en la URL (path param)
+    api_url = f"{CHILEXPRESS_BASE_URL}/streets/{street_name}?communeName={commune_name}"
+    
+    try:
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        print(f"Error al llamar a la API de Chilexpress (Calles): {e}")
+        return jsonify({"error": "No se pudo conectar al servicio de envíos"}), 500
+
+
 
 # ===========================
 # RUTAS (SIN CAMBIOS)
@@ -145,6 +256,8 @@ def redirect_main_frontend():
     from flask import redirect
     return redirect(f"{FRONTEND_ORIGIN}/src/main.html", code=302)
 
+
+
 # ---------------------------
 # Página Principal (Menú) (SIN CAMBIOS)
 # ---------------------------
@@ -155,6 +268,8 @@ def menu_principal():
 @app.route("/index_options")
 def index_options():
     return render_template("index_options.html")
+
+
 
 # ---------------------------
 # API Sucursales (CON POOL)
@@ -193,6 +308,8 @@ def api_sucursales_con_coords():
         if cur: cur.close()
         if conn: return_db_connection(conn) # <-- USA POOL
 
+
+
 # ---------------------------
 # CRUD Productos (CON POOL)
 # ---------------------------
@@ -214,8 +331,8 @@ def crud_productos():
             params.append(filtro_sucursal)
         base_query = f"""
             SELECT p.id_producto, p.sku, p.nombre_producto, p.precio_producto, 
-                   p.descripcion_producto, p.categoria_producto, p.imagen_url, 
-                   COALESCE(SUM(i.stock), 0) as stock
+            p.descripcion_producto, p.categoria_producto, p.imagen_url, 
+            COALESCE(SUM(i.stock), 0) as stock
             FROM producto p {join_clause}
         """
         where_clauses = []
@@ -558,6 +675,7 @@ def actualizar_stock_por_tallas(id_producto):
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 @app.route("/guardar_stock_sucursales/<int:id_producto>", methods=["POST"])
+@login_required
 def guardar_stock_sucursales(id_producto):
     conn = None; cur = None
     try:
@@ -600,6 +718,7 @@ def guardar_stock_sucursales(id_producto):
     return redirect(url_for("ver_stock", id_producto=id_producto))
 
 @app.route("/update_stock/<int:id_producto>/<int:id_sucursal>", methods=["POST"])
+@login_required
 def update_stock_sucursal(id_producto, id_sucursal):
     nuevo_stock = int(request.form["stock"])
     conn = None; cur = None
@@ -1510,6 +1629,7 @@ def perfil():
 # API Productos (JSON) - (Admin) (CON POOL)
 # ===========================
 @app.route("/api/productos", methods=["GET"])
+@login_required
 def api_list_productos():
     q = (request.args.get("q") or "").strip()
     categoria = (request.args.get("categoria") or "").strip()
@@ -1542,6 +1662,7 @@ def api_list_productos():
         if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos", methods=["POST"])
+@login_required
 def api_create_producto():
     payload = request.get_json(silent=True) or request.form
     sku = (payload.get("sku") or "").strip()
@@ -1570,6 +1691,7 @@ def api_create_producto():
         if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos/<int:id_producto>", methods=["PUT", "PATCH"])
+@login_required
 def api_update_producto(id_producto):
     payload = request.get_json(silent=True) or request.form
     sets, params = [], []
@@ -1600,6 +1722,7 @@ def api_update_producto(id_producto):
         if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos/<int:id_producto>", methods=["DELETE"])
+@login_required
 def api_delete_producto(id_producto):
     conn = None; cur = None
     try:
@@ -1616,6 +1739,7 @@ def api_delete_producto(id_producto):
         if conn: return_db_connection(conn) # <-- USA POOL
 
 @app.route("/api/productos/bulk_delete", methods=["POST"])
+@login_required
 def api_bulk_delete_productos():
     payload = request.get_json(silent=True) or {}; ids = payload.get("ids") or []
     if not isinstance(ids, list) or not ids: return jsonify({"error": "Debes enviar lista 'ids'."}), 400
@@ -1836,6 +1960,160 @@ def api_list_ofertas_public():
         return jsonify({"error": "Error al cargar ofertas"}), 500
     finally:
         if conn: return_db_connection(conn) # <-- USA POOL
+
+
+# ===========================
+# RUTAS DE PEDIDOS Y PAGOS
+# ===========================  
+
+@app.route('/api/crear-pedido', methods=['POST'])
+@login_required # ¡Ahora @login_required devolverá JSON si no estás logueado!
+def crear_pedido():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No se recibieron datos JSON"}), 400
+        
+    cart_items = data.get('items')
+    total = data.get('total')
+    user_id = session.get('user_id') # @login_required asegura que esto existe
+
+    if not cart_items or not total or not user_id:
+        return jsonify({"error": "Faltan datos (items, total o usuario)"}), 400
+
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor) # Usar DictCursor
+
+        # 1. Crear el Pedido principal
+        sql_pedido = """
+            INSERT INTO pedido (id_usuario, total, estado_pedido)
+            VALUES (%s, %s, %s)
+            RETURNING id_pedido;
+        """
+        cur.execute(sql_pedido, (user_id, total, 'pendiente'))
+        id_pedido_nuevo = cur.fetchone()['id_pedido'] # Obtener por nombre
+        
+        print(f"Pedido {id_pedido_nuevo} creado para usuario {user_id}")
+
+        # 2. Insertar cada item del carrito en detalle_pedido
+        sql_detalle = """
+            INSERT INTO detalle_pedido (id_pedido, sku_producto, cantidad, precio_unitario)
+            VALUES (%s, %s, %s, %s);
+        """
+        for item in cart_items:
+            cur.execute(sql_detalle, (
+                id_pedido_nuevo,
+                item.get('sku'),
+                item.get('qty'),
+                item.get('price') # Precio unitario (sin IVA)
+            ))
+        
+        conn.commit()
+        
+        # Devolver el ID del pedido al frontend
+        return jsonify({"id_pedido": id_pedido_nuevo}), 201
+
+    except psycopg2.Error as db_err:
+        if conn: conn.rollback()
+        print(f"Error de base de datos en /api/crear-pedido: {db_err}"); traceback.print_exc()
+        return jsonify({"error": f"Error de base de datos: {db_err.pgerror}"}), 500
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error en /api/crear-pedido: {e}"); traceback.print_exc()
+        return jsonify({"error": f"Error de servidor al crear pedido: {e}"}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+@app.route('/api/registrar-pago', methods=['POST'])
+def registrar_pago():
+    """
+    Paso 3: Recibe los datos del pago (desde webpay.js) y los guarda en la DB.
+    Actualiza el estado del pedido a 'pagado' (o 'rechazado').
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No se recibieron datos JSON"}), 400
+        
+    print(f"Recibiendo datos de pago: {data}")
+
+    # Mapeo de datos desde Transbank (result) a tu tabla 'pago'
+    try:
+        id_pedido = int(data.get('buy_order'))
+        monto = data.get('amount')
+        transaccion_id = data.get('authorization_code')
+        estado_pago = data.get('status')
+        metodo_pago = data.get('payment_type_code')
+        
+        if estado_pago == 'AUTHORIZED':
+            estado_db = 'aprobado'
+        elif estado_pago == 'FAILED':
+            estado_db = 'rechazado'
+        else:
+            estado_db = 'pendiente'
+            
+        if metodo_pago == 'VN':
+            metodo_db = 'Débito (Webpay)'
+        elif metodo_pago == 'VC':
+            metodo_db = 'Crédito (Webpay)'
+        else:
+            metodo_db = str(metodo_pago)
+
+    except Exception as e:
+        print(f"Error parseando datos de pago: {e}")
+        return jsonify({"error": f"Datos de pago incompletos o malformados: {e}"}), 400
+
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # 1. Insertar en la tabla PAGO
+        sql_pago = """
+            INSERT INTO pago (id_pedido, monto, metodo_pago, estado_pago, transaccion_id, observaciones)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id_pago;
+        """
+        cur.execute(sql_pago, (
+            id_pedido, monto, metodo_db, estado_db, transaccion_id,
+            json.dumps(data)
+        ))
+        id_pago_nuevo = cur.fetchone()['id_pago']
+        print(f"Pago {id_pago_nuevo} registrado para pedido {id_pedido}")
+
+        # 2. Actualizar el estado del Pedido principal
+        estado_pedido_db = 'pendiente'
+        if estado_db == 'aprobado':
+            estado_pedido_db = 'pagado'
+        elif estado_db == 'rechazado':
+            estado_pedido_db = 'rechazado'
+        
+        sql_update_pedido = "UPDATE pedido SET estado_pedido = %s WHERE id_pedido = %s;"
+        cur.execute(sql_update_pedido, (estado_pedido_db, id_pedido))
+        print(f"Pedido {id_pedido} actualizado a '{estado_pedido_db}'")
+
+        conn.commit()
+        
+        return jsonify({"success": True, "id_pago": id_pago_nuevo}), 201
+
+    except psycopg2.Error as db_err:
+        if conn: conn.rollback()
+        print(f"Error de base de datos en /api/registrar-pago: {db_err}"); traceback.print_exc()
+        return jsonify({"error": f"Error de base de datos: {db_err.pgerror}"}), 500
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error en /api/registrar-pago: {e}"); traceback.print_exc()
+        return jsonify({"error": f"Error de servidor al registrar pago: {e}"}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+# --- ▲▲▲ FIN RUTAS DE PAGO ▲▲▲ ---
+
 
 # ===========================
 # RUN (SIN CAMBIOS)

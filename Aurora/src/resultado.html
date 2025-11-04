@@ -67,6 +67,7 @@
       </div>
     </main>
 
+    <!-- ▼▼▼ INICIO SCRIPT ▼▼▼ -->
     <script>
       document.addEventListener('DOMContentLoaded', () => {
           const $ = (s) => document.querySelector(s);
@@ -79,7 +80,7 @@
               const hashParams = window.location.hash.substring(1);
               const params = new URLSearchParams(hashParams);
               const estadoTransaccion = params.get("estado") || "desconocido";
-              const montoPagado = params.get("amount"); // Este monto ya incluye IVA
+              const montoPagado = params.get("amount");
               const ordenCompraTBK = params.get("buy_order");
               const codigoAutorizacion = params.get("authorization_code") || '-';
               const ultimos4Digitos = params.get("last4") || '-';
@@ -106,33 +107,36 @@
                else if (estadoTransaccion === "error") { $('.title').textContent = '❌ Error en la Compra'; statusDiv.textContent = 'Ocurrió un error al procesar el pago.'; }
                else { $('.title').textContent = '❓ Estado Desconocido'; }
 
-              // --- 4. CARGAR DETALLE DE PRODUCTOS (¡Antes de limpiar el localStorage!) ---
+              // --- 4. CARGAR DETALLE DE PRODUCTOS (¡ANTES DE LIMPIAR!) ---
               let compraLocalStorage = null;
               let subTotalCalculado = 0;
-              let ivaCalculado = 0; // Agregado
+              let ivaCalculado = 0;
               let costoEnvio = 0;
               const itemsContainer = $("#items");
               itemsContainer.innerHTML = ''; // Limpiar "Cargando..."
 
               try {
                 console.log("Intentando cargar detalle desde 'ultimaCompra'...");
+                // Leemos 'ultimaCompra' que guardó carrito.js
                 const ultimaCompraRaw = localStorage.getItem("ultimaCompra");
                 if (ultimaCompraRaw) {
                    compraLocalStorage = JSON.parse(ultimaCompraRaw);
                    console.log("Encontrado 'ultimaCompra':", compraLocalStorage);
                 } else {
-                    console.log("'ultimaCompra' no encontrada. (Normal si el pago fue aprobado y ya se limpió, pero aún no se limpió aquí)");
+                    console.log("'ultimaCompra' no encontrada.");
                 }
 
                 // Renderizar items si se encontraron
                 if (compraLocalStorage && compraLocalStorage.items && compraLocalStorage.items.length > 0) {
                     compraLocalStorage.items.forEach((it) => {
-                      const line = (Number(it.price) || 0) * (Number(it.qty) || 1); // Precio unitario sin IVA
+                      const line = (Number(it.price) || 0) * (Number(it.qty) || 1);
+                      // Asumimos que it.price es SIN IVA, tal como lo guardó carrito.js
                       subTotalCalculado += line;
                       const row = document.createElement("div");
                       row.className = "item";
+                      // --- CORRECCIÓN: Usar 'it.title' y 'it.image' ---
                       row.innerHTML = `
-                        <img class="thumb" src="${it.image || ""}" alt="">
+                        <img class="thumb" src="${it.image || ""}" alt="${it.title || 'Producto'}" onerror="this.src='../Public/imagenes/placeholder.jpg'">
                         <div>
                           <p class="name">${it.title || 'Producto Sin Nombre'}</p>
                           <div class="meta">x${it.qty || 1} • $${fmt(it.price)} c/u</div>
@@ -141,7 +145,8 @@
                       `;
                       itemsContainer.appendChild(row);
                     });
-                    ivaCalculado = Number(compraLocalStorage.iva || 0); // Obtener IVA de ultimaCompra
+                    // Leer el IVA y Envío guardados
+                    ivaCalculado = Number(compraLocalStorage.iva || 0);
                     costoEnvio = Number(compraLocalStorage.envio || 0);
                     console.log("Items renderizados.");
                 } else {
@@ -154,15 +159,11 @@
               $('#subTotal').textContent = fmt(subTotalCalculado);
               $('#ivaAmount').textContent = fmt(ivaCalculado); // Mostrar IVA
               $('#shipping').textContent = fmt(costoEnvio);
-              // El #grandTotal y #orderTotal ya se actualizaron en el paso 2 con el montoPagado (que incluye IVA)
-              // Aquí podrías recalcularlo para verificación si quisieras:
-              // const recalculatedTotal = subTotalCalculado + ivaCalculado + costoEnvio;
-              // if (recalculatedTotal !== Number(montoPagado)) { console.warn("Monto pagado no cuadra con el detalle calculado."); }
 
               // --- 6. BOTÓN IMPRIMIR ---
               $('#btn-print').addEventListener("click", () => window.print());
 
-              // --- 7. BOTÓN DESCARGAR (COMPLETO) ---
+              // --- 7. BOTÓN DESCARGAR (CÓDIGO COMPLETO) ---
               const btnDownload = $('#btn-download');
               if (btnDownload) {
                 btnDownload.addEventListener("click", () => {
@@ -258,5 +259,6 @@
           }
       });
     </script>
-    </body>
+    <!-- ▲▲▲ FIN SCRIPT ▼▼▼ -->
+</body>
 </html>
