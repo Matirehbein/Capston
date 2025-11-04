@@ -74,10 +74,6 @@ async function loadProductDetails() {
 
 /**
  * --- RENDERPRODUCT (COMPLETO) ---
- * Muestra el stock TOTAL al inicio.
- * Crea un botón "Estándar" para productos de talla única.
- * Marca tallas agotadas.
- * Llama a la función de Zoom.
  */
 function renderProduct(data) {
     console.log("[Render Debug] renderProduct llamada con data:", data);
@@ -97,6 +93,9 @@ function renderProduct(data) {
     const priceContainer = $("#product-price");
     if (priceContainer) {
         const precioOriginal = producto.precio_producto || 0;
+        // --- GUARDAR PRECIO BASE EN DATASET ---
+        priceContainer.dataset.precioBase = precioOriginal; 
+        
         const precioOferta = producto.precio_oferta;
         const descuentoPct = producto.descuento_pct;
         let displayPriceHtml;
@@ -106,11 +105,11 @@ function renderProduct(data) {
               <span class="producto-precio-oferta" style="color: var(--color-oferta, red); font-weight: bold;">${formatCLP(precioOferta)}</span>
               ${descuentoPct ? `<span class="descuento-tag" style="background-color: var(--color-oferta, red); color: white; font-size: 0.7em; padding: 2px 5px; border-radius: 3px; margin-left: 0.5em; vertical-align: middle;">-${Math.round(descuentoPct)}%</span>` : ''}
             `;
-            priceContainer.style.fontSize = "2rem";
+            // --- GUARDAR PRECIO OFERTA EN DATASET ---
+            priceContainer.dataset.precioFinal = precioOferta;
         } else {
             displayPriceHtml = `<span>${formatCLP(precioOriginal)}</span>`;
-            priceContainer.style.fontSize = "2rem";
-            priceContainer.style.color = "var(--color-primary, #000)";
+            priceContainer.dataset.precioFinal = precioOriginal; // Guardar precio original
         }
         priceContainer.innerHTML = displayPriceHtml;
     } else { console.warn("Elemento #product-price no encontrado."); }
@@ -196,8 +195,8 @@ function renderProduct(data) {
 function updateStockDisplay(isInitialLoad = false) {
     const stockContainer = $("#product-stock-container");
     const stockDisplay = $("#product-stock-display");
-    const stockSeleccionado = state.availableStock;
-    const stockTotal = state.totalStock;
+    const stockSeleccionado = state.availableStock; // Stock de la TALLA
+    const stockTotal = state.totalStock; // Stock SUMA de tallas
     const btnPlus = $("#btn-quantity-plus");
     const btnMinus = $("#btn-quantity-minus");
     const inputQty = $("#product-quantity-input");
@@ -233,6 +232,9 @@ function updateStockDisplay(isInitialLoad = false) {
     }
     
     inputQty.value = 1; 
+    // Corregido: 'max' en el input para que el listener 'change' funcione bien
+    inputQty.max = (stockSeleccionado > 0) ? stockSeleccionado : 1; 
+    
     if (stockSeleccionado > 0 && parseInt(inputQty.value) > stockSeleccionado) {
         inputQty.value = stockSeleccionado;
     }
@@ -276,7 +278,7 @@ function setupVariationListeners() {
           color: btn.dataset.color || '',
           stock: stockDeTalla
       };
-      state.availableStock = stockDeTalla;
+      state.availableStock = stockDeTalla; // <-- Actualiza el stock DISPONIBLE
 
       $all(".product-variations-options .btn-talla").forEach(b => b.classList.remove("selected"));
       btn.classList.add("selected");
@@ -285,9 +287,6 @@ function setupVariationListeners() {
       if(variationErrorEl) variationErrorEl.style.display = "none";
 
       updateStockDisplay(false); // Actualiza UI de stock (no es carga inicial)
-
-      const colorContainer = $("#product-color-container");
-      if (btn.dataset.color && colorContainer) { /* ... tu lógica de color ... */ }
     });
   });
 }
@@ -303,19 +302,51 @@ function setupQuantityListeners() {
   btnPlus.addEventListener("click", () => {
     const stock = state.availableStock; // Stock de la talla seleccionada
     hideStockError();
-    try { let cv = parseInt(input.value, 10); if (isNaN(cv)) cv = 1; if (cv < stock && cv < 99) { input.value = cv + 1; } else { showStockError(stock); } } catch (e) { input.value = 1; }
+    try { 
+      let cv = parseInt(input.value, 10); 
+      if (isNaN(cv)) cv = 1; 
+      // Compara con el stock de la talla (state.availableStock)
+      if (cv < stock && cv < 99) { 
+          input.value = cv + 1; 
+      } else if (stock > 0) { // Solo muestra error si hay stock
+          showStockError(stock); 
+      }
+    } catch (e) { input.value = 1; }
   });
+  
   btnMinus.addEventListener("click", () => {
     hideStockError();
-    try { let cv = parseInt(input.value, 10); if (isNaN(cv)) cv = 1; if (cv > 1) { input.value = cv - 1; } } catch (e) { input.value = 1; }
+    try { 
+      let cv = parseInt(input.value, 10); 
+      if (isNaN(cv)) cv = 1; 
+      if (cv > 1) { // El mínimo es 1
+          input.value = cv - 1; 
+      } 
+    } catch (e) { input.value = 1; }
   });
+
   input.addEventListener("change", () => {
-    const stock = state.availableStock; hideStockError();
-    try { let cv = parseInt(input.value, 10); if (isNaN(cv) || cv < 1) { input.value = 1; } if (stock > 0 && cv > stock) { input.value = stock; showStockError(stock); } else if (stock === 0) { input.value = 1; } if (cv > 99) { input.value = 99; } } catch (e) { input.value = 1; }
+    const stock = state.availableStock; 
+    hideStockError();
+    try { 
+      let cv = parseInt(input.value, 10); 
+      if (isNaN(cv) || cv < 1) { 
+          input.value = 1; 
+      } 
+      // Compara con el stock de la talla
+      if (stock > 0 && cv > stock) { 
+          input.value = stock; 
+          showStockError(stock); 
+      } else if (stock === 0) { // Si no hay stock (talla agotada), resetea a 1
+          input.value = 1; 
+      } 
+      if (cv > 99) { input.value = 99; } // Límite arbitrario
+    } catch (e) { input.value = 1; }
   });
 }
 
 /**
+ * --- FUNCIÓN MODIFICADA ---
  * Añade listener al botón "Añadir al carrito"
  */
 function setupAddToCartListener() {
@@ -325,7 +356,11 @@ function setupAddToCartListener() {
   btnAdd.addEventListener("click", () => {
     hideStockError();
     // 1. Validar talla
-    if (!state.selectedVariation) { const ve=$("#variation-error"); if(ve) ve.style.display="block"; return; }
+    if (!state.selectedVariation) { 
+      const ve=$("#variation-error"); 
+      if(ve) ve.style.display="block"; 
+      return; 
+    }
     
     // 2. Leer Cantidad
     const quantityInput = $("#product-quantity-input");
@@ -333,24 +368,43 @@ function setupAddToCartListener() {
     const quantity = parseInt(quantityInput.value, 10);
     
     // 3. Validar cantidad
-    if (isNaN(quantity) || quantity < 1) { alert("Cantidad inválida."); quantityInput.value = 1; return; }
+    if (isNaN(quantity) || quantity < 1) { 
+      alert("Cantidad inválida."); 
+      quantityInput.value = 1; 
+      return; 
+    }
     
     // 4. Validar Stock (contra la talla seleccionada)
-    if (quantity > state.availableStock) { showStockError(state.availableStock); return; }
+    if (quantity > state.availableStock) { 
+      showStockError(state.availableStock); 
+      return; 
+    }
     
     // 5. Preparar item
     const { producto } = state.product;
     const { sku_variacion, talla, color } = state.selectedVariation;
-    const priceForCart = producto.precio_oferta ?? producto.precio_producto;
+    
+    // --- Lee el precio final (con o sin oferta) desde el data attribute ---
+    const priceEl = $("#product-price");
+    const priceForCart = parseFloat(priceEl.dataset.precioFinal || priceEl.dataset.precioBase || producto.precio_producto);
+
     const itemToAdd = {
-      id: producto.id_producto, name: producto.nombre_producto, price: priceForCart,
+      id: producto.id_producto, // ID base del producto
+      name: producto.nombre_producto,
+      price: priceForCart, // Precio final (con oferta si aplica)
       image: state.product.imagenes[0] || '../Public/imagenes/placeholder.jpg',
-      sku: sku_variacion || producto.sku,
-      variation: { talla: talla, color: color || '' }
+      sku: sku_variacion || producto.sku, // SKU de la variación (¡importante!)
+      variation: { talla: talla, color: color || '' },
+      
+      // --- ▼▼▼ CAMBIO IMPORTANTE: AÑADIR STOCK ▼▼▼ ---
+      stock: state.availableStock // Guardamos el stock de la talla seleccionada
+      // --- ▲▲▲ FIN CAMBIO ▲▲▲ ---
     };
     
+    console.log("Añadiendo al carrito:", itemToAdd); // Log para depurar
+    
     // 6. Añadir al carrito (y mostrar modal)
-    addItem(itemToAdd, quantity);
+    addItem(itemToAdd, quantity); // Usa la función de cart.js
     
     // 7. Feedback visual y reseteo
     const btn = btnAdd; const prevText = btn.textContent;
@@ -358,13 +412,16 @@ function setupAddToCartListener() {
     setTimeout(() => {
       // Resetea todo al estado inicial (post-carga)
       btn.textContent = "Selecciona una talla"; // Texto original del estado inicial
-      // btn.disabled = true; // Ya está deshabilitado por updateStockDisplay
       if(quantityInput) quantityInput.value = 1;
       state.selectedVariation = null; // Deselecciona la talla
       state.availableStock = 0; // Resetea stock seleccionado
       updateStockDisplay(true); // Vuelve a mostrar el stock TOTAL y deshabilita botones
       $all(".product-variations-options .btn-talla").forEach(b => b.classList.remove("selected")); // Quita selección visual
     }, 1000); // 1 segundo de feedback
+    
+    // --- Lógica del Modal (Tu código existente, si tenías) ---
+    // (Asegúrate de que la lógica para mostrar el modal esté aquí)
+    // ej: showAddedToCartModal(itemToAdd, quantity);
   });
 }
 
