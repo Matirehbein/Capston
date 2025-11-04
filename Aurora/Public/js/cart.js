@@ -1,24 +1,21 @@
 // ../Public/js/cart.js
 
 export const STORAGE_KEY = "aurora_cart_v1";
-const API_BASE = "http://localhost:5000"; // Asegúrate que esta línea existe
+const API_BASE = "http://localhost:5000";
 
 /**
  * --- VERSIÓN CORREGIDA ---
  * Formatea un número como moneda Chilena (CLP).
  */
 export function formatCLP(value) {
-  // Intenta convertir directamente a número. Si falla, intenta limpiar puntos.
   let numberValue = Number(value);
   if (isNaN(numberValue)) {
-      // console.warn(`formatCLP recibió un valor no numérico directo: ${value}`);
-      const cleanedValue = Number(String(value).replace(/\./g, '').replace(/,/g, '.'));
-      if (!isNaN(cleanedValue)) {
-          numberValue = cleanedValue;
-      } else {
-          // console.warn(`formatCLP no pudo limpiar el valor: ${value}`);
-          numberValue = 0; // Fallback final
-      }
+    const cleanedValue = Number(String(value).replace(/\./g, '').replace(/,/g, '.'));
+    if (!isNaN(cleanedValue)) {
+        numberValue = cleanedValue;
+    } else {
+        numberValue = 0;
+    }
   } else {
       value = numberValue;
   }
@@ -60,24 +57,36 @@ export function saveCart(cart) {
 }
 
 /**
- * --- addItem MODIFICADO ---
- * Llama a 'openAddedToCartModal' después de añadir.
+ * --- addItem MODIFICADO (PARA GUARDAR STOCK) ---
  */
 export function addItem(product, qty = 1) {
   const cart = getCart();
-  const quantityToAdd = Number(qty) || 1;
+  const quantityToAdd = parseInt(qty, 10) || 1; // Forzar a número
   const existingItemIndex = cart.findIndex(it => it.sku === product.sku);
   let itemAddedOrUpdated;
+
   if (existingItemIndex > -1) {
-    cart[existingItemIndex].qty += quantityToAdd;
+    // --- ITEM YA EXISTE ---
+    const currentQty = parseInt(cart[existingItemIndex].qty, 10) || 0;
+    cart[existingItemIndex].qty = currentQty + quantityToAdd;
+    // --- CORRECCIÓN: Actualizar el stock guardado (por si cambió) ---
+    cart[existingItemIndex].stock = product.stock; 
     itemAddedOrUpdated = cart[existingItemIndex];
   } else {
+    // --- ITEM NUEVO ---
     const newItem = {
-      id: product.id, sku: product.sku, name: product.name,
-      price: Number(product.price) || 0, image: product.image || "../Public/imagenes/placeholder.jpg",
-      variation: product.variation || { talla: 'Única', color: '' }, qty: quantityToAdd
+      id: product.id,
+      sku: product.sku,
+      name: product.name,
+      price: Number(product.price) || 0,
+      image: product.image || "../Public/imagenes/placeholder.jpg",
+      variation: product.variation || { talla: 'Única', color: '' },
+      qty: quantityToAdd,
+      // --- CORRECCIÓN: Añadir el stock guardado ---
+      stock: product.stock 
     };
-    cart.push(newItem); itemAddedOrUpdated = newItem;
+    cart.push(newItem);
+    itemAddedOrUpdated = newItem;
   }
   saveCart(cart);
   updateCartBadge();
@@ -103,6 +112,7 @@ window.addEventListener('storage', updateCartBadge);
 
 
 // --- ▼▼▼ FUNCIÓN PARA ABRIR Y POBLAR EL MODAL (CON DEBUG LOGS) ▼▼▼ ---
+// (Tu código de modal existente, sin cambios)
 async function openAddedToCartModal(item, quantityAdded) {
   console.log("openAddedToCartModal: Iniciando..."); // DEBUG
   const modal = document.getElementById('added-to-cart-modal');

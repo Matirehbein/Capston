@@ -1,4 +1,10 @@
 // ../Public/Js/navigation.js
+import { updateCartBadge } from './cart.js'; // Asegúrate que la ruta a cart.js sea correcta
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Llama a la función para actualizar el ícono del carrito
+    updateCartBadge();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   const navItem = document.querySelector('.nav-item-with-megamenu');

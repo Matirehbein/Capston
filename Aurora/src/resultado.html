@@ -1,89 +1,262 @@
-<main class="container">
-<link rel="stylesheet" href="../Public/Css/style.css" />
-  <h2 class="title">🧾 Comprobante de compra</h2>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprobante de Compra</title>
+    <link rel="stylesheet" href="../Public/Css/style.css" />
+    <style>
+        /* Estilos básicos si style.css no carga bien */
+        body { font-family: sans-serif; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; }
+        .card { border: 1px solid #eee; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .title { text-align: center; margin-bottom: 20px; }
+        .muted { color: #666; font-size: 0.9em; }
+        .items { margin: 20px 0; }
+        .item { display: grid; grid-template-columns: 70px 1fr auto; gap: 14px; padding: 14px 0; border-bottom: 1px dashed #eee; align-items: center;}
+        .item:last-child { border-bottom: none; }
+        .thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; background: #f1f1f1; }
+        .name { margin: 0 0 4px; font-weight: 600; }
+        .meta { color: #777; font-size: .9rem; }
+        .price { font-weight: 700; white-space: nowrap; }
+        .totals { text-align: right; margin-top: 20px; line-height: 1.6; }
+        .actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn.ghost { background: #eee; color: #333; }
+        .btn:not(.ghost) { background: #007bff; color: white; }
+         /* Estilo para mensajes de estado */
+        .status-message { text-align: center; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; }
+        .status-aprobado { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;}
+        .status-rechazado, .status-abortado, .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;}
+        .status-pendiente, .status-desconocido { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;}
+    </style>
+</head>
+<body>
+    <main class="container">
+      <h2 class="title">🧾 Comprobante de Compra</h2>
 
-  <div class="card">
-    <div class="row" style="justify-content:space-between">
-      <div>
-        <div style="font-weight:600">Orden <span id="orderId">—</span></div>
-        <div class="muted">Fecha: <span id="orderDate">—</span></div>
+       <div id="statusMessage" class="status-message"></div>
+
+      <div class="card">
+        <div class="row" style="display: flex; justify-content:space-between; align-items: flex-start; margin-bottom: 15px;">
+          <div>
+            <div style="font-weight:600">Orden <span id="orderId">—</span></div>
+            <div class="muted">Fecha: <span id="orderDate">—</span></div>
+             <div class="muted" style="font-size: 0.8em;">Auth Code: <span id="authCode">-</span></div>
+             <div class="muted" style="font-size: 0.8em;">Tarjeta: **** <span id="last4">-</span></div>
+          </div>
+          <div class="muted">Total Pagado: <b id="orderTotal" style="font-size: 1.1em; color: #333;">$0</b></div>
+        </div>
+
+        <div id="items" class="items">
+            <p style="text-align: center; color: #888;">Cargando detalle...</p>
+        </div>
+
+        <div class="totals">
+          Subtotal (referencial): $<span id="subTotal">0</span><br/>
+          Impuestos (IVA 19%): $<span id="ivaAmount">0</span><br/>
+          Envío (referencial): $<span id="shipping">0</span><br/>
+          <b>Total Pagado: $<span id="grandTotal">0</span></b>
+        </div>
+
+        <div class="actions">
+          <button class="btn ghost" id="btn-print">🖨 Imprimir</button>
+          <button class="btn ghost" id="btn-download">📄 Descargar</button>
+          <a class="btn" href="./main.html">Volver al inicio</a>
+        </div>
       </div>
-      <div class="muted">Total: <b id="orderTotal">$0</b></div>
-    </div>
+    </main>
 
-    <div id="items" class="items"></div>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+          const $ = (s) => document.querySelector(s);
+          const fmt = (n) => Number(n || 0).toLocaleString("es-CL");
 
-    <div class="totals">
-      Subtotal: $<span id="subTotal">0</span><br/>
-      Envío: $<span id="shipping">0</span><br/>
-      <b>Total: $<span id="grandTotal">0</span></b>
-    </div>
+          console.log("Script de resultado.html iniciado.");
 
-    <div class="actions" style="display:flex;gap:12px;justify-content:flex-end;">
-      <button class="btn ghost" id="btn-print">🖨 Imprimir</button>
-      <a class="btn" href="./main.html">Volver al inicio</a>
-    </div>
-  </div>
-</main>
+          try {
+              // --- 1. LEER PARÁMETROS DE LA URL (DESDE EL HASH '#') ---
+              const hashParams = window.location.hash.substring(1);
+              const params = new URLSearchParams(hashParams);
+              const estadoTransaccion = params.get("estado") || "desconocido";
+              const montoPagado = params.get("amount"); // Este monto ya incluye IVA
+              const ordenCompraTBK = params.get("buy_order");
+              const codigoAutorizacion = params.get("authorization_code") || '-';
+              const ultimos4Digitos = params.get("last4") || '-';
 
-<!-- Tu script de colores exactamente con la misma ruta que usas en otras páginas -->
-<script type="module" src="../Public/js/colores.js"></script>
+              console.log("Parámetros leídos:", { estado: estadoTransaccion, monto: montoPagado });
 
-<script>
-  const $ = s => document.querySelector(s);
-  const fmt = n => Number(n||0).toLocaleString('es-CL');
+              // --- 2. MOSTRAR DATOS PRINCIPALES (DE LA URL) ---
+              $('#orderId').textContent = ordenCompraTBK || "N/A";
+              $('#orderDate').textContent = new Date().toLocaleString("es-CL");
+              $('#orderTotal').textContent = "$" + fmt(montoPagado);
+              $('#grandTotal').textContent = fmt(montoPagado);
+              $('#authCode').textContent = codigoAutorizacion;
+              $('#last4').textContent = ultimos4Digitos;
 
-  // 1) Intentamos leer la compra guardada por el carrito
-  let compra = null;
-  try { compra = JSON.parse(localStorage.getItem('ultimaCompra') || 'null'); } catch {}
+              // --- 3. MOSTRAR MENSAJE DE ESTADO ---
+              const statusDiv = $('#statusMessage');
+              let statusText = `Estado: ${estadoTransaccion.charAt(0).toUpperCase() + estadoTransaccion.slice(1)}`;
+              statusDiv.textContent = statusText;
+              statusDiv.className = `status-message status-${estadoTransaccion}`;
 
-  // 2) Si no hay ultimaCompra, usamos el carrito como fallback
-  if (!compra) {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const total = cart.reduce((a,p)=> a + (Number(p.price)||0)*(Number(p.qty)||1), 0);
-    compra = {
-      id: 'ORD-' + Date.now(),
-      fecha: new Date().toLocaleString('es-CL'),
-      envio: 0,
-      total,
-      items: cart.map(p => ({
-        title: p.name || p.title || 'Producto',
-        qty: Number(p.qty)||1,
-        price: Number(p.price)||0,
-        image: p.image || ''
-      }))
-    };
-  }
+               if (estadoTransaccion === "aprobado") { $('.title').textContent = '✅ Compra Exitosa'; }
+               else if (estadoTransaccion === "rechazado") { $('.title').textContent = '❌ Compra Rechazada'; }
+               else if (estadoTransaccion === "abortado") { $('.title').textContent = '⚠️ Compra Abortada'; statusDiv.textContent = 'El pago fue cancelado o abortado.'; }
+               else if (estadoTransaccion === "error") { $('.title').textContent = '❌ Error en la Compra'; statusDiv.textContent = 'Ocurrió un error al procesar el pago.'; }
+               else { $('.title').textContent = '❓ Estado Desconocido'; }
 
-  // 3) Render
-  $('#orderId').textContent = compra.id;
-  $('#orderDate').textContent = compra.fecha;
-  $('#orderTotal').textContent = '$' + fmt(compra.total);
+              // --- 4. CARGAR DETALLE DE PRODUCTOS (¡Antes de limpiar el localStorage!) ---
+              let compraLocalStorage = null;
+              let subTotalCalculado = 0;
+              let ivaCalculado = 0; // Agregado
+              let costoEnvio = 0;
+              const itemsContainer = $("#items");
+              itemsContainer.innerHTML = ''; // Limpiar "Cargando..."
 
-  const cont = $('#items'); cont.innerHTML = '';
-  let sub = 0;
-  (compra.items || []).forEach(it => {
-    const line = (Number(it.price)||0) * (Number(it.qty)||1);
-    sub += line;
-    const row = document.createElement('div');
-    row.className = 'item';
-    row.style = 'display:grid;grid-template-columns:70px 1fr auto;gap:14px;padding:14px 0;border-bottom:1px dashed #eee';
-    row.innerHTML = `
-      <img class="thumb" src="${it.image||''}" alt="" style="width:70px;height:70px;object-fit:cover;border-radius:8px;background:#f1f1f1">
-      <div>
-        <p class="name" style="margin:0 0 4px;font-weight:600">${it.title}</p>
-        <div class="meta" style="color:#777;font-size:.9rem">x${it.qty} • $${fmt(it.price)} c/u</div>
-      </div>
-      <div class="price" style="font-weight:700;white-space:nowrap">$${fmt(line)}</div>
-    `;
-    cont.appendChild(row);
-  });
+              try {
+                console.log("Intentando cargar detalle desde 'ultimaCompra'...");
+                const ultimaCompraRaw = localStorage.getItem("ultimaCompra");
+                if (ultimaCompraRaw) {
+                   compraLocalStorage = JSON.parse(ultimaCompraRaw);
+                   console.log("Encontrado 'ultimaCompra':", compraLocalStorage);
+                } else {
+                    console.log("'ultimaCompra' no encontrada. (Normal si el pago fue aprobado y ya se limpió, pero aún no se limpió aquí)");
+                }
 
-  const envio = Number(compra.envio||0);
-  $('#subTotal').textContent  = fmt(sub);
-  $('#shipping').textContent  = fmt(envio);
-  $('#grandTotal').textContent = fmt(sub + envio);
+                // Renderizar items si se encontraron
+                if (compraLocalStorage && compraLocalStorage.items && compraLocalStorage.items.length > 0) {
+                    compraLocalStorage.items.forEach((it) => {
+                      const line = (Number(it.price) || 0) * (Number(it.qty) || 1); // Precio unitario sin IVA
+                      subTotalCalculado += line;
+                      const row = document.createElement("div");
+                      row.className = "item";
+                      row.innerHTML = `
+                        <img class="thumb" src="${it.image || ""}" alt="">
+                        <div>
+                          <p class="name">${it.title || 'Producto Sin Nombre'}</p>
+                          <div class="meta">x${it.qty || 1} • $${fmt(it.price)} c/u</div>
+                        </div>
+                        <div class="price">$${fmt(line)}</div>
+                      `;
+                      itemsContainer.appendChild(row);
+                    });
+                    ivaCalculado = Number(compraLocalStorage.iva || 0); // Obtener IVA de ultimaCompra
+                    costoEnvio = Number(compraLocalStorage.envio || 0);
+                    console.log("Items renderizados.");
+                } else {
+                     itemsContainer.innerHTML = '<p style="text-align: center; color: #888;">No se encontró detalle de productos en el historial.</p>';
+                     console.log("No se renderizaron items.");
+                }
+              } catch (e) { console.error("Error al leer/renderizar items:", e); itemsContainer.innerHTML = '<p style="color:red;">Error al cargar detalle.</p>'; }
 
-  // 4) Imprimir
-  document.getElementById('btn-print').addEventListener('click', () => window.print());
-</script>
+              // --- 5. ACTUALIZAR TOTALES REFERENCIALES ---
+              $('#subTotal').textContent = fmt(subTotalCalculado);
+              $('#ivaAmount').textContent = fmt(ivaCalculado); // Mostrar IVA
+              $('#shipping').textContent = fmt(costoEnvio);
+              // El #grandTotal y #orderTotal ya se actualizaron en el paso 2 con el montoPagado (que incluye IVA)
+              // Aquí podrías recalcularlo para verificación si quisieras:
+              // const recalculatedTotal = subTotalCalculado + ivaCalculado + costoEnvio;
+              // if (recalculatedTotal !== Number(montoPagado)) { console.warn("Monto pagado no cuadra con el detalle calculado."); }
+
+              // --- 6. BOTÓN IMPRIMIR ---
+              $('#btn-print').addEventListener("click", () => window.print());
+
+              // --- 7. BOTÓN DESCARGAR (COMPLETO) ---
+              const btnDownload = $('#btn-download');
+              if (btnDownload) {
+                btnDownload.addEventListener("click", () => {
+                  console.log("Botón descargar presionado.");
+                  try {
+                    // Obtener el HTML del comprobante
+                    const orderInfoHtml = $('.card .row')?.innerHTML || 'Error al obtener datos de orden.';
+                    const itemsHtml = $('#items')?.innerHTML || 'Error al obtener items.';
+                    const totalsHtml = $('.card .totals')?.innerHTML || 'Error al obtener totales.';
+                    const orderIdForFilename = ordenCompraTBK || 'boleta';
+
+                    // Definir los estilos para el archivo HTML
+                    const styles = `
+                      <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 20px; color: #333; }
+                        .receipt-container { border: 1px solid #eee; border-radius: 8px; padding: 20px; max-width: 600px; margin: auto; }
+                        .row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+                        .muted { color: #666; font-size: 0.9em; }
+                        .items { margin: 20px 0; }
+                        .item { display: grid; grid-template-columns: 70px 1fr auto; gap: 14px; padding: 14px 0; border-bottom: 1px dashed #eee; align-items: center; }
+                        .item:last-child { border-bottom: none; }
+                        .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; vertical-align: middle; margin-right: 10px;}
+                        .name { margin: 0 0 4px; font-weight: 600; }
+                        .meta { color: #777; font-size: .9rem; }
+                        .price { font-weight: 700; white-space: nowrap; }
+                        .totals { text-align: right; margin-top: 20px; line-height: 1.6; border-top: 1px solid #eee; padding-top: 10px; }
+                        img { max-width: 100%; height: auto; }
+                        .actions { display: none; } /* Ocultar botones en la boleta descargada */
+                      </style>`;
+
+                    // Crear el contenido HTML completo del archivo
+                    const fileContent = `
+                      <!DOCTYPE html>
+                      <html lang="es">
+                      <head>
+                        <meta charset="UTF-8">
+                        <title>Boleta ${orderIdForFilename}</title>
+                        ${styles}
+                      </head>
+                      <body>
+                        <h1>Comprobante de Compra</h1>
+                        <div class="receipt-container">
+                          <div class="row">${orderInfoHtml}</div>
+                          <div class="items">${itemsHtml}</div>
+                          <div class="totals">${totalsHtml}</div>
+                        </div>
+                      </body>
+                      </html>`;
+
+                    // Crear un Blob (archivo en memoria)
+                    const blob = new Blob([fileContent], { type: 'text/html;charset=utf-8' });
+
+                    // Crear un enlace temporal para la descarga
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `boleta-${orderIdForFilename.replace(/[^a-zA-Z0-9_-]/g, '-')}.html`;
+
+                    // Simular clic para iniciar la descarga
+                    document.body.appendChild(link); // Requerido por Firefox
+                    link.click();
+                    document.body.removeChild(link); // Limpiar
+                    URL.revokeObjectURL(link.href); // Liberar memoria
+
+                  } catch (downloadError) {
+                    console.error("Error al generar descarga:", downloadError);
+                    alert("No se pudo generar el archivo para descargar.");
+                  }
+                });
+              }
+
+              // --- 8. LIMPIAR CARRITO (AL FINAL DE TODO) ---
+              console.log("Verificando si limpiar carrito. Estado:", estadoTransaccion);
+              if (estadoTransaccion === 'aprobado') {
+                 console.log("Estado es 'aprobado'. Intentando limpiar localStorage...");
+                 try {
+                     localStorage.removeItem('aurora_cart');
+                     console.log("'aurora_cart' eliminado de localStorage.");
+                     localStorage.removeItem('aurora_cart_v1');
+                     console.log("'aurora_cart_v1' eliminado de localStorage.");
+                     localStorage.removeItem('ultimaCompra');
+                     console.log("'ultimaCompra' eliminada de localStorage.");
+                 } catch (clearError) {
+                     console.error("Error al limpiar localStorage:", clearError);
+                 }
+              } else {
+                  console.log("Estado no es 'aprobado', no se limpia localStorage.");
+              }
+              // --- FIN LIMPIAR CARRITO ---
+
+          } catch (error) {
+              console.error("Error general al ejecutar el script de resultado.html:", error);
+              document.body.innerHTML = `<div style="padding: 20px; text-align: center; color: red;"><h2>Error al cargar el comprobante</h2><p>${error.message}</p><p>Revisa la consola (F12).</p></div>`;
+          }
+      });
+    </script>
+    </body>
+</html>
