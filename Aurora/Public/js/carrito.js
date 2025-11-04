@@ -6,7 +6,7 @@ import {
 // Selector (igual)
 const $ = (s) => document.querySelector(s);
 
-// --- Funciones de ayuda (sin cambios) ---
+// --- Funciones de ayuda (MODIFICADA) ---
 function parseCLP(texto) {
   const n = (texto || "").replace(/[^\d]/g, "");
   return Number(n || 0);
@@ -23,7 +23,17 @@ async function postJSON(url, body) {
      body: JSON.stringify(body)
    });
    const text = await r.text();
-   if (!r.ok) throw new Error(`HTTP ${r.status} - ${text}`);
+   if (!r.ok) {
+        try {
+            const errJson = JSON.parse(text);
+            throw new Error(errJson.error || `HTTP ${r.status} - ${text}`);
+        } catch(e) {
+            if (text.includes("<!doctype html")) {
+                 throw new Error(`Error ${r.status}: El servidor devolvió HTML en lugar de JSON. Revisa la consola del backend.`);
+            }
+            throw e;
+        }
+   }
    try { return JSON.parse(text); } catch { return {}; }
 }
 function getDisplayedTotal() {
@@ -37,16 +47,13 @@ function getDisplayedTotal() {
 
 // --- NUEVA FUNCIÓN PARA CALCULAR IVA ---
 const IVA_PERCENTAGE = 0.19; // 19% de IVA
-
 function calculateIVA(subtotal) {
   return Math.round(subtotal * IVA_PERCENTAGE);
 }
 // --- FIN NUEVA FUNCIÓN ---
 
 /**
- * --- RENDER CART (Sin cambios funcionales) ---
- * Esta función AHORA solo dibuja el HTML.
- * Los listeners se movieron a DOMContentLoaded.
+ * --- RENDER CART (Sin cambios) ---
  */
 function renderCart() {
   const container = $("#cart-container");
@@ -54,10 +61,7 @@ function renderCart() {
     console.error('No existe el contenedor con id="cart-container"');
     return;
   }
-
   const cart = getCart();
-
-  // Carrito vacío
   if (!cart.length) {
     container.innerHTML = `
       <div class="cart-empty-box">
@@ -69,13 +73,10 @@ function renderCart() {
     updateCartBadge();
     return;
   }
-
-  // Template de item
   const rows = cart.map((p) => {
     const quantity = Number(p.qty) || 0;
     const price = Number(p.price) || 0;
     const subtotalItem = price * quantity;
-
     return `
       <div class="cart-item" data-sku="${p.sku}">
         <img class="cart-img" src="${p.image}" alt="${p.name}"
@@ -98,12 +99,9 @@ function renderCart() {
       </div>
     `;
   }).join("");
-
   const currentSubtotal = totalPrice();
   const ivaCalculado = calculateIVA(currentSubtotal);
   const totalConIVA = currentSubtotal + ivaCalculado;
-
-  // Render HTML completo
   container.innerHTML = `
     <div class="cart-list">${rows}</div>
     <div class="cart-total">
@@ -117,72 +115,116 @@ function renderCart() {
       </div>
     </div>
   `;
-
   container.dataset.total = String(Math.round(totalConIVA));
   updateCartBadge();
-
-  // --- ¡EL LISTENER FUE MOVIDO FUERA DE ESTA FUNCIÓN! ---
 }
 
-// --- FUNCIONES DE PAGO (Sin cambios) ---
+// --- ▼▼▼ FUNCIÓN DE PAGO WEBPAY (CORREGIDA) ▼▼▼ ---
 async function handleWebpayCheckout(btn) {
   const amount = getDisplayedTotal();
   if (!amount || amount <= 0) {
     alert("Tu carrito está vacío."); return;
   }
 
-  // --- GUARDAR CARRITO ANTES DE PAGAR ---
+  btn.setAttribute("disabled", "disabled");
+  const oldText = btn.textContent;
+  btn.textContent = "Preparando pedido...";
+
+  let id_pedido_nuevo;
+
+  // --- PASO 1: Crear el Pedido en app.py (Flask) ---
   try {
     const cartItems = getCart();
     const currentSubtotal = totalPrice();
     const ivaCalculado = calculateIVA(currentSubtotal);
-    const totalConIVA = currentSubtotal + ivaCalculado; 
 
     if (!cartItems || cartItems.length === 0) {
-        alert("Error: No se encontraron items en el carrito para guardar.");
-        return; 
+        alert("Error: Carrito vacío.");
+        btn.removeAttribute("disabled"); btn.textContent = oldText;
+        return;
     }
-
-    const compraParaGuardar = {
-      id: "PENDIENTE-" + Date.now(),
-      fecha: new Date().toLocaleString('es-CL'),
+    
+    const pedidoParaCrear = {
       subtotal: currentSubtotal,
       iva: ivaCalculado,
-      total: totalConIVA,
-      envio: 0, 
+      total: amount,
       items: cartItems.map(item => ({ 
           sku: item.sku,
-          title: item.name || 'Producto Sin Nombre',
           qty: Number(item.qty) || 1,
           price: Number(item.price) || 0,
-          image: item.image || '',
-          variation: item.variation,
-          stock: item.stock // Guardamos el stock (leído desde detalle_producto.js)
+          stock: item.stock
       }))
     };
 
-    localStorage.setItem('ultimaCompra', JSON.stringify(compraParaGuardar));
-    console.log("Copia del carrito guardada en 'ultimaCompra'", compraParaGuardar);
+    localStorage.setItem('ultimaCompra', JSON.stringify({
+        id: "PENDIENTE-" + Date.now(),
+        fecha: new Date().toLocaleString('es-CL'),
+        ...pedidoParaCrear,
+        // Guardar explícitamente los items con nombre/imagen
+        items: cartItems.map(item => ({ 
+            sku: item.sku,
+            title: item.name || 'Producto Sin Nombre',
+            qty: Number(item.qty) || 1,
+            price: Number(item.price) || 0,
+            image: item.image || '',
+            variation: item.variation,
+            stock: item.stock
+        }))
+    }));
+
+    // Llamar a Flask (app.py)
+    const respPedido = await fetch("http://localhost:5000/api/crear-pedido", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(pedidoParaCrear) 
+    });
+
+    const respText = await respPedido.text();
+    if (!respPedido.ok) {
+        try {
+            const errJson = JSON.parse(respText);
+            throw new Error(errJson.error || "Error desconocido del backend");
+        } catch (e) {
+            if (respText.includes("<!doctype html")) {
+                 throw new Error(`Error ${respPedido.status}: El servidor devolvió HTML (¿No logueado o ruta no encontrada?)`);
+            }
+            throw new Error(`HTTP ${respPedido.status}: ${respText}`);
+        }
+    }
+    
+    const dataPedido = JSON.parse(respText);
+    if (!dataPedido.id_pedido) {
+        throw new Error("El backend no devolvió un id_pedido.");
+    }
+    
+    id_pedido_nuevo = dataPedido.id_pedido;
+    console.log("Pedido creado con ID:", id_pedido_nuevo);
+    
+    const compraGuardada = JSON.parse(localStorage.getItem('ultimaCompra') || '{}');
+    compraGuardada.id = id_pedido_nuevo;
+    localStorage.setItem('ultimaCompra', JSON.stringify(compraGuardada));
 
   } catch (error) {
-      console.error("Error al guardar 'ultimaCompra' en localStorage:", error);
-      alert("Hubo un problema al preparar los detalles de la compra. Intenta de nuevo.");
+      console.error("Error en Paso 1 (Crear Pedido en app.py):", error);
+      alert(`Hubo un problema al crear tu pedido: ${error.message}. ¿Iniciaste sesión?`);
+      btn.removeAttribute("disabled"); btn.textContent = oldText;
+      localStorage.removeItem('ultimaCompra');
       return;
   }
-  // --- FIN GUARDAR CARRITO ---
+  // --- FIN PASO 1 ---
 
-  btn.setAttribute("disabled", "disabled");
-  const oldText = btn.textContent;
+  // --- PASO 2: Iniciar Pago en webpay.js (Node) ---
   btn.textContent = "Redirigiendo...";
   try {
-    const buyOrderWebpay = "ORD-" + Date.now();
     const sessionIdWebpay = "USR-" + Date.now();
 
     const data = await postJSON("http://localhost:3010/webpay/create", {
-      amount: amount, // total CON IVA
-      buyOrder: buyOrderWebpay,
+      amount: amount, 
+      buyOrder: id_pedido_nuevo, 
       sessionId: sessionIdWebpay
     });
+
     if (!data?.token || !data?.url) throw new Error("Respuesta inválida del servidor Webpay");
 
     window.location.href = `${data.url}?token_ws=${data.token}`;
@@ -191,70 +233,131 @@ async function handleWebpayCheckout(btn) {
     console.error("[checkout Webpay]", err);
     alert("No se pudo iniciar el pago con Webpay. Revisa la consola.");
     btn.removeAttribute("disabled"); btn.textContent = oldText;
-     localStorage.removeItem('ultimaCompra');
-     console.log("'ultimaCompra' eliminada por fallo al iniciar pago.");
   }
 }
+// --- FIN FUNCIÓN WEBPAY ---
 
+// --- ▼▼▼ FUNCIÓN DE PAGO MERCADOPAGO (CORREGIDA) ▼▼▼ ---
 async function handleMercadoPagoCheckout(btn) {
   const amount = getDisplayedTotal();
   if (!amount || amount <= 0) {
       alert("Tu carrito está vacío."); return;
   }
 
-    // --- GUARDAR CARRITO ANTES DE PAGAR (MP) ---
-    try {
+  btn.setAttribute("disabled", "disabled");
+  const oldText = btn.textContent;
+  btn.textContent = "Preparando pedido...";
+
+  let id_pedido_nuevo;
+
+  // --- PASO 1: Crear el Pedido en app.py (Flask) ---
+  try {
     const cartItems = getCart();
     const currentSubtotal = totalPrice();
     const ivaCalculado = calculateIVA(currentSubtotal);
-    const totalConIVA = currentSubtotal + ivaCalculado;
 
     if (!cartItems || cartItems.length === 0) {
-        alert("Error: Carrito vacío."); return;
+        alert("Error: Carrito vacío.");
+        btn.removeAttribute("disabled"); btn.textContent = oldText;
+        return;
     }
-    const compraParaGuardar = {
-      id: "PENDIENTE-MP-" + Date.now(),
-      fecha: new Date().toLocaleString('es-CL'),
+    
+    const pedidoParaCrear = {
       subtotal: currentSubtotal,
       iva: ivaCalculado,
-      total: totalConIVA,
-      envio: 0,
+      total: amount,
       items: cartItems.map(item => ({ 
           sku: item.sku,
-          title: item.name || 'Producto Sin Nombre',
           qty: Number(item.qty) || 1,
           price: Number(item.price) || 0,
-          image: item.image || '',
-          variation: item.variation,
           stock: item.stock
-       }))
+      }))
     };
-    localStorage.setItem('ultimaCompra', JSON.stringify(compraParaGuardar));
-    console.log("Copia del carrito guardada en 'ultimaCompra' (para MP)", compraParaGuardar);
+
+    // --- ▼▼▼ ¡CORRECCIÓN! Usar el mapeo completo para guardar los detalles ▼▼▼ ---
+    localStorage.setItem('ultimaCompra', JSON.stringify({
+        id: "PENDIENTE-MP-" + Date.now(),
+        fecha: new Date().toLocaleString('es-CL'),
+        subtotal: currentSubtotal,
+        iva: ivaCalculado,
+        total: amount,
+        envio: 0,
+        items: cartItems.map(item => ({ 
+            sku: item.sku,
+            title: item.name || 'Producto Sin Nombre', // <--- ESTO ES LO QUE ARREGLA EL ERROR
+            qty: Number(item.qty) || 1,
+            price: Number(item.price) || 0,
+            image: item.image || '',
+            variation: item.variation,
+            stock: item.stock
+        }))
+    }));
+    // --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
+
+    const respPedido = await fetch("http://localhost:5000/api/crear-pedido", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(pedidoParaCrear)
+    });
+
+    const respText = await respPedido.text();
+    if (!respPedido.ok) {
+        try {
+            const errJson = JSON.parse(respText);
+            throw new Error(errJson.error || "Error desconocido del backend");
+        } catch (e) {
+            if (respText.includes("<!doctype html")) {
+                 throw new Error(`Error ${respPedido.status}: El servidor devolvió HTML (¿No logueado o ruta no encontrada?)`);
+            }
+            throw new Error(`HTTP ${respPedido.status}: ${respText}`);
+        }
+    }
+    
+    const dataPedido = JSON.parse(respText);
+
+    if (!dataPedido.id_pedido) {
+        throw new Error("El backend no devolvió un id_pedido.");
+    }
+    
+    id_pedido_nuevo = dataPedido.id_pedido;
+    console.log("Pedido (MP) creado con ID:", id_pedido_nuevo);
+    
+    const compraGuardada = JSON.parse(localStorage.getItem('ultimaCompra') || '{}');
+    compraGuardada.id = id_pedido_nuevo;
+    localStorage.setItem('ultimaCompra', JSON.stringify(compraGuardada));
+
   } catch (error) {
-      console.error("Error al guardar 'ultimaCompra' (para MP):", error);
-      alert("Hubo un problema al preparar detalles. Intenta de nuevo.");
+      console.error("Error en Paso 1 (Crear Pedido en app.py):", error);
+      alert(`Hubo un problema al crear tu pedido: ${error.message}. ¿Iniciaste sesión?`);
+      btn.removeAttribute("disabled"); btn.textContent = oldText;
+      localStorage.removeItem('ultimaCompra');
       return;
   }
-  // --- FIN GUARDAR CARRITO ---
+  // --- FIN PASO 1 ---
 
+  // --- PASO 2: Iniciar Pago en Mercado Pago ---
+  btn.textContent = "Redirigiendo...";
+  
   const mpUrl = $("#cart-container")?.dataset?.mercadopago || "http://localhost:3010/mercadopago/create_preference";
-  const items = getCart().map((p) => ({
+  
+  const itemsForMp = getCart().map((p) => ({
       id: p.sku,
       title: `${p.name} (Talla: ${p.variation?.talla || 'Única'})`,
-      unit_price: Math.round(p.price), // Enviamos precio unitario SIN IVA
+      unit_price: Math.round(p.price),
       quantity: Number(p.qty) || 1,
       currency_id: "CLP",
       picture_url: p.image || undefined
   }));
 
-  btn.setAttribute("disabled", "disabled");
-  const oldText = btn.textContent;
-  btn.textContent = "Redirigiendo...";
   try {
       const r = await fetch(mpUrl, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: items, amount: amount }) // amount es el total CON IVA
+          body: JSON.stringify({ 
+              items: itemsForMp, 
+              amount: amount,
+              external_reference: id_pedido_nuevo
+          })
       });
       const txt = await r.text();
       if (!r.ok) {
@@ -264,41 +367,36 @@ async function handleMercadoPagoCheckout(btn) {
       const data = (() => { try { return JSON.parse(txt); } catch { return {}; } })();
       const next = data.init_point || data.sandbox_init_point || (data.id ? `https://www.mercadopago.cl/checkout/v1/redirect?preference-id=${data.id}` : null);
       if (!next) throw new Error("Respuesta inválida del backend de MP");
+      
       window.location.href = next;
+  
   } catch (err) {
       console.error("[checkout Mercado Pago]", err);
       alert("No se pudo iniciar el pago con Mercado Pago. Revisa la consola.");
       btn.removeAttribute("disabled"); btn.textContent = oldText;
-      localStorage.removeItem('ultimaCompra');
-      console.log("'ultimaCompra' eliminada por fallo al iniciar pago MP.");
   }
 }
-// --- FIN FUNCIONES DE PAGO ---
+// --- FIN FUNCIÓN MERCADOPAGO ---
 
 
-// --- ▼▼▼ SECCIÓN MODIFICADA (LISTENERS MOVIDOS AQUÍ) ▼▼▼ ---
-
-// Ejecuta renderCart cuando la página cargue
+// --- ▼▼▼ SECCIÓN DE LISTENERS (Sin cambios) ▼▼▼ ---
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Dibuja el carrito inicial
     renderCart();
 
     // 2. Añade UN SOLO listener de clics al contenedor
-    // Este listener vivirá por siempre y manejará los clics
-    // en los botones, sin importar cuántas veces se re-dibuje el carrito.
     const container = $("#cart-container");
     if (container) {
         container.addEventListener("click", (e) => {
             const target = e.target;
     
-            // --- LÓGICA DE BOTONES +/- CORREGIDA ---
+            // Lógica de botones +/- (CORREGIDA)
             if (target.classList.contains("qty-btn")) {
               const sku = target.dataset.sku;
               const action = target.dataset.action;
               const item = getCart().find(it => it.sku === sku);
               if (!item) return;
         
-              // FORZAR A NÚMERO ENTERO
               let currentQty = parseInt(item.qty, 10);
               if (isNaN(currentQty) || currentQty < 1) {
                   currentQty = 1;
@@ -307,28 +405,30 @@ document.addEventListener("DOMContentLoaded", () => {
               let newQty = currentQty;
         
               if (action === "inc") {
-                  // LÍMITE DE 10 UNIDADES
-                  const maxLimit = 10; 
+                  const maxStock = parseInt(item.stock, 10); 
+                  const limit = (!isNaN(maxStock) && maxStock > 0) ? maxStock : 10; 
                   
-                  if (currentQty < maxLimit) {
-                      newQty = currentQty + 1; // Suma numérica
+                  if (currentQty < limit) {
+                      newQty = currentQty + 1;
                   } else {
-                      newQty = maxLimit; // No pasar de 10
-                      alert(`Puedes agregar un máximo de ${maxLimit} unidades por producto.`);
+                      newQty = limit;
+                      alert(`Has alcanzado el límite de stock (${limit} unidades) para este producto.`);
                   }
+                  if (isNaN(maxStock)) {
+                      console.warn(`No se encontró 'item.stock' para ${sku}. Usando límite de 10.`);
+                  }
+
               } else if (action === "dec") {
-                  // CORRECCIÓN DECREMENTO (Mínimo 1)
                   if (currentQty > 1) {
-                      newQty = currentQty - 1; // Resta numérica
+                      newQty = currentQty - 1;
                   } else {
-                      newQty = 1; // El mínimo es 1
+                      newQty = 1; // Mínimo 1
                   }
               }
               
-              setQty(sku, newQty); // Guarda la nueva cantidad
-              renderCart(); // Re-dibuja
+              setQty(sku, newQty);
+              renderCart();
             }
-            // --- FIN LÓGICA +/- CORREGIDA ---
     
             // Botón Eliminar
             if (target.classList.contains("remove-btn")) {
@@ -356,6 +456,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// Vuelve a renderizar si el localStorage cambia (ej: en otra pestaña)
+// Vuelve a renderizar si el localStorage cambia
 window.addEventListener("storage", renderCart);
 // --- ▲▲▲ FIN SECCIÓN MODIFICADA ▲▲▲ ---

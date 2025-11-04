@@ -5,6 +5,38 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Aurora | Carrito</title>
   <link rel="stylesheet" href="../Public/Css/style.css" />
+  <style>
+    /* Estilos opcionales para el nuevo calculador de envío */
+    .shipping-calculator {
+      margin-top: 2rem;
+      border-top: 1px solid #eee;
+      padding-top: 2rem;
+      max-width: 400px; /* Limitar ancho */
+    }
+    .shipping-calculator h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .shipping-calculator .form-group {
+      margin-bottom: 1rem;
+    }
+    .shipping-calculator label {
+      display: block;
+      margin-bottom: .5rem;
+      font-weight: bold;
+    }
+    .shipping-calculator select,
+    .shipping-calculator input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box; /* Importante para que el padding no desborde */
+    }
+    .shipping-calculator select:disabled {
+      background-color: #f4f4f4;
+    }
+  </style>
 </head>
 <body>
     <header>
@@ -40,7 +72,6 @@
         </ul>
 
         <div class="header-actions">
-          <!-- seleccionar sucursal -->
           <div class="branch-selector">
           
           <button id="branch-display-btn" class="branch-display-button" type="button">
@@ -52,14 +83,11 @@
           </div>
         </div>
 
-        <!-- Seccion del carrito -->
-          <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+        <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
 
-          <!-- Seccion del login/register del usuario -->
           <a href="/src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
           <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
 
-          <!-- Seccion de perfil del usuario -->
           <a href="../src/perfil.html" id="perfil-menu-btn" class="icon-btn" style="display: none;" aria-label="Mi perfil">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -67,14 +95,12 @@
             </svg>
           </a>
 
-          <!-- Seccion de logout del usuario -->
           <button id="logout-btn" class="icon-btn icon-logout" aria-label="Logout" style="display: none; background: none; border: none; cursor: pointer; padding: 0; vertical-align: middle;">
-             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
           </button>
 
-          <!-- Seccion del Panel Admin -->
           <span id="admin-menu-btn" style="display:none;">
-             <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light">Panel Admin</a>
+              <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light">Panel Admin</a>
           </span>
 
         </div>
@@ -86,30 +112,19 @@
   <div class="container">
     <h1>🛍️ Carrito de Compras</h1>
 
-    <!-- Pasos -->
     <div class="cart-steps">
       <span class="step active">Carrito</span>
       <span class="step">Pago</span>
       <span class="step">Confirmación</span>
-      <p class="cart-total-final">
- 
-
-
-
+      <p class="cart-total-final"></p>
     </div>
     
+    <div id="cart-container" data-mercadopago="http://localhost:3010/mercadopago/create_preference">
+      </div>
 
-
-
-    
-
-    <!-- Carrito dinámico -->
     <!-- Carrito dinámico -->
     <div id="cart-container"
      data-mercadopago="http://localhost:3010/api/mercadopago/create"></div>
-
-
-
 
 </main>
 
@@ -146,7 +161,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
-<!-- Script para el botón de admin según el tipo de sesión -->
 <script>
 (async function checkUserSessionAndSetupUI() {
   const adminBtnSpan = document.getElementById("admin-menu-btn");
@@ -217,3 +231,118 @@ document.addEventListener("DOMContentLoaded", () => {
   <script type="module" src="/Public/Js/geolocation.js"></script>
   <script type="module" src="/Public/Js/colores.js"></script>
   <script type="module" src="../Public/js/carrito.js"></script>
+
+  <script type="module">
+    // URL de TU backend (Flask en puerto 5000)
+    const API_BACKEND = 'http://localhost:5000';
+    
+    const selectRegion = document.getElementById('select-region');
+    const selectComuna = document.getElementById('select-comuna');
+    
+    // --- 1. Cargar Regiones al iniciar ---
+    async function cargarRegiones() {
+        if (!selectRegion) return; // Si el select no existe, no hacer nada
+        try {
+            console.log("Llamando a /api/chilexpress/regiones...");
+            const response = await fetch(`${API_BACKEND}/api/chilexpress/regiones`);
+            
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Error al cargar regiones');
+            }
+            
+            const data = await response.json();
+            
+            selectRegion.innerHTML = '<option value="">Selecciona una región</option>'; // Limpiar "Cargando..."
+            
+            if (data.regions && data.regions.length > 0) {
+              data.regions.forEach(region => {
+                  const option = document.createElement('option');
+                  option.value = region.regionCode; // Guardamos el CÓDIGO
+                  option.textContent = region.regionName; // Mostramos el NOMBRE
+                  selectRegion.appendChild(option);
+              });
+            } else {
+              selectRegion.innerHTML = '<option value="">No hay regiones</option>';
+            }
+        } catch (error) {
+            console.error("Error en cargarRegiones:", error);
+            selectRegion.innerHTML = '<option value="">Error al cargar</option>';
+        }
+    }
+
+    // --- 2. Cargar Comunas cuando se cambia la Región ---
+    async function cargarComunas(regionCode) {
+        if (!selectComuna) return; // Si el select no existe, no hacer nada
+        
+        if (!regionCode) {
+            selectComuna.innerHTML = '<option value="">Selecciona una región primero</option>';
+            selectComuna.disabled = true;
+            return;
+        }
+        
+        selectComuna.innerHTML = '<option value="">Cargando comunas...</option>';
+        selectComuna.disabled = false;
+        
+        try {
+            const response = await fetch(`${API_BACKEND}/api/chilexpress/comunas?regionCode=${regionCode}`);
+            if (!response.ok) {
+              const errData = await response.json();
+              throw new Error(errData.error || 'Error al cargar comunas');
+            }
+            
+            const data = await response.json();
+            
+            selectComuna.innerHTML = '<option value="">Selecciona una comuna</option>';
+            
+            if (data.communes && data.communes.length > 0) {
+              data.communes.forEach(comuna => {
+                  const option = document.createElement('option');
+                  option.value = comuna.communeName; // Guardamos el NOMBRE
+                  option.textContent = comuna.communeName;
+                  selectComuna.appendChild(option);
+              });
+            } else {
+              selectComuna.innerHTML = '<option value="">No hay comunas</option>';
+            }
+        } catch (error) {
+            console.error("Error en cargarComunas:", error);
+            selectComuna.innerHTML = '<option value="">Error al cargar</or>';
+        }
+    }
+
+    // --- 3. Listeners ---
+    if (selectRegion) {
+      selectRegion.addEventListener('change', () => {
+          cargarComunas(selectRegion.value);
+      });
+    }
+
+    // --- 4. Iniciar Carga de Regiones ---
+    cargarRegiones();
+    
+    // --- 5. Listener para el botón Cotizar (Siguiente paso) ---
+    const btnCalcular = document.getElementById('btn-calcular-envio');
+    const resultadoEnvio = document.getElementById('envio-resultado');
+
+    if (btnCalcular) {
+      btnCalcular.addEventListener('click', () => {
+        // Esta es la lógica para el *siguiente* paso (API Cotizador)
+        const comunaSeleccionada = selectComuna.value;
+        if (!comunaSeleccionada) {
+          alert('Por favor, selecciona una región y una comuna.');
+          return;
+        }
+        
+        // Próximo paso:
+        // 1. Obtener peso y dimensiones del carrito.
+        // 2. Llamar a tu nueva ruta /api/chilexpress/cotizar
+        // 3. Mostrar el precio en 'resultadoEnvio'
+        alert(`¡El siguiente paso es cotizar para la comuna de ${comunaSeleccionada}!`);
+        resultadoEnvio.textContent = "Calculando...";
+      });
+    }
+
+  </script>
+  </body>
+</html>
