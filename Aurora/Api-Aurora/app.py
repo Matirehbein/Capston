@@ -15,12 +15,6 @@ import requests
 
 
 
-# --- CONFIGURACIÓN DE CHILEXPRESS ---
-# ¡Guarda tu clave aquí! (Mejor aún si usas variables de entorno)
-CHILEXPRESS_API_KEY = "0deb3ba124ad400bbdd586324006c7e8"
-CHILEXPRESS_BASE_URL = "https://api.chilexpress.cl/georeference/v1"
-# --- FIN CONFIGURACIÓN ---
-
 # --- NUEVAS IMPORTACIONES PARA CORREO Y TOKENS ---
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
@@ -142,97 +136,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 # --- ▲▲▲ FIN DECORADORES ▲▲▲ ---
-
-# ===========================
-# RUTAS api Chilexpress
-# ===========================
-
-# ===========================
-# Chilexpress: Regiones
-# ===========================
-@app.route('/api/chilexpress/regiones', methods=['GET'])
-def get_chilexpress_regiones():
-    """
-    Endpoint proxy para obtener todas las regiones de Chilexpress.
-    El frontend llamará a esta ruta.
-    """
-    headers = {
-        'Ocp-Apim-Subscription-Key': CHILEXPRESS_API_KEY,
-        'Cache-Control': 'no-cache'
-    }
-    api_url = f"{CHILEXPRESS_BASE_URL}/regions"
-    
-    try:
-        response = requests.get(api_url, headers=headers)
-        response.raise_for_status() # Lanza un error si la respuesta no es 200 OK
-        return jsonify(response.json())
-    except requests.exceptions.RequestException as e:
-        print(f"Error al llamar a la API de Chilexpress (Regiones): {e}")
-        return jsonify({"error": "No se pudo conectar al servicio de envíos"}), 500
-    
-
-# ===========================
-# Chilexpress: Comunas
-# ===========================
-
-@app.route('/api/chilexpress/comunas', methods=['GET'])
-def get_chilexpress_comunas():
-    """
-    Endpoint proxy para obtener comunas basado en un regionCode.
-    El frontend llamará a esta ruta.
-    Ej: /api/chilexpress/comunas?regionCode=13
-    """
-    region_code = request.args.get('regionCode')
-    if not region_code:
-        return jsonify({"error": "Se requiere 'regionCode'"}), 400
-
-    headers = {
-        'Ocp-Apim-Subscription-Key': CHILEXPRESS_API_KEY,
-        'Cache-Control': 'no-cache'
-    }
-    api_url = f"{CHILEXPRESS_BASE_URL}/communes?regionCode={region_code}"
-    
-    try:
-        response = requests.get(api_url, headers=headers)
-        response.raise_for_status()
-        return jsonify(response.json())
-    except requests.exceptions.RequestException as e:
-        print(f"Error al llamar a la API de Chilexpress (Comunas): {e}")
-        return jsonify({"error": "No se pudo conectar al servicio de envíos"}), 500
-    
-
-# ===========================
-# Chilexpress: Calles
-# ===========================
-
-@app.route('/api/chilexpress/calles', methods=['GET'])
-def get_chilexpress_calles():
-    """
-    Endpoint proxy para buscar calles en una comuna.
-    Ej: /api/chilexpress/calles?communeName=SANTIAGO&streetName=ALAMEDA
-    """
-    commune_name = request.args.get('communeName')
-    street_name = request.args.get('streetName')
-    
-    if not commune_name or not street_name:
-        return jsonify({"error": "Se requiere 'communeName' y 'streetName'"}), 400
-
-    headers = {
-        'Ocp-Apim-Subscription-Key': CHILEXPRESS_API_KEY,
-        'Cache-Control': 'no-cache'
-    }
-    # El endpoint de streets usa el nombre de la calle en la URL (path param)
-    api_url = f"{CHILEXPRESS_BASE_URL}/streets/{street_name}?communeName={commune_name}"
-    
-    try:
-        response = requests.get(api_url, headers=headers)
-        response.raise_for_status()
-        return jsonify(response.json())
-    except requests.exceptions.RequestException as e:
-        print(f"Error al llamar a la API de Chilexpress (Calles): {e}")
-        return jsonify({"error": "No se pudo conectar al servicio de envíos"}), 500
-
-
 
 # ===========================
 # RUTAS (SIN CAMBIOS)
