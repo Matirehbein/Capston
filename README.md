@@ -78,7 +78,8 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
 
 
 pip install flask-cors
-
+pip install python-dotenv en la api
+npm install @n8n/chat en la carpeta principal
 
 ## webpay
 

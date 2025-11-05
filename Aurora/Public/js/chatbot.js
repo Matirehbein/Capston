@@ -16,7 +16,7 @@ let sessionUserId = null;
 //-------------------------------------------------------
 window.addEventListener('DOMContentLoaded', async () => {
   try {
-    const res = await fetch('http://localhost:5000/api/session_info', { credentials: 'include' });
+    const res = await fetch('/api/session_info');
     const data = await res.json();
 
     if (data.logged_in) {
