@@ -2,19 +2,22 @@ import json
 import re
 import traceback
 import os
-from datetime import datetime, date
+from datetime import datetime, date # Asegúrate de importar date
+from dotenv import load_dotenv
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
 import psycopg2
 import psycopg2.extras
 from psycopg2 import errors
-from psycopg2 import pool 
+from psycopg2 import pool  # <-- 1. IMPORTACIÓN AÑADIDA
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
+import json
+from datetime import datetime, date
+import google.generativeai as genai
 import requests
 
-
-
+# import datetime # ya importado arriba
 # --- CONFIGURACIÓN DE CHILEXPRESS ---
 # ¡Guarda tu clave aquí! (Mejor aún si usas variables de entorno)
 CHILEXPRESS_API_KEY = "0deb3ba124ad400bbdd586324006c7e8"
@@ -56,6 +59,9 @@ TALLAS_CALZADO = [str(i) for i in range(35, 47)]
 # ===========================
 @app.route("/api/session_info")
 def api_session_info():
+    """
+    Devuelve la información de sesión del usuario logueado.
+    """
     if "user_id" not in session:
         return jsonify({"logged_in": False})
     return jsonify({
@@ -69,50 +75,56 @@ def api_session_info():
     })
 
 
-# Configuración PostgreSQL (SIN CAMBIOS)
-app.config['PG_HOST'] = "localhost"
-app.config['PG_DATABASE'] = "aurora"
-app.config['PG_USER'] = "postgres"
-app.config['PG_PASSWORD'] = "duoc"
+load_dotenv()
 
+app.config['PG_HOST'] = os.getenv("PG_HOST")
+app.config['PG_DATABASE'] = os.getenv("PG_DATABASE")
+app.config['PG_USER'] = os.getenv("PG_USER")
+app.config['PG_PASSWORD'] = os.getenv("PG_PASSWORD")
+app.config['PG_PORT'] = int(os.getenv("PG_PORT", 6543))
 
-# --- POOL DE CONEXIONES (Tu código, SIN CAMBIOS) ---
+# --- 2. Crear pool de conexiones ---
 try:
     db_pool = psycopg2.pool.SimpleConnectionPool(
-        1, 20, # minconn=1, maxconn=20
+        1, 20,
         host=app.config['PG_HOST'],
         database=app.config['PG_DATABASE'],
         user=app.config['PG_USER'],
-        password=app.config['PG_PASSWORD']
+        password=app.config['PG_PASSWORD'],
+        port=app.config['PG_PORT'],
+        sslmode="require"
     )
-    print("[Flask] Pool de conexiones a PostgreSQL creado exitosamente.")
+    print("[Flask] ✅ Conectado a Supabase (PostgreSQL en la nube)")
 except psycopg2.OperationalError as e:
-    print(f"❌ ERROR: No se pudo crear el pool de conexiones a PostgreSQL: {e}")
+    print(f"❌ ERROR: No se pudo conectar a Supabase: {e}")
     db_pool = None
-# --- FIN POOL ---
 
-
-# --- FUNCIONES DE CONEXIÓN CON POOL (Tu código, SIN CAMBIOS) ---
+# --- 3. Función para obtener conexión ---
 def get_db_connection():
     if db_pool:
         return db_pool.getconn()
     else:
-        print("Error: db_pool no está inicializado. Creando conexión de emergencia.")
+        print("Error: Pool no disponible, abriendo conexión directa")
         return psycopg2.connect(
             host=app.config['PG_HOST'],
             database=app.config['PG_DATABASE'],
             user=app.config['PG_USER'],
-            password=app.config['PG_PASSWORD']
+            password=app.config['PG_PASSWORD'],
+            port=app.config['PG_PORT']
         )
 
+# --- ▼▼▼ 4. AÑADIR FUNCIÓN return_db_connection() ▼▼▼ ---
 def return_db_connection(conn):
+    """
+    Devuelve una conexión al pool.
+    """
     if db_pool:
         db_pool.putconn(conn)
     else:
-        conn.close()
-# --- FIN FUNCIONES DE CONEXIÓN ---
+        conn.close() # Cierra la conexión de emergencia
+# --- ▲▲▲ FIN FUNCIÓN AÑADIDA ▲▲▲ ---
 
-# --- ▼▼▼ DECORADORES (CORREGIDOS) ▼▼▼ ---
+# Decoradores (SIN CAMBIOS)
 def login_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -305,10 +317,10 @@ def api_sucursales_con_coords():
         traceback.print_exc()
         return jsonify({"error": "Error al obtener sucursales"}), 500
     finally:
+        # --- ▼▼▼ 5. BLOQUE FINALLY MODIFICADO ▼▼▼ ---
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
-
-
+        if conn: return_db_connection(conn)
+        # --- ▲▲▲ FIN BLOQUE MODIFICADO ▲▲▲ ---
 
 # ---------------------------
 # CRUD Productos (CON POOL)
@@ -414,7 +426,7 @@ def api_productos_por_color():
         return jsonify({"error": "Error buscando productos por color"}), 500
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
+        if conn: return_db_connection(conn) # <-- CAMBIO
 
 @app.route("/add", methods=["POST"])
 @login_required # Añadido decorador
@@ -533,23 +545,34 @@ def ver_stock(id_producto):
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # 1. Obtener información del producto
         cur.execute("SELECT * FROM producto WHERE id_producto = %s", (id_producto,))
         producto = cur.fetchone()
         if not producto:
             flash("Producto no encontrado.", "danger")
             return redirect(url_for("crud_productos"))
+
+        # 2. Determinar las tallas disponibles
         categoria = (producto["categoria_producto"] or "").strip()
         tallas_disponibles = []
         if categoria in CATEGORIAS_ROPA: tallas_disponibles = TALLAS_ROPA
         elif categoria in CATEGORIAS_CALZADO: tallas_disponibles = TALLAS_CALZADO
         usa_tallas = bool(tallas_disponibles)
+
+        # 3. Obtener todas las sucursales
         cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal")
         sucursales = cur.fetchall()
+
+        # 4. Obtener el stock
         stock_por_talla = {}
         stock_total_sucursal = {}
-        stock_base_sucursal = {} # <-- NUEVO
+        stock_base_sucursal = {} # Para stock sin talla (Estándar)
+
         for s in sucursales:
-            id_sucursal = s["id_sucursal"]
+            id_sucursal = s["id_sucursal"] # <-- Aquí se obtiene correctamente
+            
+            # Obtener stock POR TALLA (XS, S, M...)
             cur.execute("""
                 SELECT v.talla, COALESCE(i.stock, 0) as stock
                 FROM variacion_producto v
@@ -559,6 +582,7 @@ def ver_stock(id_producto):
             stock_tallas_sucursal = {row['talla']: row['stock'] for row in cur.fetchall()}
             stock_por_talla[id_sucursal] = stock_tallas_sucursal
             
+            # Obtener stock de la variación BASE (talla IS NULL)
             cur.execute("""
                 SELECT COALESCE(i.stock, 0) as stock
                 FROM variacion_producto v
@@ -566,52 +590,90 @@ def ver_stock(id_producto):
                 WHERE v.id_producto = %s AND v.talla IS NULL LIMIT 1;
             """, (id_sucursal, id_producto))
             stock_base_row = cur.fetchone()
-            stock_base_sucursal[s['id_sucursal']] = stock_base_row['stock'] if stock_base_row else 0 # <-- CORREGIDO
-            stock_total_sucursal[s['id_sucursal']] = sum(stock_tallas_sucursal.values()) + stock_base_sucursal[s['id_sucursal']] # <-- CORREGIDO
             
+            # --- ▼▼▼ CORRECCIÓN AQUÍ ▼▼▼ ---
+            # Usar s['id_sucursal'] en lugar de s.id_sucursal
+            stock_base_sucursal[s['id_sucursal']] = stock_base_row['stock'] if stock_base_row else 0
+            
+            # Calcular el stock TOTAL de la sucursal
+            # Usar s['id_sucursal'] aquí también
+            stock_total_sucursal[s['id_sucursal']] = sum(stock_tallas_sucursal.values()) + stock_base_sucursal[s['id_sucursal']]
+            # --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
+
+        # 5. Calcular stock total del producto
         stock_total_producto = sum(stock_total_sucursal.values())
+        
         return render_template(
             "productos/ver_stock.html",
-            producto=producto, sucursales=sucursales, usa_tallas=usa_tallas,
-            tallas_disponibles=tallas_disponibles, stock_por_talla=stock_por_talla,
-            stock_total_sucursal=stock_total_sucursal, stock_total_producto=stock_total_producto,
-            stock_base_sucursal=stock_base_sucursal # <-- NUEVO
+            producto=producto,
+            sucursales=sucursales,
+            usa_tallas=usa_tallas,
+            tallas_disponibles=tallas_disponibles,
+            stock_por_talla=stock_por_talla,
+            stock_total_sucursal=stock_total_sucursal,
+            stock_total_producto=stock_total_producto,
+            stock_base_sucursal=stock_base_sucursal # Pasa el stock base
         )
+    
     except Exception as e:
         print(f"Error en ver_stock: {e}"); traceback.print_exc()
         flash("Error al cargar stock", "danger")
         return redirect(url_for("crud_productos"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
+        if conn: return_db_connection(conn) # Devuelve al pool
 
-# --- ▼▼▼ NUEVA RUTA (tal como te la pasé) ▼▼▼ ---
+
+# --- ▼▼▼ AÑADE ESTA NUEVA RUTA EN app.py ▼▼▼ ---
+
 @app.route("/productos/<int:id_producto>/actualizar_stock_estandar", methods=["POST"])
 @login_required
 def actualizar_stock_estandar(id_producto):
+    """
+    Actualiza el stock para la variación "base" (talla IS NULL) de un producto
+    en una sucursal específica.
+    """
     id_sucursal = request.form.get("id_sucursal")
-    stock_estandar = request.form.get("stock_estandar", 0)
+    stock_estandar = request.form.get("stock_estandar", 0) # 0 si no se envía
+
     if not id_sucursal:
         flash("❌ Error: No se especificó una sucursal.", "danger")
         return redirect(url_for("ver_stock", id_producto=id_producto))
+
     conn = None; cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cur.execute("SELECT id_variacion FROM variacion_producto WHERE id_producto = %s AND talla IS NULL LIMIT 1;", (id_producto,))
+
+        # 1. Encontrar la ID de la variación base (donde talla es NULL)
+        cur.execute("""
+            SELECT id_variacion FROM variacion_producto
+            WHERE id_producto = %s AND talla IS NULL
+            LIMIT 1;
+        """, (id_producto,))
+        
         variacion = cur.fetchone()
+        
         if not variacion:
+            # Si el producto no tiene ni siquiera una variación base (creada al añadir producto),
+            # esto es un error, pero podríamos crearla aquí si quisiéramos.
+            # Por ahora, asumimos que se creó al añadir el producto.
             flash("❌ Error: No se encontró la variación base del producto.", "danger")
             raise Exception("No se encontró variación base (talla NULL)")
+
         id_variacion_base = variacion['id_variacion']
+
+        # 2. Insertar o actualizar el stock para esa variación base en la sucursal
         cur.execute("""
             INSERT INTO inventario_sucursal (id_sucursal, id_variacion, stock)
             VALUES (%s, %s, %s)
             ON CONFLICT (id_sucursal, id_variacion)
             DO UPDATE SET stock = EXCLUDED.stock;
         """, (id_sucursal, id_variacion_base, stock_estandar))
+
         conn.commit()
         flash("✅ Stock estándar actualizado correctamente.", "success")
+
     except Exception as e:
         if conn: conn.rollback()
         print(f"❌ Error al actualizar stock estándar: {e}"); traceback.print_exc()
@@ -695,7 +757,8 @@ def guardar_stock_sucursales(id_producto):
         for key, val in request.form.items():
             if key.startswith("stock_"): total_nuevo += int(val)
         
-        # if total_nuevo > stock_max: # Validación comentada
+        # Esta validación es problemática si se reasigna stock, la comento
+        # if total_nuevo > stock_max:
         #     flash(f"❌ No puedes asignar {total_nuevo} unidades. El máximo permitido es {stock_max}.")
         #     return redirect(url_for("ver_stock", id_producto=id_producto))
         
@@ -1464,6 +1527,7 @@ def do_login(email, password):
     return True, None
 
 def do_register(data):
+    # Esta función parece no usarse, 'register' tiene su propia lógica
     if not data.get("nombre_usuario") or not data.get("email_usuario") or not data.get("password"):
         return False, "Nombre, correo y contraseña son obligatorios."
     ok, result = create_user(data)
@@ -1480,6 +1544,7 @@ def login():
     if request.method == "GET":
         return send_from_directory(SRC_DIR, "login.html")
     
+    # POST
     email = (request.form.get("email_usuario") or "").strip()
     password = (request.form.get("password") or "").strip()
     if not email or not password:
@@ -1492,8 +1557,10 @@ def login():
         if msg == "Credenciales inválidas.":
              return redirect(url_for("login") + "?error=bad_password&tab=login&src=login")
         else:
+             # Asumimos 'user_not_found' u otro error
              return redirect(url_for("login") + "?error=user_not_found&tab=login&src=login")
 
+    # Si do_login fue exitoso, la sesión ya está seteada
     return redirect(FRONTEND_MAIN_URL)
 
 # ===========================
@@ -1525,6 +1592,7 @@ def register():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # Validar teléfono y email
         cur.execute("SELECT 1 FROM usuario WHERE telefono = %s LIMIT 1;", (data.get("telefono"),))
         if cur.fetchone() is not None:
             return redirect(url_for("login") + "?error=telefono_exists&tab=register&src=register")
@@ -1605,10 +1673,12 @@ def logout():
 @app.route("/perfil")
 @login_required
 def perfil():
-    conn = None; cur = None
+    conn = None; cur = None # Usar pool para perfil también
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        # Puedes hacer una consulta a la DB aquí si quieres datos frescos
+        # O simplemente usar la sesión
         return f"""
         <h1>Perfil</h1>
         <ul>
