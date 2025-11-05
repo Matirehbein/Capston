@@ -1,6 +1,6 @@
 const router = require('express').Router();
-const fetch = require('node-fetch'); // <-- ¡NUEVA IMPORTACIÓN!
-const cors = require('cors'); // <--- AÑADIR 1: Importar cors
+const fetch = require('node-fetch');
+const cors = require('cors'); // <-- Asegúrate de tener esto
 const {
   WebpayPlus,
   Options,
@@ -31,38 +31,41 @@ const corsOptions = {
   origin: 'http://localhost:3000', // Permite solo peticiones desde tu frontend
   optionsSuccessStatus: 200
 };
-router.use(cors(corsOptions)); // <--- AÑADIR 2: Usar cors con opciones
+router.use(cors(corsOptions)); // <-- APLICAR CORS A TODAS LAS RUTAS
 // --- ▲▲▲ FIN CONFIGURACIÓN CORS ▲▲▲ ---
-
 
 
 // Crear transacción
 router.post('/create', async (req, res) => {
   try {
-    // 'amount' y 'buyOrder' (id_pedido) ahora vienen desde carrito.js
     const { amount = 0, buyOrder, sessionId } = req.body;
     
-    // VALIDACIÓN: buyOrder AHORA DEBE SER UN NÚMERO
+    // 1. Validar que buyOrder sea un número (viene de app.py)
     const buyOrderInt = parseInt(buyOrder, 10);
     if (!buyOrderInt || isNaN(buyOrderInt)) {
         return res.status(400).json({ error: 'buyOrder (id_pedido) inválido o faltante' });
     }
 
+    // 2. Convertir el ID a String para Transbank
+    const _buyOrder = String(buyOrderInt); // <--- STRING (ej: "55")
+
     const _sessionId = sessionId || 'USR-' + Date.now();
-    const amountInt  = Math.round(Number(amount) || 0);
+    const amountInt  = Math.round(Number(amount) || 0); // <--- NÚMERO (ej: 60678)
 
     if (!amountInt || amountInt <= 0) {
       return res.status(400).json({ error: 'Monto inválido' });
     }
     
-    console.log(`Creando transacción Webpay: Orden=${buyOrderInt}, Session=${_sessionId}, Monto=${amountInt}, ReturnURL=${RETURN_URL}`);
+    console.log(`Creando transacción Webpay: Orden=${_buyOrder}, Session=${_sessionId}, Monto=${amountInt}, ReturnURL=${RETURN_URL}`);
     
-    // Usamos el buyOrderInt (id_pedido)
-    const response = await tx.create(buyOrderInt, _sessionId, amountInt, RETURN_URL);
+    // --- ▼▼▼ CORRECCIÓN: Convertir amountInt a String() ▼▼▼ ---
+    const response = await tx.create(_buyOrder, _sessionId, String(amountInt), RETURN_URL);
+    // --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
     
     console.log('Respuesta de Webpay create:', response);
     res.json(response);
   } catch (e) {
+    // Aquí es donde estabas viendo el error "value.trim is not a function"
     console.error('create error:', e?.response?.data || e.message || e);
     res.status(500).json({ error: 'Error creando transacción' });
   }
@@ -70,8 +73,6 @@ router.post('/create', async (req, res) => {
 
 // CORS requiere que las rutas POST también respondan a OPTIONS
 router.options('/return', cors(corsOptions)); 
-
-
 
 // Return (acepta POST y GET) -> commit y redirige a la página de resultado
 router.post('/return', handleReturn);
@@ -125,7 +126,6 @@ async function handleReturn(req, res) {
 
     } catch (dbError) {
         console.error('¡ERROR CRÍTICO! El pago fue exitoso en Transbank pero falló al guardar en app.py:', dbError.message);
-        // Continuar de todas formas para no confundir al usuario
     }
     // --- ▲▲▲ FIN PASO 3 ▲▲▲ ---
 

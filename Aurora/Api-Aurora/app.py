@@ -1967,7 +1967,7 @@ def api_list_ofertas_public():
 # ===========================  
 
 @app.route('/api/crear-pedido', methods=['POST'])
-@login_required # ¡Ahora @login_required devolverá JSON si no estás logueado!
+@login_required 
 def crear_pedido():
     data = request.get_json()
     if not data:
@@ -1975,29 +1975,39 @@ def crear_pedido():
         
     cart_items = data.get('items')
     total = data.get('total')
-    user_id = session.get('user_id') # @login_required asegura que esto existe
+    user_id = session.get('user_id') 
+    # --- ▼▼▼ ¡NUEVO! Obtener sucursal del frontend ▼▼▼ ---
+    sucursal_id = data.get('sucursal_id') 
+    # --- ▲▲▲ FIN NUEVO ▲▲▲ ---
 
     if not cart_items or not total or not user_id:
         return jsonify({"error": "Faltan datos (items, total o usuario)"}), 400
+    
+    # Es válido comprar sin una sucursal (ej. si el stock es nacional)
+    if not sucursal_id:
+        print("Advertencia: Pedido creado sin ID de sucursal.")
+        # O puedes devolver un error si es obligatorio:
+        # return jsonify({"error": "Falta id_sucursal"}), 400
 
     conn = None
     cur = None
     try:
         conn = get_db_connection()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor) # Usar DictCursor
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor) 
 
-        # 1. Crear el Pedido principal
+        # --- ▼▼▼ ¡MODIFICADO! Añadir id_sucursal al SQL ▼▼▼ ---
         sql_pedido = """
-            INSERT INTO pedido (id_usuario, total, estado_pedido)
-            VALUES (%s, %s, %s)
+            INSERT INTO pedido (id_usuario, total, estado_pedido, id_sucursal)
+            VALUES (%s, %s, %s, %s)
             RETURNING id_pedido;
         """
-        cur.execute(sql_pedido, (user_id, total, 'pendiente'))
-        id_pedido_nuevo = cur.fetchone()['id_pedido'] # Obtener por nombre
+        cur.execute(sql_pedido, (user_id, total, 'pendiente', sucursal_id))
+        # --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
         
-        print(f"Pedido {id_pedido_nuevo} creado para usuario {user_id}")
+        id_pedido_nuevo = cur.fetchone()['id_pedido'] 
+        
+        print(f"Pedido {id_pedido_nuevo} creado para usuario {user_id} desde sucursal {sucursal_id}")
 
-        # 2. Insertar cada item del carrito en detalle_pedido
         sql_detalle = """
             INSERT INTO detalle_pedido (id_pedido, sku_producto, cantidad, precio_unitario)
             VALUES (%s, %s, %s, %s);
@@ -2007,12 +2017,11 @@ def crear_pedido():
                 id_pedido_nuevo,
                 item.get('sku'),
                 item.get('qty'),
-                item.get('price') # Precio unitario (sin IVA)
+                item.get('price')
             ))
         
         conn.commit()
         
-        # Devolver el ID del pedido al frontend
         return jsonify({"id_pedido": id_pedido_nuevo}), 201
 
     except psycopg2.Error as db_err:
@@ -2030,21 +2039,18 @@ def crear_pedido():
 
 @app.route('/api/registrar-pago', methods=['POST'])
 def registrar_pago():
-    """
-    Paso 3: Recibe los datos del pago (desde webpay.js) y los guarda en la DB.
-    Actualiza el estado del pedido a 'pagado' (o 'rechazado').
-    """
     data = request.get_json()
     if not data:
         return jsonify({"error": "No se recibieron datos JSON"}), 400
         
     print(f"Recibiendo datos de pago: {data}")
 
-    # Mapeo de datos desde Transbank (result) a tu tabla 'pago'
     try:
         id_pedido = int(data.get('buy_order'))
         monto = data.get('amount')
-        transaccion_id = data.get('authorization_code')
+        auth_code = data.get('authorization_code')
+        timestamp = datetime.now().strftime('%H%M%S')
+        transaccion_id = f"{auth_code}-{timestamp}" 
         estado_pago = data.get('status')
         metodo_pago = data.get('payment_type_code')
         
@@ -2083,7 +2089,7 @@ def registrar_pago():
             json.dumps(data)
         ))
         id_pago_nuevo = cur.fetchone()['id_pago']
-        print(f"Pago {id_pago_nuevo} registrado para pedido {id_pedido}")
+        print(f"Pago {id_pago_nuevo} registrado para pedido {id_pedido} con transaccion_id {transaccion_id}")
 
         # 2. Actualizar el estado del Pedido principal
         estado_pedido_db = 'pendiente'
@@ -2095,6 +2101,56 @@ def registrar_pago():
         sql_update_pedido = "UPDATE pedido SET estado_pedido = %s WHERE id_pedido = %s;"
         cur.execute(sql_update_pedido, (estado_pedido_db, id_pedido))
         print(f"Pedido {id_pedido} actualizado a '{estado_pedido_db}'")
+
+        # --- ▼▼▼ 3. ¡NUEVO! Descontar Stock SI EL PAGO FUE APROBADO ▼▼▼ ---
+        if estado_db == 'aprobado':
+            print(f"Iniciando descuento de stock para Pedido {id_pedido}...")
+            
+            # A. Obtener la sucursal de la que se vendió
+            cur.execute("SELECT id_sucursal FROM pedido WHERE id_pedido = %s", (id_pedido,))
+            pedido_data = cur.fetchone()
+            id_sucursal_venta = pedido_data['id_sucursal'] if pedido_data else None
+
+            if id_sucursal_venta:
+                print(f"Venta desde Sucursal ID: {id_sucursal_venta}")
+                
+                # B. Obtener los items (SKUs y cantidades) del pedido
+                cur.execute("""
+                    SELECT sku_producto, cantidad 
+                    FROM detalle_pedido 
+                    WHERE id_pedido = %s
+                """, (id_pedido,))
+                items_vendidos = cur.fetchall()
+                
+                for item in items_vendidos:
+                    item_sku = item['sku_producto']
+                    item_cantidad = item['cantidad']
+                    
+                    print(f"Descontando {item_cantidad} de SKU {item_sku} de sucursal {id_sucursal_venta}...")
+                    
+                    # C. Encontrar el id_variacion usando el SKU
+                    cur.execute("""
+                        SELECT id_variacion FROM variacion_producto 
+                        WHERE sku_variacion = %s
+                    """, (item_sku,))
+                    variacion_data = cur.fetchone()
+                    
+                    if variacion_data:
+                        id_variacion_vendida = variacion_data['id_variacion']
+                        
+                        # D. Actualizar el inventario
+                        sql_update_stock = """
+                            UPDATE inventario_sucursal
+                            SET stock = stock - %s
+                            WHERE id_variacion = %s AND id_sucursal = %s;
+                        """
+                        cur.execute(sql_update_stock, (item_cantidad, id_variacion_vendida, id_sucursal_venta))
+                        print(f"Stock para id_variacion {id_variacion_vendida} actualizado.")
+                    else:
+                        print(f"ADVERTENCIA: No se encontró id_variacion para SKU {item_sku}. No se descontó stock.")
+            else:
+                print(f"ADVERTENCIA: Pedido {id_pedido} no tiene sucursal asignada. No se descontó stock.")
+        # --- ▲▲▲ FIN DESCONTAR STOCK ▲▲▲ ---
 
         conn.commit()
         
