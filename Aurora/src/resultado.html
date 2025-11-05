@@ -17,7 +17,7 @@
         .item:last-child { border-bottom: none; }
         .thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; background: #f1f1f1; }
         .name { margin: 0 0 4px; font-weight: 600; }
-        .meta { color: #777; font-size: .9rem; }
+        .meta { color: #777; font-size: .9rem; line-height: 1.5; } /* Añadido line-height */
         .price { font-weight: 700; white-space: nowrap; }
         .totals { text-align: right; margin-top: 20px; line-height: 1.6; }
         .actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
@@ -130,22 +130,45 @@
                 if (compraLocalStorage && compraLocalStorage.items && compraLocalStorage.items.length > 0) {
                     compraLocalStorage.items.forEach((it) => {
                       const line = (Number(it.price) || 0) * (Number(it.qty) || 1);
-                      // Asumimos que it.price es SIN IVA, tal como lo guardó carrito.js
                       subTotalCalculado += line;
                       const row = document.createElement("div");
                       row.className = "item";
-                      // --- CORRECCIÓN: Usar 'it.title' y 'it.image' ---
+
+                      // --- ▼▼▼ LÓGICA DE TALLA Y COLOR AÑADIDA ▼▼▼ ---
+                      let variationDetails = '';
+                      // 'it.variation' viene del 'ultimaCompra' que guardó carrito.js
+                      const talla = it.variation?.talla;
+                      const color = it.variation?.color;
+
+                      if (talla && talla !== 'Única' && talla !== 'Estándar') {
+                          variationDetails += `Talla: ${talla}`;
+                      }
+                      if (color) {
+                          if (variationDetails) variationDetails += ' • '; // Separador
+                          variationDetails += `Color: ${color}`;
+                      }
+                      
+                      // Si hay detalles de variación, los preparamos para el HTML
+                      if (variationDetails) {
+                        variationDetails = `<span style="font-size: 0.9em; color: #777;">${variationDetails}</span><br>`;
+                      }
+                      // --- ▲▲▲ FIN LÓGICA TALLA Y COLOR ▲▲▲ ---
+
+                      // --- HTML DEL ITEM ACTUALIZADO ---
                       row.innerHTML = `
                         <img class="thumb" src="${it.image || ""}" alt="${it.title || 'Producto'}" onerror="this.src='../Public/imagenes/placeholder.jpg'">
                         <div>
                           <p class="name">${it.title || 'Producto Sin Nombre'}</p>
-                          <div class="meta">x${it.qty || 1} • $${fmt(it.price)} c/u</div>
+                          <div class="meta">
+                            ${variationDetails} <!-- Muestra Talla y Color -->
+                            x${it.qty || 1} • $${fmt(it.price)} c/u
+                          </div>
                         </div>
                         <div class="price">$${fmt(line)}</div>
                       `;
                       itemsContainer.appendChild(row);
                     });
-                    // Leer el IVA y Envío guardados
+                    
                     ivaCalculado = Number(compraLocalStorage.iva || 0);
                     costoEnvio = Number(compraLocalStorage.envio || 0);
                     console.log("Items renderizados.");
@@ -169,13 +192,11 @@
                 btnDownload.addEventListener("click", () => {
                   console.log("Botón descargar presionado.");
                   try {
-                    // Obtener el HTML del comprobante
                     const orderInfoHtml = $('.card .row')?.innerHTML || 'Error al obtener datos de orden.';
                     const itemsHtml = $('#items')?.innerHTML || 'Error al obtener items.';
                     const totalsHtml = $('.card .totals')?.innerHTML || 'Error al obtener totales.';
                     const orderIdForFilename = ordenCompraTBK || 'boleta';
 
-                    // Definir los estilos para el archivo HTML
                     const styles = `
                       <style>
                         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 20px; color: #333; }
@@ -187,14 +208,13 @@
                         .item:last-child { border-bottom: none; }
                         .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; vertical-align: middle; margin-right: 10px;}
                         .name { margin: 0 0 4px; font-weight: 600; }
-                        .meta { color: #777; font-size: .9rem; }
+                        .meta { color: #777; font-size: .9rem; line-height: 1.5; } /* Añadido line-height */
                         .price { font-weight: 700; white-space: nowrap; }
                         .totals { text-align: right; margin-top: 20px; line-height: 1.6; border-top: 1px solid #eee; padding-top: 10px; }
                         img { max-width: 100%; height: auto; }
-                        .actions { display: none; } /* Ocultar botones en la boleta descargada */
+                        .actions { display: none; }
                       </style>`;
 
-                    // Crear el contenido HTML completo del archivo
                     const fileContent = `
                       <!DOCTYPE html>
                       <html lang="es">
@@ -213,20 +233,14 @@
                       </body>
                       </html>`;
 
-                    // Crear un Blob (archivo en memoria)
                     const blob = new Blob([fileContent], { type: 'text/html;charset=utf-8' });
-
-                    // Crear un enlace temporal para la descarga
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     link.download = `boleta-${orderIdForFilename.replace(/[^a-zA-Z0-9_-]/g, '-')}.html`;
-
-                    // Simular clic para iniciar la descarga
-                    document.body.appendChild(link); // Requerido por Firefox
+                    document.body.appendChild(link);
                     link.click();
-                    document.body.removeChild(link); // Limpiar
-                    URL.revokeObjectURL(link.href); // Liberar memoria
-
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
                   } catch (downloadError) {
                     console.error("Error al generar descarga:", downloadError);
                     alert("No se pudo generar el archivo para descargar.");

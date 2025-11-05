@@ -2,6 +2,9 @@
 import {
   getCart, saveCart, formatCLP, removeItem, totalPrice, setQty, updateCartBadge // Importamos todo lo necesario
 } from "./cart.js";
+// --- ▼▼▼ ¡NUEVA IMPORTACIÓN! ▼▼▼ ---
+import { getActiveBranchId } from "./geolocation.js";
+// --- ▲▲▲ FIN NUEVA IMPORTACIÓN ▲▲▲ ---
 
 // Selector (igual)
 const $ = (s) => document.querySelector(s);
@@ -119,7 +122,7 @@ function renderCart() {
   updateCartBadge();
 }
 
-// --- ▼▼▼ FUNCIÓN DE PAGO WEBPAY (CORREGIDA) ▼▼▼ ---
+// --- ▼▼▼ FUNCIÓN DE PAGO WEBPAY (MODIFICADA) ▼▼▼ ---
 async function handleWebpayCheckout(btn) {
   const amount = getDisplayedTotal();
   if (!amount || amount <= 0) {
@@ -137,6 +140,9 @@ async function handleWebpayCheckout(btn) {
     const cartItems = getCart();
     const currentSubtotal = totalPrice();
     const ivaCalculado = calculateIVA(currentSubtotal);
+    // --- ▼▼▼ ¡NUEVO! Obtener sucursal activa ▼▼▼ ---
+    const sucursalId = getActiveBranchId(); 
+    // --- ▲▲▲ FIN NUEVO ▲▲▲ ---
 
     if (!cartItems || cartItems.length === 0) {
         alert("Error: Carrito vacío.");
@@ -148,6 +154,7 @@ async function handleWebpayCheckout(btn) {
       subtotal: currentSubtotal,
       iva: ivaCalculado,
       total: amount,
+      sucursal_id: sucursalId, // <-- ¡NUEVO! Enviamos la sucursal
       items: cartItems.map(item => ({ 
           sku: item.sku,
           qty: Number(item.qty) || 1,
@@ -237,7 +244,7 @@ async function handleWebpayCheckout(btn) {
 }
 // --- FIN FUNCIÓN WEBPAY ---
 
-// --- ▼▼▼ FUNCIÓN DE PAGO MERCADOPAGO (CORREGIDA) ▼▼▼ ---
+// --- ▼▼▼ FUNCIÓN DE PAGO MERCADOPAGO (MODIFICADA) ▼▼▼ ---
 async function handleMercadoPagoCheckout(btn) {
   const amount = getDisplayedTotal();
   if (!amount || amount <= 0) {
@@ -255,6 +262,9 @@ async function handleMercadoPagoCheckout(btn) {
     const cartItems = getCart();
     const currentSubtotal = totalPrice();
     const ivaCalculado = calculateIVA(currentSubtotal);
+    // --- ▼▼▼ ¡NUEVO! Obtener sucursal activa ▼▼▼ ---
+    const sucursalId = getActiveBranchId(); 
+    // --- ▲▲▲ FIN NUEVO ▲▲▲ ---
 
     if (!cartItems || cartItems.length === 0) {
         alert("Error: Carrito vacío.");
@@ -266,6 +276,7 @@ async function handleMercadoPagoCheckout(btn) {
       subtotal: currentSubtotal,
       iva: ivaCalculado,
       total: amount,
+      sucursal_id: sucursalId, // <-- ¡NUEVO! Enviamos la sucursal
       items: cartItems.map(item => ({ 
           sku: item.sku,
           qty: Number(item.qty) || 1,
@@ -274,17 +285,13 @@ async function handleMercadoPagoCheckout(btn) {
       }))
     };
 
-    // --- ▼▼▼ ¡CORRECCIÓN! Usar el mapeo completo para guardar los detalles ▼▼▼ ---
     localStorage.setItem('ultimaCompra', JSON.stringify({
         id: "PENDIENTE-MP-" + Date.now(),
         fecha: new Date().toLocaleString('es-CL'),
-        subtotal: currentSubtotal,
-        iva: ivaCalculado,
-        total: amount,
-        envio: 0,
+        ...pedidoParaCrear, // (pedidoParaCrear no tiene 'items' con detalles, por eso usamos el mapeo de abajo)
         items: cartItems.map(item => ({ 
             sku: item.sku,
-            title: item.name || 'Producto Sin Nombre', // <--- ESTO ES LO QUE ARREGLA EL ERROR
+            title: item.name || 'Producto Sin Nombre',
             qty: Number(item.qty) || 1,
             price: Number(item.price) || 0,
             image: item.image || '',
@@ -292,13 +299,12 @@ async function handleMercadoPagoCheckout(btn) {
             stock: item.stock
         }))
     }));
-    // --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
 
     const respPedido = await fetch("http://localhost:5000/api/crear-pedido", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(pedidoParaCrear)
+        body: JSON.stringify(pedidoParaCrear) // <-- 'pedidoParaCrear' ahora tiene 'sucursal_id'
     });
 
     const respText = await respPedido.text();
