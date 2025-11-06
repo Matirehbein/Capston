@@ -2,7 +2,6 @@ import json
 import re
 import traceback
 import os
-from datetime import datetime, date # Asegúrate de importar date
 from dotenv import load_dotenv
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
@@ -12,7 +11,6 @@ from psycopg2 import errors
 from psycopg2 import pool  # <-- 1. IMPORTACIÓN AÑADIDA
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
-import json
 from datetime import datetime, date
 import requests
 from flask_mail import Mail, Message
@@ -30,11 +28,10 @@ app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_SSL'] = True
 app.config['MAIL_USE_TLS'] = False
-app.config['MAIL_USERNAME'] = 'painless199388@gmail.com' # <--- REEMPLAZA ESTO
-app.config['MAIL_PASSWORD'] = 'djrlxfizwbmbfger' # <--- REEMPLAZA ESTO (la de 16 dígitos)
+app.config['MAIL_USERNAME'] = 'painless199388@gmail.com'
+app.config['MAIL_PASSWORD'] = 'djrlxfizwbmbfger' 
 
 mail = Mail(app)
-# ---  FIN CONFIGURACIÓN MAIL ---
 
 # --- NUEVO: CONFIGURACIÓN DE SERIALIZER (TOKEN)  ---
 s = URLSafeTimedSerializer(app.secret_key)
@@ -124,7 +121,7 @@ def login_required(fn):
         if "user_id" not in session:
             # Si la petición es a una API (como crear-pedido), devuelve un error JSON
             if request.path.startswith('/api/'):
-                 return jsonify({"error": "No autorizado. Debes iniciar sesión."}), 401
+                return jsonify({"error": "No autorizado. Debes iniciar sesión."}), 401
             
             # Si NO es una API, redirige a la página de login
             flash("⚠️ Debes iniciar sesión.", "warning")
