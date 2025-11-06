@@ -48,7 +48,7 @@
 
 .muted { color: #6b7280; }
 
-/* ====== Pedidos ====== */
+/* ====== Contenedor de pedidos ====== */
 .orders-container {
   margin: 40px auto;
   max-width: 1000px;
@@ -61,79 +61,107 @@
   margin-bottom: 14px;
 }
 
-.orders-list {
-  border: 1px solid #e5e7eb;
+/* ====== TARJETAS DE PEDIDOS (Nuevo Diseño) ====== */
+.order-card {
+  background: #fff;
+  border: 1px solid #e0e3eb;
   border-radius: 12px;
-  overflow: hidden;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-.order-row {
-  display: grid;
-  grid-template-columns: 140px 1fr 120px 140px 120px; /* #, fecha, total, estado, acciones */
-  gap: 12px;
-  padding: 14px 16px;
+.order-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-}
-
-.order-row:nth-child(odd) { background: #fafafa; }
-
-.order-head {
   font-weight: 600;
-  background: #f3f4f6;
+  margin-bottom: 10px;
 }
 
-/* Badges de estado */
-.badge {
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: .85rem;
-  display: inline-block;
-  line-height: 1;
-  border: 1px solid transparent;
+.order-header span {
+  color: #6b7280;
+  font-size: 0.9rem;
 }
 
-.badge.pendiente  { background:#fff7ed; color:#c2410c; border-color:#fdba74; }
-.badge.procesando { background:#eff6ff; color:#1d4ed8; border-color:#93c5fd; }
-.badge.enviado    { background:#ecfeff; color:#0891b2; border-color:#67e8f9; }
-.badge.entregado  { background:#ecfdf5; color:#059669; border-color:#6ee7b7; }
+.order-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
 
-/* Carcasa vacío */
-.empty-box {
+.order-footer .estado {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* ====== COLORES POR ESTADO DEL PEDIDO ====== */
+.estado.pagado {
+  color: #2563eb; /* Azul */
+}
+.estado.enviado {
+  color: #0891b2; /* Celeste */
+}
+.estado.entregado {
+  color: #059669; /* Verde */
+}
+
+/* ====== Imagen futura de productos si quieres agregarla ====== */
+.order-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.order-item img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+/* ====== Estado "sin pedidos" ====== */
+#ordersEmpty {
   text-align: center;
-  padding: 32px;
-  border: 1px dashed #d1d5db;
-  border-radius: 12px;
+  padding: 20px;
+  color: #6b7280;
 }
 
-/* ====== Responsivo ====== */
-@media (max-width: 900px) {
-  .order-row {
-    grid-template-columns: 110px 1fr 110px 120px 100px;
-  }
-}
-
-@media (max-width: 680px) {
-  .orders-container { margin: 24px auto; }
-  .order-head { display: none; }
-
-  .orders-list { border: none; }
-  .order-row {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 14px;
-  }
-
-  .order-row > div:nth-child(1)::before { content: "# Pedido"; display:block; color:#6b7280; font-size:.85rem; }
-  .order-row > div:nth-child(2)::before { content: "Fecha"; display:block; color:#6b7280; font-size:.85rem; }
-  .order-row > div:nth-child(3)::before { content: "Total"; display:block; color:#6b7280; font-size:.85rem; }
-  .order-row > div:nth-child(4)::before { content: "Estado"; display:block; color:#6b7280; font-size:.85rem; }
-  .order-row > div:nth-child(5)::before { content: "Acciones"; display:block; color:#6b7280; font-size:.85rem; }
-}
+/* ====== HERO - sólo estética ====== */
 .hero {
-  height: 300px; /* ajusta el tamaño a tu gusto (ej. 250px, 400px...) */
-  background-size: cover;      /* asegura que se vea bien */
-  background-position: center; /* centra la imagen */
+  height: 300px;
+  background-size: cover;
+  background-position: center;
+}
+
+/* ====== ELIMINAR ESTILOS ANTIGUOS (para que no rompan) ====== */
+.orders-list { border: none !important; }
+.order-row { display: none !important; }
+.badge { display: none !important; }
+
+/* ====== RESPONSIVO ====== */
+@media (max-width: 600px) {
+  .order-card {
+    padding: 14px;
+  }
+
+  .order-item {
+    flex-wrap: wrap;
+  }
+
+  .order-item .subtotal {
+    width: 100%;
+    text-align: right;
+    margin-top: 4px;
+  }
 }

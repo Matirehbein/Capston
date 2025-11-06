@@ -2141,6 +2141,64 @@ def registrar_pago():
 # --- ▲▲▲ FIN RUTAS DE PAGO ▲▲▲ ---
 
 
+@app.route('/api/mis_pedidos', methods=['GET'])
+def api_mis_pedidos():
+    user_id = session.get('user_id')
+
+    if not user_id:
+        return jsonify({"error": "No hay sesión activa"}), 401
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # 1. Obtener pedidos del usuario
+    cur.execute("""
+        SELECT id_pedido, creado_en, estado_pedido, total
+        FROM pedido
+        WHERE id_usuario = %s
+        AND estado_pedido IN ('pagado', 'enviado', 'entregado')
+        ORDER BY creado_en DESC;
+    """, (user_id,))
+    pedidos = cur.fetchall()
+
+    resultado = []
+
+    for pedido in pedidos:
+        id_pedido, fecha, estado, total = pedido
+
+        # 2. Obtener productos dentro del pedido
+        cur.execute("""
+            SELECT dp.cantidad, pr.nombre_producto, pr.imagen_url
+            FROM detalle_pedido dp
+            JOIN variacion_producto vp ON dp.id_variacion = vp.id_variacion
+            JOIN producto pr ON pr.id_producto = vp.id_producto
+            WHERE dp.id_pedido = %s;
+        """, (id_pedido,))
+
+        productos = [
+            {
+                "nombre": p[1],
+                "cantidad": p[0],
+                "imagen_url": p[2]
+            }
+            for p in cur.fetchall()
+        ]
+
+        # 3. Armar estructura final del pedido
+        resultado.append({
+            "id_pedido": id_pedido,
+            "fecha": fecha,
+            "estado_pedido": estado,  
+            "total": float(total),
+            "productos": productos
+        })
+
+
+    cur.close()
+    conn.close()
+
+    return jsonify(resultado), 200
+
 # ===========================
 # RUN (SIN CAMBIOS)
 # ===========================

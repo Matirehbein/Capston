@@ -1,15 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Miperfil</title>
-    <link rel="stylesheet" href="/Public/Css/style.css"/>
-    <link rel="stylesheet" href="/Public/Css/perfil.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi Perfil | Aurora</title>
+
+  <!-- Estilos generales y perfil -->
+  <link rel="stylesheet" href="/Public/Css/style.css"/>
+  <link rel="stylesheet" href="/Public/Css/perfil.css"/>
+  <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
 </head>
+
 <body>
-    
-    <!-- Header -->
+
+  <!-- ✅ HEADER (idéntico al main.html) -->
   <header>
     <div class="container">
       <div class="header-content">
@@ -21,41 +25,51 @@
           <li><a href="/src/ofertas.html">Ofertas</a></li>
         </ul>
 
-        <div class="header-actions" style="display:flex;align-items:center;gap:10px;">
-          <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
-
-          <!-- Botón de cuenta + menú -->
-          <div class="account-wrap">
-            <a id="accountBtn" class="icon-btn icon-login account-btn" aria-label="Cuenta"></a>
-            <div id="accountMenu" class="account-menu">
-              <div class="muted" style="padding:8px 10px;" id="welcomeUser">Cargando…</div>
-              <a href="/src/perfil.html">Mi perfil</a>
-              <a href="/src/pedidos.html">Mis pedidos</a>
-              <button id="logoutBtn">Cerrar sesión</button>
+        <div class="header-actions">
+          <!-- Sucursal -->
+          <div class="branch-selector">
+            <button id="branch-display-btn" class="branch-display-button">📍 Buscando...</button>
+            <div id="branch-list-dropdown" class="branch-dropdown-menu" style="display: none;">
+              <div class="dropdown-loading">Cargando sucursales...</div>
             </div>
           </div>
 
-          <!-- Menú Admin (controlado por JS según rol) -->
-          <li id="admin-menu-btn" style="display:none; list-style:none;">
-            <a href="../src/main_menu.html">Admin</a>
-          </li>
+          <!-- Carrito -->
+          <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+
+          <!-- Login / perfil / logout -->
+          <a href="/src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
+          <a href="/src/perfil.html" id="perfil-menu-btn" class="icon-btn" style="display: none;" aria-label="Perfil">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </a>
+          <button id="logout-btn" class="icon-btn icon-logout" aria-label="Logout" style="display: none; background: none; border: none; cursor: pointer; padding: 0; vertical-align: middle;">
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+
+          <!-- Admin -->
+          <span id="admin-menu-btn" style="display:none;">
+            <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light">Panel Admin</a>
+          </span>
         </div>
       </div>
     </div>
   </header>
 
+  <!-- HERO -->
   <main>
-    <!-- Hero (puedes quitarlo si no lo quieres en perfil) -->
-    <section class="hero" id="inicio">
+    <section class="hero">
       <div class="container">
         <div class="hero-content">
-          <h1>Mi perfil</h1>
+          <h1>Mi Perfil</h1>
           <p>Revisa tus pedidos y estado de entrega</p>
         </div>
       </div>
     </section>
 
-    <!-- Pedidos -->
+    <!-- ✅ Sección de pedidos -->
     <section class="container orders-container">
       <div class="orders-header">
         <h2>Mis pedidos</h2>
@@ -63,19 +77,11 @@
       </div>
 
       <div id="ordersBox">
-        <div class="orders-list" id="ordersList">
-          <!-- Cabecera -->
-          <div class="order-row order-head">
-            <div># Pedido</div>
-            <div>Fecha</div>
-            <div>Total</div>
-            <div>Estado</div>
-            <div>Acciones</div>
-          </div>
-          <!-- Filas por JS -->
+        <div id="ordersList" class="orders-list">
+          <!-- Tarjetas de pedidos (insertadas dinámicamente por perfil.js) -->
         </div>
 
-        <!-- Vacío -->
+        <!-- Estado vacío -->
         <div id="ordersEmpty" class="empty-box" style="display:none;">
           <p>No tienes pedidos todavía.</p>
           <a class="btn" href="/src/productos.html">Explorar productos</a>
@@ -84,31 +90,15 @@
     </section>
   </main>
 
-  <!-- Chatbot Aurora -->
-  <link rel="stylesheet" href="/Public/css/chatbot.css">
-  <div class="chatbot-container">
-    <button class="chatbot-btn" id="openChat">
-      <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" alt="Aurora" />
-    </button>
-    <div class="chat-window" id="chatWindow">
-      <div class="chat-header">
-        <h3>Asistente Aurora</h3>
-        <span id="closeChat">&times;</span>
-      </div>
-      <div class="chat-body" id="chatBody">
-        <div class="bot-message">
-          <p>👋 ¡Hola! Soy Aurora. ¿En qué te puedo ayudar hoy?</p>
-        </div>
-      </div>
-      <div class="chat-footer">
-        <input type="text" id="userInput" placeholder="Escribe tu mensaje..." />
-        <button id="sendBtn">Enviar</button>
-      </div>
-    </div>
-  </div>
-  <script src="/Public/js/chatbot.js"></script>
+  <!-- ✅ Chatbot n8n -->
+  <script type="module">
+    import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+    createChat({
+      webhookUrl: 'https://vicmoralesl.app.n8n.cloud/webhook/fd272f2c-66c0-4d7c-a04e-f239f0c90509/chat'
+    });
+  </script>
 
-  <!-- Footer -->
+  <!-- ✅ Footer igual a todo el sitio -->
   <footer class="footer">
     <div class="container">
       <nav class="footer-top">
@@ -129,7 +119,72 @@
     </div>
   </footer>
 
+  <!-- ✅ Scripts externos -->
   <script type="module" src="/Public/js/perfil.js"></script>
   <script type="module" src="/Public/js/colores.js"></script>
+  <script type="module" src="/Public/Js/geolocation.js"></script>
+  <script type="module" src="/Public/Js/navigation.js"></script>
+  <!-- ✅ Script para manejar sesión en el header (igual que main.html) -->
+<script>
+(async function checkUserSessionAndSetupUI() {
+  const adminBtnSpan  = document.getElementById("admin-menu-btn");
+  const perfilBtnSpan = document.getElementById("perfil-menu-btn");
+  const welcomeMsg    = document.getElementById("welcome-msg");
+  const loginBtn      = document.getElementById("login-btn");
+  const logoutBtn     = document.getElementById("logout-btn");
+
+  // Estado inicial
+  if (adminBtnSpan) adminBtnSpan.style.display = "none";
+  if (perfilBtnSpan) perfilBtnSpan.style.display = "none";
+  if (welcomeMsg)    welcomeMsg.style.display    = "none";
+  if (loginBtn)      loginBtn.style.display      = "inline-block";
+  if (logoutBtn)     logoutBtn.style.display     = "none";
+
+  try {
+    const res = await fetch("http://localhost:5000/api/session_info", {
+      method: "GET",
+      credentials: "include"
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    if (data.logged_in) {
+      // ✅ Mostrar nombre
+      if (welcomeMsg) {
+        welcomeMsg.textContent = `Hola, ${data.nombre || ''} ${data.apellido_paterno || ''}`.trim();
+        welcomeMsg.style.display = "inline-block";
+      }
+
+      // ✅ Mostrar botones correctos
+      if (loginBtn)  loginBtn.style.display   = "none";
+      if (logoutBtn) logoutBtn.style.display  = "inline-block";
+      if (perfilBtnSpan) perfilBtnSpan.style.display = "inline-block";
+
+      // ✅ Mostrar Panel Admin si corresponde
+      if (adminBtnSpan && (data.rol === "admin" || data.rol === "soporte")) {
+        adminBtnSpan.style.display = "inline-block";
+      }
+
+    } else {
+      if (perfilBtnSpan) perfilBtnSpan.style.display = "none";
+    }
+
+  } catch (err) {
+    console.error("Error verificando sesión:", err);
+  }
+
+  // ✅ Logout
+  if (logoutBtn && !logoutBtn.dataset.listenerAttached) {
+    logoutBtn.addEventListener("click", () => {
+      window.location.href = "http://localhost:5000/logout";
+    });
+    logoutBtn.dataset.listenerAttached = "true";
+  }
+})();
+</script>
+
+
 </body>
 </html>
