@@ -76,6 +76,7 @@ En donde se centra un ChatBot con IA, para poder ayudar al sistema y soporte de 
    ```bash
     python app.py
 
+pip install Flask-Mail
 
 pip install flask-cors
 pip install python-dotenv en la api

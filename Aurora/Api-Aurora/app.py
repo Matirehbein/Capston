@@ -14,7 +14,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 import json
 from datetime import datetime, date
-import google.generativeai as genai
 import requests
 # --- NUEVAS IMPORTACIONES PARA CORREO Y TOKENS ---
 from flask_mail import Mail, Message

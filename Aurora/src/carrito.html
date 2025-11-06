@@ -345,4 +345,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   </script>
   </body>
+  <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
+<script type="module">
+	import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+
+	createChat({
+		webhookUrl: 'https://vicmoralesl.app.n8n.cloud/webhook/fd272f2c-66c0-4d7c-a04e-f239f0c90509/chat'
+	});
+</script>
 </html>

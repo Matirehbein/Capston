@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Aurora | Moda Elegante</title>
   <link rel="stylesheet" href="/Public/Css/style.css"/>
-  <link rel="stylesheet" href="/Public/Css/chatbot.css"> 
 </head>
 
 <body>
@@ -147,26 +146,7 @@
   </main>
 
 
-  <div class="chatbot-container">
-    <button class="chatbot-btn" id="openChat">
-      <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" alt="Aurora" />
-    </button>
-    <div class="chat-window" id="chatWindow">
-      <div class="chat-header">
-        <h3>Asistente Aurora</h3>
-        <span id="closeChat">&times;</span>
-      </div>
-      <div class="chat-body" id="chatBody">
-        <div class="bot-message"><p>👋 ¡Hola! Soy Aurora. ¿En qué te puedo ayudar hoy?</p></div>
-      </div>
-      <div class="chat-footer">
-        <input type="text" id="userInput" placeholder="Escribe tu mensaje..." />
-        <button id="sendBtn">Enviar</button>
-      </div>
-    </div>
-  </div>
- 
-  <script src="/Public/Js/chatbot.js"></script>
+  
 
 
   <footer class="footer">
@@ -260,6 +240,13 @@
 
   <script type="module" src="/Public/Js/navigation.js"></script>
   <script type="module" src="/Public/Js/geolocation.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
+<script type="module">
+	import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
 
+	createChat({
+		webhookUrl: 'https://vicmoralesl.app.n8n.cloud/webhook/fd272f2c-66c0-4d7c-a04e-f239f0c90509/chat'
+	});
+</script>
 </body>
 </html>
