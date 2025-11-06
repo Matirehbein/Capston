@@ -2040,9 +2040,15 @@ def api_list_ofertas_public():
 # RUTAS DE PEDIDOS Y PAGOS
 # ===========================  
 
+# --- ▼▼▼ /api/crear-pedido MODIFICADO ▼▼▼ ---
 @app.route('/api/crear-pedido', methods=['POST'])
-@login_required 
+@login_required # Requiere que el usuario esté logueado
 def crear_pedido():
+    """
+    Paso 1: Crea un pedido en estado 'pendiente' y los detalles del pedido.
+    Recibe el carrito desde carrito.js.
+    Devuelve el nuevo id_pedido.
+    """
     data = request.get_json()
     if not data:
         return jsonify({"error": "No se recibieron datos JSON"}), 400
@@ -2050,17 +2056,14 @@ def crear_pedido():
     cart_items = data.get('items')
     total = data.get('total')
     user_id = session.get('user_id') 
-    # --- ▼▼▼ ¡NUEVO! Obtener sucursal del frontend ▼▼▼ ---
     sucursal_id = data.get('sucursal_id') 
-    # --- ▲▲▲ FIN NUEVO ▲▲▲ ---
 
     if not cart_items or not total or not user_id:
         return jsonify({"error": "Faltan datos (items, total o usuario)"}), 400
     
-    # Es válido comprar sin una sucursal (ej. si el stock es nacional)
     if not sucursal_id:
         print("Advertencia: Pedido creado sin ID de sucursal.")
-        # O puedes devolver un error si es obligatorio:
+        # Considera si esto debe ser un error
         # return jsonify({"error": "Falta id_sucursal"}), 400
 
     conn = None
@@ -2069,29 +2072,49 @@ def crear_pedido():
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor) 
 
-        # --- ▼▼▼ ¡MODIFICADO! Añadir id_sucursal al SQL ▼▼▼ ---
+        # 1. Crear el Pedido principal
         sql_pedido = """
             INSERT INTO pedido (id_usuario, total, estado_pedido, id_sucursal)
             VALUES (%s, %s, %s, %s)
             RETURNING id_pedido;
         """
         cur.execute(sql_pedido, (user_id, total, 'pendiente', sucursal_id))
-        # --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
-        
         id_pedido_nuevo = cur.fetchone()['id_pedido'] 
         
         print(f"Pedido {id_pedido_nuevo} creado para usuario {user_id} desde sucursal {sucursal_id}")
 
+        # 2. Insertar cada item del carrito en detalle_pedido
+        # --- ¡SQL MODIFICADO! ---
         sql_detalle = """
-            INSERT INTO detalle_pedido (id_pedido, sku_producto, cantidad, precio_unitario)
-            VALUES (%s, %s, %s, %s);
+            INSERT INTO detalle_pedido (id_pedido, sku_producto, cantidad, precio_unitario, id_variacion)
+            VALUES (%s, %s, %s, %s, %s);
         """
+        
         for item in cart_items:
+            sku_from_cart = item.get('sku')
+            
+            # --- ¡NUEVO! Buscar el id_variacion usando el SKU ---
+            cur.execute(
+                "SELECT id_variacion FROM variacion_producto WHERE sku_variacion = %s",
+                (sku_from_cart,)
+            )
+            variacion_row = cur.fetchone()
+            
+            id_variacion_to_insert = None
+            if variacion_row:
+                id_variacion_to_insert = variacion_row['id_variacion']
+            else:
+                # Esto es un problema de datos, pero no queremos que el pago falle por esto
+                print(f"ADVERTENCIA: No se encontró id_variacion para SKU {sku_from_cart}. Se insertará NULL.")
+                # La columna id_variacion en tu DB permite NULLs (lo arreglamos antes)
+            
+            # --- ¡INSERT MODIFICADO! ---
             cur.execute(sql_detalle, (
                 id_pedido_nuevo,
-                item.get('sku'),
+                sku_from_cart,
                 item.get('qty'),
-                item.get('price')
+                item.get('price'),
+                id_variacion_to_insert # <-- Se añade el ID (o NULL si no se encontró)
             ))
         
         conn.commit()
@@ -2109,6 +2132,7 @@ def crear_pedido():
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
+# --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
 
 
 @app.route('/api/registrar-pago', methods=['POST'])
