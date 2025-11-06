@@ -2,7 +2,6 @@ import json
 import re
 import traceback
 import os
-from datetime import datetime, date # Asegúrate de importar date
 from dotenv import load_dotenv
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
@@ -12,12 +11,12 @@ from psycopg2 import errors
 from psycopg2 import pool  # <-- 1. IMPORTACIÓN AÑADIDA
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
-import json
 from datetime import datetime, date
 import requests
-# --- NUEVAS IMPORTACIONES PARA CORREO Y TOKENS ---
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
+import smtplib
+from email.utils import make_msgid
 
 
 app = Flask(__name__)
@@ -28,11 +27,11 @@ app.secret_key = "supersecretkey" # ¡Mantén esto seguro y secreto!
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_SSL'] = True
-app.config['MAIL_USERNAME'] = 'painless199388@gmail.com' # <--- REEMPLAZA ESTO
-app.config['MAIL_PASSWORD'] = 'djrl xfiz wbmb fger' # <--- REEMPLAZA ESTO (la de 16 dígitos)
-app.config['MAIL_DEFAULT_SENDER'] = ('Aurora', 'painless199388@gmail.com') # Nombre amigable
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USERNAME'] = 'painless199388@gmail.com'
+app.config['MAIL_PASSWORD'] = 'djrlxfizwbmbfger' 
+
 mail = Mail(app)
-# ---  FIN CONFIGURACIÓN MAIL ---
 
 # --- NUEVO: CONFIGURACIÓN DE SERIALIZER (TOKEN)  ---
 s = URLSafeTimedSerializer(app.secret_key)
@@ -122,7 +121,7 @@ def login_required(fn):
         if "user_id" not in session:
             # Si la petición es a una API (como crear-pedido), devuelve un error JSON
             if request.path.startswith('/api/'):
-                 return jsonify({"error": "No autorizado. Debes iniciar sesión."}), 401
+                return jsonify({"error": "No autorizado. Debes iniciar sesión."}), 401
             
             # Si NO es una API, redirige a la página de login
             flash("⚠️ Debes iniciar sesión.", "warning")
@@ -1354,14 +1353,17 @@ def view_oferta(id_oferta):
 # ===========================
 # HELPERS (CON POOL)
 # ===========================
+# --- ▼▼▼ get_user_by_email MODIFICADO ▼▼▼ ---
 def get_user_by_email(email):
     conn = None; cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        # --- Añadir is_verified (tu nombre de columna) a la consulta ---
         cur.execute("""
             SELECT id_usuario, nombre_usuario, apellido_paterno, apellido_materno,
-                   email_usuario, rol_usuario, password, calle, numero_calle, region, ciudad, comuna, telefono, creado_en
+                   email_usuario, rol_usuario, password, calle, numero_calle, 
+                   region, ciudad, comuna, telefono, creado_en, is_verified
             FROM usuario WHERE LOWER(email_usuario) = LOWER(%s) LIMIT 1;
         """, (email,))
         user = cur.fetchone()
@@ -1370,7 +1372,10 @@ def get_user_by_email(email):
         print(f"Error en get_user_by_email: {e}"); return None
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
+        if conn: return_db_connection(conn)
+# --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
+
+
 
 def create_user(data):
     email_norm = (data.get("email_usuario") or "").strip().lower()
@@ -1412,12 +1417,23 @@ def create_user(data):
         if cur: cur.close()
         if conn: return_db_connection(conn) # <-- USA POOL
 
+
+
+# --- ▼▼▼ do_login MODIFICADO ▼▼▼ ---
 def do_login(email, password):
     if not email or not password:
         return False, "Debes ingresar correo y contraseña."
-    user = get_user_by_email(email) # Esta función ya usa el pool
+    
+    user = get_user_by_email(email) # Esta función ya trae 'is_verified'
+    
     if not user or not check_password_hash(user["password"], password):
         return False, "Credenciales inválidas."
+        
+    # --- ¡NUEVA VALIDACIÓN! ---
+    if not user["is_verified"]:
+        return False, "Cuenta no verificada."
+    # --- FIN NUEVA VALIDACIÓN ---
+
     session["user_id"] = user["id_usuario"]
     session["nombre_usuario"] = user["nombre_usuario"]
     session["apellido_paterno"] = user["apellido_paterno"]
@@ -1425,6 +1441,7 @@ def do_login(email, password):
     session["email_usuario"] = user["email_usuario"]
     session["rol_usuario"] = user["rol_usuario"].strip().lower()
     return True, None
+# --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
 
 def do_register(data):
     # Esta función parece no usarse, 'register' tiene su propia lógica
@@ -1439,9 +1456,11 @@ def do_register(data):
 # ===========================
 # RUTAS AUTENTICACIÓN (CON POOL)
 # ===========================
+# --- ▼▼▼ /login MODIFICADO ▼▼▼ ---
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
+        # Envía el archivo estático login.html
         return send_from_directory(SRC_DIR, "login.html")
     
     # POST
@@ -1450,18 +1469,20 @@ def login():
     if not email or not password:
         return redirect(url_for("login") + "?error=missing&tab=login&src=login")
     
-    # do_login ya usa el pool (a través de get_user_by_email)
     ok, msg = do_login(email, password) 
     
     if not ok:
         if msg == "Credenciales inválidas.":
              return redirect(url_for("login") + "?error=bad_password&tab=login&src=login")
+        # --- NUEVO MANEJO DE ERROR ---
+        elif msg == "Cuenta no verificada.":
+             return redirect(url_for("login") + "?error=not_verified&tab=login&src=login")
+        # --- FIN NUEVO MANEJO ---
         else:
-             # Asumimos 'user_not_found' u otro error
              return redirect(url_for("login") + "?error=user_not_found&tab=login&src=login")
 
-    # Si do_login fue exitoso, la sesión ya está seteada
     return redirect(FRONTEND_MAIN_URL)
+# --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
 
 # ===========================
 # RUTAS Registro (CON POOL)
@@ -1474,12 +1495,15 @@ def validar_password(password):
     if not re.search(r"[^A-Za-z0-9]", password): return False, "La contraseña debe incluir al menos un carácter especial."
     return True, None
 
+
+
+# --- ▼▼▼ /register MODIFICADO ▼▼▼ ---
 @app.route("/register", methods=["POST"])
 def register():
     data = request.form.to_dict()
     conn = None; cur = None
     try:
-        # 1. Validaciones
+        # 1. Validaciones (tu código existente)
         if data.get("email_usuario", "").lower() != (data.get("email_confirm") or "").lower():
             return redirect(url_for("login") + "?error=email_mismatch&tab=register&src=register")
         if data.get("password") != data.get("password_confirm"):
@@ -1496,26 +1520,62 @@ def register():
         cur.execute("SELECT 1 FROM usuario WHERE telefono = %s LIMIT 1;", (data.get("telefono"),))
         if cur.fetchone() is not None:
             return redirect(url_for("login") + "?error=telefono_exists&tab=register&src=register")
-        cur.execute("SELECT 1 FROM usuario WHERE email_usuario = %s LIMIT 1;", (data.get("email_usuario"),))
+        
+        email_usuario = data.get("email_usuario")
+        cur.execute("SELECT 1 FROM usuario WHERE email_usuario = %s LIMIT 1;", (email_usuario,))
         if cur.fetchone() is not None:
             return redirect(url_for("login") + "?error=email_exists&tab=register&src=register")
 
         hashed_password = generate_password_hash(data["password"])
+        
+        # --- AÑADIR is_verified=FALSE a la consulta ---
         cur.execute("""
             INSERT INTO usuario (
                 nombre_usuario, apellido_paterno, apellido_materno, email_usuario,
-                password, rol_usuario, calle, numero_calle, region, ciudad, comuna, telefono
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                password, rol_usuario, calle, numero_calle, region, ciudad, comuna, telefono,
+                is_verified 
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """, (
             data["nombre_usuario"], data["apellido_paterno"], data["apellido_materno"],
-            data["email_usuario"], hashed_password, 'cliente', data["calle"], data["numero_calle"],
-            data["region"], data["ciudad"], data["comuna"], data["telefono"]
+            email_usuario, hashed_password, 'cliente', data["calle"], data["numero_calle"],
+            data["region"], data["ciudad"], data["comuna"], data["telefono"],
+            False # <-- is_verified = FALSE
         ))
         conn.commit()
         
-        # 3. Auto-login y Redirección
-        do_login(data.get("email_usuario"), data.get("password"))
-        return redirect(FRONTEND_MAIN_URL)
+        # 3. Generar Token y Enviar Email
+        try:
+            token = s.dumps(email_usuario, salt='email-confirm')
+            # _external=True crea una URL absoluta (ej: http://localhost:5000/...)
+            verification_url = url_for('verify_email', token=token, _external=True)
+            
+
+            # Crear el mensaje de correo
+            msg = Message(
+                subject="Confirma tu cuenta en Aurora",
+                recipients=[email_usuario],
+                sender=("Aurora", app.config['MAIL_USERNAME']),
+                charset="utf-8"
+            )
+# Forzamos un ID único seguro para evitar que use tu nombre de usuario de Windows con tildes
+            msg.msgId = make_msgid(domain='aurora.local')
+
+            # Necesitarás crear este archivo HTML en la carpeta 'templates/email/'
+            msg.html = render_template(
+                "email/template_verificacion.html", 
+                nombre=data["nombre_usuario"],
+                url_verificacion=verification_url
+            )
+            mail.send(msg)
+            print(f"Email de verificacion enviado a {email_usuario}")
+
+        except Exception as e:
+            print(f"Error al enviar correo: {e}"); traceback.print_exc()
+            pass # No detener el registro si el correo falla, pero loguear el error
+
+        # 4. Redirigir al Login con mensaje de éxito
+        # (Ya NO hacemos auto-login)
+        return redirect(url_for("login") + "?success=registered&tab=login")
 
     except Exception as e:
         if conn: conn.rollback()
@@ -1523,7 +1583,51 @@ def register():
         return redirect(url_for("login") + f"?error=unknown&tab=register&src=register&msg={e}")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
+        if conn: return_db_connection(conn)
+# --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
+
+
+
+# --- ▼▼▼ NUEVA RUTA DE VERIFICACIÓN de email al correo del usuario (REAL) ▼▼▼ ---
+@app.route("/verify-email/<token>")
+def verify_email(token):
+    try:
+        # Cargar el token (expira en 1 hora = 3600 segundos)
+        email = s.loads(token, salt='email-confirm', max_age=3600)
+    except SignatureExpired:
+        # El token es válido pero ha expirado
+        return redirect(url_for("login") + "?error=token_expired&tab=login")
+    except (BadTimeSignature, Exception):
+        # El token no es válido
+        return redirect(url_for("login") + "?error=token_invalid&tab=login")
+
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Actualizar la base de datos
+        cur.execute("""
+            UPDATE usuario 
+            SET is_verified = TRUE 
+            WHERE email_usuario = %s;
+        """, (email,))
+        
+        conn.commit()
+        
+        # Redirigir a login con mensaje de éxito
+        return redirect(url_for("login") + "?success=verified&tab=login")
+
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error al verificar email en DB: {e}"); traceback.print_exc()
+        return redirect(url_for("login") + "?error=db_error&tab=login")
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+# --- ▲▲▲ FIN NUEVA RUTA ▲▲▲ ---
+
+
 
 # ===========================
 # Validar Email/Teléfono en registro (Async) (CON POOL)

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación de Correo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .header {
+            background-color: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+        .header h1 {
+            margin: 0;
+            color: #000;
+            font-size: 24px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .content p {
+            margin-bottom: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .footer {
+            background-color: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Bienvenido/a a Aurora</h1>
+        </div>
+        <div class="content">
+            <p>¡Hola, {{ nombre }}!</p>
+            <p>Gracias por registrarte en Aurora. Para completar tu registro y activar tu cuenta, por favor haz clic en el botón de abajo:</p>
+            <p style="text-align: center;">
+                <a href="{{ url_verificacion }}" class="btn">Verificar mi cuenta</a>
+            </p>
+            <p>Este enlace es válido por 1 hora. Si no te registraste en nuestro sitio, por favor ignora este correo.</p>
+            <p>¡Gracias!<br>El equipo de Aurora</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2025 Aurora. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>
