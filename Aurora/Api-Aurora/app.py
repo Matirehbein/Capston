@@ -2675,7 +2675,7 @@ def api_mis_pedidos():
 
         # 2. Obtener productos dentro del pedido
         cur.execute("""
-            SELECT dp.cantidad, pr.nombre_producto, pr.imagen_url
+            SELECT dp.cantidad, dp.precio_unitario, pr.nombre_producto, pr.imagen_url, vp.talla
             FROM detalle_pedido dp
             JOIN variacion_producto vp ON dp.id_variacion = vp.id_variacion
             JOIN producto pr ON pr.id_producto = vp.id_producto
@@ -2684,12 +2684,16 @@ def api_mis_pedidos():
 
         productos = [
             {
-                "nombre": p[1],
+                "nombre": p[2],
                 "cantidad": p[0],
-                "imagen_url": p[2]
+                "precio_unitario": float(p[1]),
+                "imagen_url": p[3],
+                "talla": p[4] or "N/A"
+
             }
             for p in cur.fetchall()
         ]
+
 
         # 3. Armar estructura final del pedido
         resultado.append({
