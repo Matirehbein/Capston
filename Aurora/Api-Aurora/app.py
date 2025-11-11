@@ -2268,6 +2268,385 @@ def registrar_pago():
 
 # --- ▲▲▲ FIN RUTAS DE PAGO ▲▲▲ ---
 
+# ===========================
+# RUTA DE REPORTES (KPI)
+# ===========================
+
+@app.route('/api/admin/reportes/kpi_ventas', methods=['GET'])
+@admin_required # Asegura que solo admin/soporte puedan ver esto
+def get_reporte_kpi_ventas():
+    """
+    Calcula los KPIs de ventas (mes actual vs mes pasado)
+    Acepta un 'sucursal_id' opcional para filtrar.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    print(f"[Reportes] Solicitando KPI de ventas para sucursal: {sucursal_id_str}")
+
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # --- 1. Calcular Ventas Mes Actual ---
+        sql_actual = """
+            SELECT COALESCE(SUM(pago.monto), 0) as total
+            FROM pago
+            JOIN pedido ON pago.id_pedido = pedido.id_pedido
+            WHERE pago.estado_pago = 'aprobado'
+            AND pago.fecha_pago >= date_trunc('month', CURRENT_DATE)
+        """
+        params_actual = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            sql_actual += " AND pedido.id_sucursal = %s"
+            params_actual.append(int(sucursal_id_str))
+            
+        cur.execute(sql_actual, tuple(params_actual))
+        ventas_actual = cur.fetchone()['total']
+
+        # --- 2. Calcular Ventas Mes Pasado ---
+        sql_pasado = """
+            SELECT COALESCE(SUM(pago.monto), 0) as total
+            FROM pago
+            JOIN pedido ON pago.id_pedido = pedido.id_pedido
+            WHERE pago.estado_pago = 'aprobado'
+            AND pago.fecha_pago >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+            AND pago.fecha_pago < date_trunc('month', CURRENT_DATE)
+        """
+        params_pasado = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            sql_pasado += " AND pedido.id_sucursal = %s"
+            params_pasado.append(int(sucursal_id_str))
+
+        cur.execute(sql_pasado, tuple(params_pasado))
+        ventas_pasado = cur.fetchone()['total']
+
+        # --- 3. Calcular Porcentaje de Cambio ---
+        porcentaje_cambio = 0
+        if ventas_pasado > 0:
+            porcentaje_cambio = ((ventas_actual - ventas_pasado) / ventas_pasado) * 100
+        elif ventas_actual > 0:
+            porcentaje_cambio = 100 # Si el mes pasado fue 0 y este no, es 100% de aumento
+
+        return jsonify({
+            "ventas_mes_actual": float(ventas_actual),
+            "ventas_mes_pasado": float(ventas_pasado),
+            "porcentaje_cambio": round(porcentaje_cambio, 2)
+        })
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/kpi_ventas: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+# ===========================
+# RUTA DE REPORTES (KPI): Gráficos interactivos
+# ===========================
+
+# --- ▼▼▼ NUEVA RUTA DE REPORTES (GRÁFICO ANUAL) ▼▼▼ ---
+
+@app.route('/api/admin/reportes/ventas_mensuales', methods=['GET'])
+@admin_required
+def get_reporte_ventas_mensuales():
+    """
+    Calcula las ventas totales por mes para el año actual y el año pasado.
+    Acepta un 'sucursal_id' opcional.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    print(f"[Reportes] Solicitando gráfico de ventas mensuales para sucursal: {sucursal_id_str}")
+
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # --- 1. Datos Año Actual ---
+        sql_actual = """
+            SELECT 
+                date_trunc('month', pago.fecha_pago) as mes,
+                COALESCE(SUM(pago.monto), 0) as total
+            FROM pago
+            JOIN pedido ON pago.id_pedido = pedido.id_pedido
+            WHERE 
+                pago.estado_pago = 'aprobado'
+                AND pago.fecha_pago >= date_trunc('year', CURRENT_DATE)
+                AND pago.fecha_pago < date_trunc('year', CURRENT_DATE) + INTERVAL '1 year'
+        """
+        params_actual = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            sql_actual += " AND pedido.id_sucursal = %s"
+            params_actual.append(int(sucursal_id_str))
+        sql_actual += " GROUP BY mes"
+        
+        cur.execute(sql_actual, tuple(params_actual))
+        rows_actual = cur.fetchall()
+
+        # --- 2. Datos Año Pasado ---
+        sql_pasado = """
+            SELECT 
+                date_trunc('month', pago.fecha_pago) as mes,
+                COALESCE(SUM(pago.monto), 0) as total
+            FROM pago
+            JOIN pedido ON pago.id_pedido = pedido.id_pedido
+            WHERE 
+                pago.estado_pago = 'aprobado'
+                AND pago.fecha_pago >= date_trunc('year', CURRENT_DATE) - INTERVAL '1 year'
+                AND pago.fecha_pago < date_trunc('year', CURRENT_DATE)
+        """
+        params_pasado = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            sql_pasado += " AND pedido.id_sucursal = %s"
+            params_pasado.append(int(sucursal_id_str))
+        sql_pasado += " GROUP BY mes"
+        
+        cur.execute(sql_pasado, tuple(params_pasado))
+        rows_pasado = cur.fetchall()
+
+        # --- 3. Formatear datos para Chart.js ---
+        labels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+        data_actual = [0.0] * 12
+        data_pasado = [0.0] * 12
+
+        for row in rows_actual:
+            # .month devuelve 1 para Enero, 2 para Febrero, etc.
+            mes_index = row['mes'].month - 1 
+            data_actual[mes_index] = float(row['total'])
+
+        for row in rows_pasado:
+            mes_index = row['mes'].month - 1
+            data_pasado[mes_index] = float(row['total'])
+
+        return jsonify({
+            "labels": labels,
+            "datasets": [
+                {
+                    "label": "Este Año",
+                    "data": data_actual,
+                    "backgroundColor": "rgba(13, 110, 253, 0.7)",
+                    "borderColor": "rgba(13, 110, 253, 1)",
+                    "borderWidth": 2,
+                    "fill": True # Para gráfico de área
+                },
+                {
+                    "label": "Año Pasado",
+                    "data": data_pasado,
+                    "backgroundColor": "rgba(220, 53, 69, 0.7)",
+                    "borderColor": "rgba(220, 53, 69, 1)",
+                    "borderWidth": 2,
+                    "fill": True # Para gráfico de área
+                }
+            ]
+        })
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/ventas_mensuales: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+# --- ▲▲▲ FIN NUEVA RUTA ▲▲▲ ---
+
+
+
+# ===========================
+# Reportes: RUTAS DE REPORTES DE PEDIDOS (KPI) 
+# ===========================
+
+# --- ▼▼▼ NUEVAS RUTAS DE REPORTES DE PEDIDOS ▼▼▼ ---
+
+@app.route('/api/admin/reportes/kpi_pedidos', methods=['GET'])
+@admin_required
+def get_reporte_kpi_pedidos():
+    """
+    Calcula el KPI de pedidos (mes actual vs mes pasado)
+    Acepta un 'sucursal_id' opcional para filtrar.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    print(f"[Reportes] Solicitando KPI de pedidos para sucursal: {sucursal_id_str}")
+
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # --- 1. Calcular Pedidos Mes Actual ---
+        sql_actual = """
+            SELECT COUNT(DISTINCT pedido.id_pedido) as total
+            FROM pedido
+            JOIN pago ON pago.id_pedido = pedido.id_pedido
+            WHERE pago.estado_pago = 'aprobado'
+            AND pago.fecha_pago >= date_trunc('month', CURRENT_DATE)
+        """
+        params_actual = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            sql_actual += " AND pedido.id_sucursal = %s"
+            params_actual.append(int(sucursal_id_str))
+            
+        cur.execute(sql_actual, tuple(params_actual))
+        pedidos_actual = cur.fetchone()['total']
+
+        # --- 2. Calcular Pedidos Mes Pasado ---
+        sql_pasado = """
+            SELECT COUNT(DISTINCT pedido.id_pedido) as total
+            FROM pedido
+            JOIN pago ON pago.id_pedido = pedido.id_pedido
+            WHERE pago.estado_pago = 'aprobado'
+            AND pago.fecha_pago >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+            AND pago.fecha_pago < date_trunc('month', CURRENT_DATE)
+        """
+        params_pasado = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            sql_pasado += " AND pedido.id_sucursal = %s"
+            params_pasado.append(int(sucursal_id_str))
+
+        cur.execute(sql_pasado, tuple(params_pasado))
+        pedidos_pasado = cur.fetchone()['total']
+
+        # --- 3. Calcular Porcentaje de Cambio ---
+        porcentaje_cambio = 0
+        if pedidos_pasado > 0:
+            porcentaje_cambio = ((pedidos_actual - pedidos_pasado) / pedidos_pasado) * 100
+        elif pedidos_actual > 0:
+            porcentaje_cambio = 100 
+
+        return jsonify({
+            "pedidos_mes_actual": int(pedidos_actual),
+            "pedidos_mes_pasado": int(pedidos_pasado),
+            "porcentaje_cambio": round(porcentaje_cambio, 2)
+        })
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/kpi_pedidos: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+@app.route('/api/admin/reportes/lista_pedidos_mes', methods=['GET'])
+@admin_required
+def get_lista_pedidos_mes():
+    """
+    Obtiene la lista de pedidos aprobados de este mes para el Modal 1.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        sql = """
+            SELECT 
+                p.id_pedido, 
+                u.nombre_usuario, 
+                u.apellido_paterno,
+                (SELECT SUM(dp.cantidad) FROM detalle_pedido dp WHERE dp.id_pedido = p.id_pedido) as total_items
+            FROM pedido p
+            JOIN usuario u ON p.id_usuario = u.id_usuario
+            JOIN pago pa ON p.id_pedido = pa.id_pedido
+            WHERE 
+                pa.estado_pago = 'aprobado'
+                AND pa.fecha_pago >= date_trunc('month', CURRENT_DATE)
+        """
+        params = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            sql += " AND p.id_sucursal = %s"
+            params.append(int(sucursal_id_str))
+            
+        sql += " GROUP BY p.id_pedido, u.nombre_usuario, u.apellido_paterno ORDER BY p.id_pedido DESC;"
+        
+        cur.execute(sql, tuple(params))
+        pedidos = cur.fetchall()
+        
+        return jsonify([dict(row) for row in pedidos])
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/lista_pedidos_mes: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+@app.route('/api/admin/reportes/detalle_pedido/<int:id_pedido>', methods=['GET'])
+@admin_required
+def get_detalle_pedido(id_pedido):
+    """
+    Obtiene el detalle completo de un pedido para el Modal 2.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # --- Query 1: Detalles del Pedido y Cliente ---
+        cur.execute("""
+            SELECT 
+                p.id_pedido, p.total, p.creado_en, p.estado_pedido,
+                pa.metodo_pago, pa.transaccion_id,
+                u.nombre_usuario, u.apellido_paterno, u.apellido_materno,
+                u.email_usuario, u.telefono, u.region, u.ciudad, u.comuna,
+                u.calle, u.numero_calle
+            FROM pedido p
+            JOIN usuario u ON p.id_usuario = u.id_usuario
+            LEFT JOIN pago pa ON p.id_pedido = pa.id_pedido AND pa.estado_pago = 'aprobado'
+            WHERE p.id_pedido = %s
+            ORDER BY pa.fecha_pago DESC
+            LIMIT 1;
+        """, (id_pedido,))
+        
+        pedido_info = cur.fetchone()
+        
+        if not pedido_info:
+            return jsonify({"error": "Pedido no encontrado"}), 404
+
+        # --- Query 2: Items del Pedido ---
+        cur.execute("""
+            SELECT 
+                dp.cantidad, 
+                dp.precio_unitario, 
+                dp.sku_producto, 
+                v.talla, 
+                v.color, 
+                pr.nombre_producto
+            FROM detalle_pedido dp
+            LEFT JOIN variacion_producto v ON dp.sku_producto = v.sku_variacion
+            LEFT JOIN producto pr ON v.id_producto = pr.id_producto
+            WHERE dp.id_pedido = %s;
+        """, (id_pedido,))
+        
+        items_pedido = cur.fetchall()
+        
+        # Combinar todo
+        resultado = {
+            "pedido": dict(pedido_info),
+            "items": [dict(item) for item in items_pedido]
+        }
+        
+        return jsonify(resultado)
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/detalle_pedido/{id_pedido}: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+# --- ▲▲▲ FIN NUEVAS RUTAS DE REPORTES DE PEDIDOS ▲▲▲ ---
+
+
+
+# ===========================
+# Ruta de ver los pedidos
+# ===========================
+
 
 @app.route('/api/mis_pedidos', methods=['GET'])
 def api_mis_pedidos():
