@@ -10,6 +10,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        .admin-layout {
+            display: flex;
+            min-height: 100vh; 
+        }
+
         .admin-topbar {
             display: flex;
             align-items: center;
@@ -50,8 +55,11 @@
         .kpi-trend.negative {
             color: #dc3545;
         }
+        
+        .kpi-grid {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
 
-        /* ESTILOS PARA EL MODAL DE GRÁFICOS (EXISTENTE) */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -172,42 +180,123 @@
             width: 100%;
             height: 100%;
         }
-        /* FIN ESTILOS MODAL */
 
-        /* --- NUEVOS ESTILOS --- */
-
-        /* Hacer la tarjeta de KPI "Ventas" cliqueable (EXISTENTE) */
-        #kpi-ventas-card {
+        #kpi-ventas-card,
+        #kpi-pedidos-card,
+        #kpi-clientes-card { 
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        #kpi-ventas-card:hover {
+        #kpi-ventas-card:hover,
+        #kpi-pedidos-card:hover,
+        #kpi-clientes-card:hover { 
             transform: translateY(-3px);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
         }
 
-        /* (NUEVO) Hacer la tarjeta de KPI "Pedidos" cliqueable */
-        #kpi-pedidos-card {
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        #pedidos-list-modal,
+        #clientes-list-modal,
+        #report-options-modal {
+            z-index: 1010; 
         }
 
-        #kpi-pedidos-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        #clientes-detail-modal {
+            z-index: 1020; 
         }
-
-        /* (NUEVO) Z-index para apilar modales */
-        #pedidos-list-modal {
-            z-index: 1000;
-        }
-
+        
         #pedidos-detail-modal {
-            z-index: 1010;
-        } /* Más alto para superponer */
+            z-index: 1030; 
+        }
+        
+        #recent-order-detail-modal {
+            z-index: 1040; 
+        }
 
-        /* (NUEVO) Estilos para el modal de detalle (Modal 2) */
+        .kpi-card.action-card {
+            background-color: var(--page-bg, #f8f9fa);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border: 2px dashed var(--border-color, #ddd);
+        }
+        [data-theme="noir"] .kpi-card.action-card {
+            background-color: #2a2a2e;
+            border-color: #444;
+        }
+        .admin-btn.primary {
+            background-color: var(--primary-color, #0d6efd);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: background-color 0.2s ease;
+        }
+        .admin-btn.primary:hover {
+            background-color: #0b5ed7;
+        }
+        [data-theme="noir"] .admin-btn.primary {
+             background-color: #f1f1f1;
+             color: #1a1a1a;
+        }
+        [data-theme="noir"] .admin-btn.primary:hover {
+             background-color: #ddd;
+        }
+        
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { 
+            display: block; 
+            font-weight: 600; 
+            margin-bottom: 0.5rem; 
+            color: var(--text-color, #333);
+        }
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color, #ccc);
+            border-radius: 6px;
+            background-color: var(--card-bg, #fff);
+            color: var(--text-color, #333);
+            font-size: 1rem;
+            box-sizing: border-box; 
+        }
+        [data-theme="noir"] .form-group select {
+             background-color: var(--sidebar-bg, #3a3a3f);
+             color: var(--text-color, #f1f1f1);
+             border-color: #555;
+        }
+
+
+        .pedido-detail-link,
+        .cliente-detail-link { 
+            color: var(--primary-color, #0d6efd);
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .pedido-detail-link:hover,
+        .cliente-detail-link:hover { 
+            text-decoration: underline;
+        }
+
+        [data-theme="noir"] .pedido-detail-link,
+        [data-theme="noir"] .cliente-detail-link { 
+            color: #58a6ff;
+        }
+        
+        #pedidos-list-modal .table-wrap,
+        #clientes-list-modal .table-wrap {
+            flex-grow: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
         .pedido-detail-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -243,40 +332,108 @@
             color: var(--text-color-muted, #adb5bd);
         }
 
-        /* (NUEVO) Zebra-striping para la tabla de items en Modal 2 */
-        #detalle-items-tbody tr:nth-child(even) {
+        #detalle-items-tbody tr:nth-child(even),
+        #cliente-pedidos-tbody tr:nth-child(even),
+        #recent-detalle-items-tbody tr:nth-child(even) { 
             background-color: var(--table-stripe-color, #f9f9f9);
         }
-
         [data-theme="noir"] #detalle-items-tbody tr:nth-child(even),
-        [data-theme="ocean"] #detalle-items-tbody tr:nth-child(even) {
+        [data-theme="noir"] #cliente-pedidos-tbody tr:nth-child(even),
+        [data-theme="noir"] #recent-detalle-items-tbody tr:nth-child(even),
+        [data-theme="ocean"] #detalle-items-tbody tr:nth-child(even),
+        [data-theme="ocean"] #cliente-pedidos-tbody tr:nth-child(even),
+        [data-theme="ocean"] #recent-detalle-items-tbody tr:nth-child(even) { 
             background-color: var(--table-stripe-color, #3a3a3f);
         }
+        
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-head-title {
+            margin: 0; 
+        }
+        .section-head-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px; 
+        }
+        .section-head-filter label {
+            font-weight: 500;
+            color: var(--text-color-muted, #6c757d);
+            margin: 0;
+        }
+        .section-head-filter select {
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color, #ddd);
+            background-color: var(--card-bg, #fff);
+            color: var(--text-color, #333);
+        }
+        [data-theme="noir"] .section-head-filter select {
+             background-color: var(--sidebar-bg, #3a3a3f);
+             color: var(--text-color, #f1f1f1);
+             border-color: #555;
+        }
 
-        /* (NUEVO) Estilo para el enlace de cliente en Modal 1 */
-        .pedido-detail-link {
-            color: var(--primary-color, #0d6efd);
+        .admin-btn-sm {
+            padding: 4px 10px;
+            font-size: 0.8rem;
             font-weight: 600;
-            text-decoration: none;
+            border-radius: 5px;
             cursor: pointer;
+            border: 1px solid var(--primary-color, #0d6efd);
+            background-color: transparent;
+            color: var(--primary-color, #0d6efd);
+            transition: all 0.2s ease;
         }
-
-        .pedido-detail-link:hover {
-            text-decoration: underline;
+        .admin-btn-sm:hover {
+            background-color: var(--primary-color, #0d6efd);
+            color: #fff;
         }
-
-        [data-theme="noir"] .pedido-detail-link {
+        [data-theme="noir"] .admin-btn-sm {
             color: #58a6ff;
+            border-color: #58a6ff;
+        }
+        [data-theme="noir"] .admin-btn-sm:hover {
+            background-color: #58a6ff;
+            color: #1a1a1a;
+        }
+
+        .item-foto {
+            width: 45px;
+            height: 45px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--border-color, #eee);
+        }
+        [data-theme="noir"] .item-foto {
+            border-color: #444;
         }
         
-        /* --- ▼▼▼ ¡AQUÍ ESTÁ EL ARREGLO (AHORA SÍ)! ▼▼▼ --- */
-        /* Hacemos que el .table-wrap sea el que crezca y tenga el scroll */
-        #pedidos-list-modal .table-wrap {
-            flex-grow: 1;       /* Hace que ocupe el espacio disponible */
-            overflow-y: auto;   /* Añade el scroll si el contenido se desborda */
-            min-height: 0;      /* Requerido para que flexbox y overflow funcionen juntos */
+        /* Clases de Badge para Estados */
+        .badge {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 10px;
+            color: #fff;
+            text-transform: capitalize;
         }
-        /* --- ▲▲▲ FIN ARREGLO ▲▲▲ --- */
+        .bg-success { background-color: #198754; }
+        .bg-warning { background-color: #ffc107; color: #000; }
+        .bg-danger { background-color: #dc3545; }
+        .bg-info { background-color: #0dcaf0; color: #000; }
+        .bg-primary { background-color: #0d6efd; }
+        .bg-secondary { background-color: #6c757d; }
+        
+        [data-theme="noir"] .bg-warning,
+        [data-theme="noir"] .bg-info {
+            color: #000; /* Forzar texto negro en badges claros */
+        }
+
     </style>
 </head>
 
@@ -326,6 +483,7 @@
                     <div class="admin-user"><span class="user-dot"></span><span>Admin</span></div>
                 </div>
             </header>
+            
             <section class="kpi-grid">
                 <div class="kpi-card" id="kpi-ventas-card" title="Ver gráfico detallado">
                     <h3>Ventas (este mes)</h3>
@@ -338,40 +496,51 @@
                     <p id="kpi-pedidos" class="kpi-number">—</p>
                     <p class="kpi-sub">vs mes pasado <span id="kpi-pedidos-trend" class="kpi-trend">—</span></p>
                 </div>
-                <div class="kpi-card">
+                
+                <div class="kpi-card" id="kpi-clientes-card" title="Ver nuevos clientes">
                     <h3>Nuevos clientes</h3>
                     <p id="kpi-clientes" class="kpi-number">—</p>
-                    <p class="kpi-sub">Retención 60 días <span id="kpi-clientes-trend" class="kpi-trend">—</span></p>
+                    <p class="kpi-sub">vs mes pasado <span id="kpi-clientes-trend" class="kpi-trend">—</span></p>
+                </div>
+
+                <div class="kpi-card action-card">
+                    <h3>Generar Informe</h3>
+                    <p class="kpi-sub">Descargar datos mensuales</p>
+                    <button class="admin-btn primary" id="open-report-modal-btn">Generar</button>
                 </div>
             </section>
 
             <section class="admin-section">
                 <div class="section-head">
-                    <h2>Pedidos recientes</h2>
-                    <a class="link-inline" href="#">Ver todos →</a>
+                    <h2 class="section-head-title">Pedidos recientes</h2>
+                    <div class="section-head-filter">
+                        <label for="pedidos-limit-selector">Mostrar:</label>
+                        <select id="pedidos-limit-selector" name="limite">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="table-wrap">
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th># Pedido</th>
                                 <th>Cliente</th>
+                                <th>Correo electrónico</th>
+                                <th>Teléfono</th>
                                 <th>Fecha</th>
-                                <th>Estado</th>
+                                <th>Estado Pago</th>
+                                <th>Estado Pedido</th>
                                 <th>Total</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr><td colspan="5" class="no-data">Sin datos</td></tr>
+                        <tbody id="pedidos-recientes-tbody">
+                            <tr><td colspan="9" class="no-data">Sin datos</td></tr>
                         </tbody>
                     </table>
-                </div>
-            </section>
-
-            <section class="admin-section">
-                <div class="section-head"><h2>Notas rápidas</h2></div>
-                <div class="chart-card notas-vacias">
-                    <p class="kpi-sub">—</p>
                 </div>
             </section>
         </main>
@@ -397,6 +566,7 @@
             </div>
         </div>
     </div>
+
     <div class="modal-overlay" id="pedidos-list-modal">
         <div class="modal-content" style="max-width: 800px; height: 80vh;">
             <div class="modal-header">
@@ -421,6 +591,7 @@
             </div>
         </div>
     </div>
+
     <div class="modal-overlay" id="pedidos-detail-modal">
         <div class="modal-content" style="max-width: 900px; height: 90vh;">
             <div class="modal-header">
@@ -428,7 +599,6 @@
                 <button class="modal-close" id="pedidos-detail-close-btn">&times;</button>
             </div>
             <div class="modal-body" style="overflow-y: auto;">
-
                 <div class="pedido-detail-grid">
                     <div class="pedido-detail-section">
                         <h4>Datos del Cliente</h4>
@@ -450,13 +620,13 @@
                         <p><strong>ID Transacción:</strong> <span id="detalle-pedido-transaccion">...</span></p>
                     </div>
                 </div>
-
                 <div class="pedido-detail-section">
                     <h4>Items Comprados</h4>
                     <div class="table-wrap">
                         <table class="admin-table">
                             <thead>
                                 <tr>
+                                    <th>Foto</th> 
                                     <th>Producto</th>
                                     <th>SKU</th>
                                     <th>Talla</th>
@@ -466,15 +636,153 @@
                                 </tr>
                             </thead>
                             <tbody id="detalle-items-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="clientes-list-modal">
+        <div class="modal-content" style="max-width: 900px; height: 80vh;">
+            <div class="modal-header">
+                <h2>Nuevos Clientes (Este mes)</h2>
+                <button class="modal-close" id="clientes-list-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-wrap">
+                    <table class="admin-table">
+                        <thead id="clientes-modal-thead">
+                        </thead>
+                        <tbody id="clientes-modal-tbody">
+                            <tr><td colspan="3" class="no-data">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="clientes-detail-modal">
+        <div class="modal-content" style="max-width: 1000px; height: 90vh;">
+            <div class="modal-header">
+                <h2>Historial de: <span id="detalle-cliente-nombre-modal">...</span></h2>
+                <button class="modal-close" id="clientes-detail-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto;">
+                <div class="pedido-detail-section">
+                    <h4>Datos del Cliente</h4>
+                    <p><strong>Nombre:</strong> <span id="detalle-cliente-nombre-2">...</span></p>
+                    <p><strong>Email:</strong> <span id="detalle-cliente-email-2">...</span></p>
+                    <p><strong>Dirección:</strong> <span id="detalle-cliente-direccion-2">...</span></p>
+                </div>
+                <div class="pedido-detail-section">
+                    <h4>Historial de Pedidos (<span id="detalle-cliente-total-pedidos">0</span>)</h4>
+                    <div class="table-wrap" style="max-height: 400px; overflow-y: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Pedido</th>
+                                    <th>Fecha</th>
+                                    <th>Sucursal</th>
+                                    <th>Productos (preview)</th>
+                                    <th>Total</th>
+                                    <th>Ver</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cliente-pedidos-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="report-options-modal">
+        <div class="modal-content" style="max-width: 500px; height: auto;">
+            <div class="modal-header">
+                <h2>Generar Informe</h2>
+                <button class="modal-close" id="report-options-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="report-options-form">
+                    <div class="form-group">
+                        <label for="report-type">Tipo de Informe:</label>
+                        <select id="report-type" name="tipo_reporte" required>
+                            <option value="" disabled selected>Seleccione...</option>
+                            <option value="ventas">Ventas Mensuales</option>
+                            <option value="pedidos">Pedidos Mensuales</option>
+                            <option value="clientes">Nuevos Clientes Mensuales</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="report-month">Mes:</label>
+                        <select id="report-month" name="mes" required>
+                            <option value="actual">Mes Actual</option>
+                            <option value="pasado">Mes Pasado</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="admin-btn primary" id="generate-report-submit-btn">Descargar CSV</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="recent-order-detail-modal">
+        <div class="modal-content" style="max-width: 900px; height: 90vh;">
+            <div class="modal-header">
+                <h2>Detalle del Pedido: #<span id="recent-detalle-pedido-id">...</span></h2>
+                <button class="modal-close" id="recent-order-detail-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto;">
+                <div class="pedido-detail-grid">
+                    <div class="pedido-detail-section">
+                        <h4>Datos del Cliente</h4>
+                        <p><strong>Nombre:</strong> <span id="recent-detalle-cliente-nombre">...</span></p>
+                        <p><strong>Email:</strong> <span id="recent-detalle-cliente-email">...</span></p>
+                        <p><strong>Teléfono:</strong> <span id="recent-detalle-cliente-telefono">...</span></p>
+                        <p><strong>Dirección:</strong> <span id="recent-detalle-cliente-direccion">...</span></p>
+                        <p><strong>Comuna:</strong> <span id="recent-detalle-cliente-comuna">...</span></p>
+                        <p><strong>Ciudad:</strong> <span id="recent-detalle-cliente-ciudad">...</span></p>
+                        <p><strong>Región:</strong> <span id="recent-detalle-cliente-region">...</span></p>
+                    </div>
+                    <div class="pedido-detail-section">
+                        <h4>Datos del Pedido</h4>
+                        <p><strong>ID Pedido:</strong> <span id="recent-detalle-pedido-id-2">...</span></p>
+                        <p><strong>Fecha:</strong> <span id="recent-detalle-pedido-fecha">...</span></p>
+                        <p><strong>Total Pagado:</strong> <span id="recent-detalle-pedido-total">...</span></p>
+                        <p><strong>Método Pago:</strong> <span id="recent-detalle-pedido-metodo">...</span></p>
+                        <p><strong>Estado Pago:</strong> <span id="recent-detalle-pedido-estado">...</span></p>
+                        <p><strong>Estado Pedido:</strong> <span id="recent-detalle-envio-estado">...</span></p>
+                    </div>
+                </div>
+                <div class="pedido-detail-section">
+                    <h4>Items Comprados</h4>
+                    <div class="table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Foto</th>
+                                    <th>Producto</th>
+                                    <th>SKU</th>
+                                    <th>Talla</th>
+                                    <th>Color</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio Unit.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-detalle-items-tbody">
                                 </tbody>
                         </table>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
     <script type="module" src="../Public/js/colores.js"></script>
-    <script type="module" src="../Public/js/reportes_admin.js"></script>
-</body>
+    
+    <script type="module" src="../Public/js/reportes_admin.js?v=1.1"></script>
+    </body>
 </html>

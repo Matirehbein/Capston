@@ -2,9 +2,12 @@ import json
 import re
 import traceback
 import os
+import io
+import csv
+import random
 from dotenv import load_dotenv
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify, make_response
 import psycopg2
 import psycopg2.extras
 from psycopg2 import errors
@@ -2615,7 +2618,8 @@ def get_detalle_pedido(id_pedido):
                 dp.sku_producto, 
                 v.talla, 
                 v.color, 
-                pr.nombre_producto
+                pr.nombre_producto,
+                pr.imagen_url  -- <-- AÑADIDO PARA LA FOTO
             FROM detalle_pedido dp
             LEFT JOIN variacion_producto v ON dp.sku_producto = v.sku_variacion
             LEFT JOIN producto pr ON v.id_producto = pr.id_producto
@@ -2641,6 +2645,631 @@ def get_detalle_pedido(id_pedido):
 
 # --- ▲▲▲ FIN NUEVAS RUTAS DE REPORTES DE PEDIDOS ▲▲▲ ---
 
+# ===========================
+# Reportes: RUTAS DE REPORTES DE CLIENTES (KPI) 
+# ===========================
+
+# --- ▼▼▼ NUEVAS RUTAS DE REPORTES DE CLIENTES ▼▼▼ ---
+
+@app.route('/api/admin/reportes/kpi_clientes', methods=['GET'])
+@admin_required
+def get_reporte_kpi_clientes():
+    """
+    Calcula el KPI de nuevos clientes (mes actual vs mes pasado)
+    - Si sucursal_id es 'all', cuenta todos los usuarios nuevos.
+    - Si sucursal_id es específico, cuenta los usuarios nuevos QUE COMPRARON en esa sucursal.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    print(f"[Reportes] Solicitando KPI de clientes para sucursal: {sucursal_id_str}")
+
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # --- 1. Calcular Clientes Mes Actual ---
+        sql_actual = ""
+        params_actual = []
+
+        if sucursal_id_str and sucursal_id_str != 'all':
+            # Clientes nuevos (este mes) que compraron en esta sucursal
+            sql_actual = """
+                SELECT COUNT(DISTINCT u.id_usuario) as total
+                FROM usuario u
+                JOIN pedido p ON u.id_usuario = p.id_usuario
+                WHERE u.creado_en >= date_trunc('month', CURRENT_DATE)
+                  AND p.id_sucursal = %s;
+            """
+            params_actual.append(int(sucursal_id_str))
+        else:
+            # Todos los clientes nuevos (este mes)
+            sql_actual = """
+                SELECT COUNT(id_usuario) as total
+                FROM usuario
+                WHERE creado_en >= date_trunc('month', CURRENT_DATE);
+            """
+
+        cur.execute(sql_actual, tuple(params_actual))
+        clientes_actual = cur.fetchone()['total']
+
+        # --- 2. Calcular Clientes Mes Pasado ---
+        sql_pasado = ""
+        params_pasado = []
+
+        if sucursal_id_str and sucursal_id_str != 'all':
+            sql_pasado = """
+                SELECT COUNT(DISTINCT u.id_usuario) as total
+                FROM usuario u
+                JOIN pedido p ON u.id_usuario = p.id_usuario
+                WHERE u.creado_en >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+                  AND u.creado_en < date_trunc('month', CURRENT_DATE)
+                  AND p.id_sucursal = %s;
+            """
+            params_pasado.append(int(sucursal_id_str))
+        else:
+            sql_pasado = """
+                SELECT COUNT(id_usuario) as total
+                FROM usuario
+                WHERE creado_en >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+                  AND creado_en < date_trunc('month', CURRENT_DATE);
+            """
+        
+        cur.execute(sql_pasado, tuple(params_pasado))
+        clientes_pasado = cur.fetchone()['total']
+
+        # --- 3. Calcular Porcentaje de Cambio ---
+        porcentaje_cambio = 0
+        if clientes_pasado > 0:
+            porcentaje_cambio = ((clientes_actual - clientes_pasado) / clientes_pasado) * 100
+        elif clientes_actual > 0:
+            porcentaje_cambio = 100  
+
+        return jsonify({
+            "clientes_mes_actual": int(clientes_actual),
+            "clientes_mes_pasado": int(clientes_pasado),
+            "porcentaje_cambio": round(porcentaje_cambio, 2)
+        })
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/kpi_clientes: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+@app.route('/api/admin/reportes/lista_nuevos_clientes', methods=['GET'])
+@admin_required
+def get_lista_nuevos_clientes():
+    """
+    Obtiene la lista de nuevos clientes de este mes.
+    - 'all': Todos los nuevos clientes.
+    - 'specific': Clientes nuevos que compraron en esa sucursal.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        sql = ""
+        params = []
+
+        if sucursal_id_str and sucursal_id_str != 'all':
+            # Clientes nuevos con su dirección, que compraron en esta sucursal
+            sql = """
+                SELECT DISTINCT 
+                    u.id_usuario, u.nombre_usuario, u.apellido_paterno, u.apellido_materno, 
+                    u.email_usuario, u.creado_en, u.region, u.ciudad, u.comuna, 
+                    u.calle, u.numero_calle
+                FROM usuario u
+                JOIN pedido p ON u.id_usuario = p.id_usuario
+                WHERE u.creado_en >= date_trunc('month', CURRENT_DATE)
+                  AND p.id_sucursal = %s
+                ORDER BY u.creado_en DESC;
+            """
+            params.append(int(sucursal_id_str))
+        else:
+            # Todos los clientes nuevos
+            sql = """
+                SELECT 
+                    id_usuario, nombre_usuario, apellido_paterno, apellido_materno, 
+                    email_usuario, creado_en
+                FROM usuario 
+                WHERE creado_en >= date_trunc('month', CURRENT_DATE)
+                ORDER BY creado_en DESC;
+            """
+        
+        cur.execute(sql, tuple(params))
+        clientes = cur.fetchall()
+        
+        return jsonify([dict(row) for row in clientes])
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/lista_nuevos_clientes: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+@app.route('/api/admin/reportes/historial_cliente/<int:id_usuario>', methods=['GET'])
+@admin_required
+def get_historial_pedidos_cliente(id_usuario):
+    """
+    Obtiene el historial de pedidos de un cliente específico para el Modal 2.
+    Filtra por sucursal si se provee el 'sucursal_id'.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # --- 1. Obtener info del Usuario ---
+        cur.execute("""
+            SELECT 
+                id_usuario, nombre_usuario, apellido_paterno, apellido_materno, 
+                email_usuario, region, ciudad, comuna, calle, numero_calle
+            FROM usuario 
+            WHERE id_usuario = %s;
+        """, (id_usuario,))
+        usuario_info = cur.fetchone()
+
+        if not usuario_info:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+
+        # --- 2. Obtener historial de Pedidos ---
+        sql_pedidos = """
+            SELECT 
+                p.id_pedido, p.creado_en, p.total, p.estado_pedido, 
+                s.nombre_sucursal,
+                (SELECT COUNT(*) FROM detalle_pedido dp WHERE dp.id_pedido = p.id_pedido) as item_count,
+                (SELECT STRING_AGG(pr.nombre_producto, ', ') 
+                 FROM detalle_pedido dp 
+                 LEFT JOIN variacion_producto v ON dp.id_variacion = v.id_variacion
+                 LEFT JOIN producto pr ON v.id_producto = pr.id_producto
+                 WHERE dp.id_pedido = p.id_pedido
+                 LIMIT 3
+                ) as productos_preview
+            FROM pedido p
+            LEFT JOIN sucursal s ON p.id_sucursal = s.id_sucursal
+            WHERE p.id_usuario = %s
+              AND p.estado_pedido IN ('pagado', 'enviado', 'entregado')
+        """
+        params_pedidos = [id_usuario]
+
+        if sucursal_id_str and sucursal_id_str != 'all':
+            sql_pedidos += " AND p.id_sucursal = %s"
+            params_pedidos.append(int(sucursal_id_str))
+        
+        sql_pedidos += " ORDER BY p.creado_en DESC;"
+        
+        cur.execute(sql_pedidos, tuple(params_pedidos))
+        pedidos = cur.fetchall()
+
+        # --- 3. Combinar todo ---
+        resultado = {
+            "usuario": dict(usuario_info),
+            "pedidos": [dict(p) for p in pedidos],
+            "total_pedidos": len(pedidos)
+        }
+        
+        return jsonify(resultado)
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/historial_cliente/{id_usuario}: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+# --- ▲▲▲ FIN NUEVAS RUTAS DE REPORTES DE CLIENTES ▲▲▲ ---
+
+@app.route('/api/admin/reportes/pedidos_recientes', methods=['GET'])
+@admin_required
+def get_pedidos_recientes():
+    """
+    Obtiene una lista paginada de pedidos recientes para la tabla del dashboard.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    limit = request.args.get('limit', 5) 
+    
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # --- CONSULTA CORREGIDA ---
+        sql = """
+            SELECT 
+                p.id_pedido,
+                CONCAT_WS(' ', u.nombre_usuario, u.apellido_paterno, u.apellido_materno) as cliente_nombre,
+                u.email_usuario as email,
+                u.telefono,
+                p.creado_en,
+                p.estado_pedido, -- Para el "Estado Envío"
+                pa.estado_pago,  -- Para el "Estado Pago"
+                p.total
+            FROM pedido p
+            JOIN usuario u ON p.id_usuario = u.id_usuario
+            LEFT JOIN (
+                -- Subconsulta para obtener solo el estado del ÚLTIMO pago de cada pedido
+                SELECT DISTINCT ON (id_pedido) id_pedido, estado_pago
+                FROM pago
+                ORDER BY id_pedido, fecha_pago DESC
+            ) pa ON p.id_pedido = pa.id_pedido
+        """
+        
+        params = []
+        where_clauses = [] # Empezar de cero
+
+        if sucursal_id_str and sucursal_id_str != 'all':
+            where_clauses.append("p.id_sucursal = %s")
+            params.append(int(sucursal_id_str))
+        
+        if where_clauses:
+            sql += " WHERE " + " AND ".join(where_clauses)
+            
+        sql += " ORDER BY p.creado_en DESC LIMIT %s"
+        params.append(int(limit))
+        
+        cur.execute(sql, tuple(params))
+        pedidos = cur.fetchall()
+        
+        return jsonify([dict(row) for row in pedidos])
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/pedidos_recientes: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+# --- ▼▼▼ NUEVAS RUTAS PARA GENERACIÓN DE INFORMES (CSV) ▼▼▼ ---
+
+def get_report_data(tipo_reporte, mes, sucursal_id_str):
+    """
+    Función helper para obtener los datos y cabeceras del informe.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        headers = []
+        data = []
+        
+        # --- Lógica de Fechas ---
+        # 'actual' o 'pasado'
+        if mes == 'pasado':
+            fecha_inicio = "date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'"
+            fecha_fin = "date_trunc('month', CURRENT_DATE)"
+        else: # 'actual'
+            fecha_inicio = "date_trunc('month', CURRENT_DATE)"
+            fecha_fin = "date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'"
+
+        # --- Lógica de Sucursal ---
+        filtro_sucursal_sql = ""
+        params = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            filtro_sucursal_sql = " AND p.id_sucursal = %s"
+            params.append(int(sucursal_id_str))
+
+        # --- Lógica de Reporte ---
+        if tipo_reporte == 'ventas':
+            headers = ["ID Pedido", "ID Pago", "Fecha Pago", "Monto", "Metodo Pago", "Sucursal"]
+            sql = f"""
+                SELECT 
+                    p.id_pedido, pa.id_pago, pa.fecha_pago, pa.monto, pa.metodo_pago, s.nombre_sucursal
+                FROM pago pa
+                JOIN pedido p ON pa.id_pedido = p.id_pedido
+                LEFT JOIN sucursal s ON p.id_sucursal = s.id_sucursal
+                WHERE pa.estado_pago = 'aprobado'
+                  AND pa.fecha_pago >= {fecha_inicio}
+                  AND pa.fecha_pago < {fecha_fin}
+                  {filtro_sucursal_sql.replace('p.id_sucursal', 'pa.id_sucursal' if 'pa.' in filtro_sucursal_sql else 'p.id_sucursal')}
+                ORDER BY pa.fecha_pago DESC;
+            """
+            cur.execute(sql, tuple(params))
+            data = cur.fetchall()
+
+        elif tipo_reporte == 'pedidos':
+            headers = ["ID Pedido", "Fecha Pedido", "Cliente", "Email", "Total", "Items", "Estado", "Sucursal"]
+            sql = f"""
+                SELECT 
+                    p.id_pedido, p.creado_en, 
+                    CONCAT(u.nombre_usuario, ' ', u.apellido_paterno) as cliente,
+                    u.email_usuario, p.total,
+                    (SELECT SUM(dp.cantidad) FROM detalle_pedido dp WHERE dp.id_pedido = p.id_pedido) as total_items,
+                    p.estado_pedido, s.nombre_sucursal
+                FROM pedido p
+                JOIN usuario u ON p.id_usuario = u.id_usuario
+                LEFT JOIN sucursal s ON p.id_sucursal = s.id_sucursal
+                WHERE p.creado_en >= {fecha_inicio}
+                  AND p.creado_en < {fecha_fin}
+                  AND p.estado_pedido IN ('pagado', 'enviado', 'entregado')
+                  {filtro_sucursal_sql}
+                ORDER BY p.creado_en DESC;
+            """
+            cur.execute(sql, tuple(params))
+            data = cur.fetchall()
+
+        elif tipo_reporte == 'clientes':
+            headers = ["ID Usuario", "Nombre", "Apellido", "Email", "Telefono", "Region", "Comuna", "Fecha Registro"]
+            # El filtro de sucursal para clientes los filtra por *dónde compraron*
+            if sucursal_id_str and sucursal_id_str != 'all':
+                sql = f"""
+                    SELECT DISTINCT
+                        u.id_usuario, u.nombre_usuario, u.apellido_paterno, u.email_usuario,
+                        u.telefono, u.region, u.comuna, u.creado_en
+                    FROM usuario u
+                    JOIN pedido p ON u.id_usuario = p.id_usuario
+                    WHERE u.creado_en >= {fecha_inicio}
+                      AND u.creado_en < {fecha_fin}
+                      {filtro_sucursal_sql}
+                    ORDER BY u.creado_en DESC;
+                """
+                cur.execute(sql, tuple(params))
+            else:
+                # Si es 'all', solo trae todos los usuarios nuevos sin join
+                sql = f"""
+                    SELECT 
+                        id_usuario, nombre_usuario, apellido_paterno, email_usuario,
+                        telefono, region, comuna, creado_en
+                    FROM usuario
+                    WHERE creado_en >= {fecha_inicio}
+                      AND creado_en < {fecha_fin}
+                    ORDER BY creado_en DESC;
+                """
+                cur.execute(sql) # Sin params
+            
+            data = cur.fetchall()
+
+        return headers, data
+    
+    except Exception as e:
+        print(f"Error en get_report_data: {e}"); traceback.print_exc()
+        return [], []
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+        
+        # --- Función para obtener pedidos recientes ---
+def get_recent_orders_data(sucursal_id='all', limit=10):
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        query = """
+            SELECT
+                p.id_pedido,
+                u.id_usuario,
+                u.nombre_usuario,
+                u.apellido_paterno,
+                u.apellido_materno,
+                u.email_usuario,
+                u.telefono_usuario,
+                p.creado_en AS fecha_pedido,
+                p.estado_pedido,
+                p.total,
+                p.metodo_pago,
+                p.transaccion_id,
+                -- Datos de dirección para el detalle
+                du.calle,
+                du.numero_calle,
+                du.comuna,
+                du.ciudad,
+                du.region,
+                -- Productos en el pedido para preview (limitado a los primeros 3)
+                STRING_AGG(pr.nombre_producto, ', ' ORDER BY pip.id_producto_en_pedido) AS productos_preview
+            FROM
+                pedido p
+            JOIN
+                usuario u ON p.id_usuario = u.id_usuario
+            LEFT JOIN
+                direccion_usuario du ON u.id_usuario = du.id_usuario AND du.es_principal = TRUE
+            LEFT JOIN (
+                SELECT 
+                    pip.id_pedido, 
+                    pip.id_producto_en_pedido,
+                    pr.nombre_producto
+                FROM 
+                    producto_en_pedido pip
+                JOIN 
+                    producto pr ON pip.id_producto = pr.id_producto
+            ) pip ON p.id_pedido = pip.id_pedido
+        """
+        params = []
+        where_clauses = []
+
+        if sucursal_id and sucursal_id != 'all':
+            where_clauses.append("p.id_sucursal = %s")
+            params.append(int(sucursal_id))
+
+        if where_clauses:
+            query += " WHERE " + " AND ".join(where_clauses)
+
+        query += """
+            GROUP BY
+                p.id_pedido, u.id_usuario, u.nombre_usuario, u.apellido_paterno,
+                u.apellido_materno, u.email_usuario, u.telefono_usuario,
+                p.creado_en, p.estado_pedido, p.total, p.metodo_pago, p.transaccion_id,
+                du.calle, du.numero_calle, du.comuna, du.ciudad, du.region
+            ORDER BY
+                p.creado_en DESC
+            LIMIT %s;
+        """
+        params.append(int(limit))
+
+        cur.execute(query, tuple(params))
+        pedidos = cur.fetchall()
+        return pedidos
+
+    except Exception as e:
+        print(f"Error al obtener pedidos recientes: {e}")
+        traceback.print_exc()
+        return []
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+# --- Nuevo Endpoint para Pedidos Recientes ---
+@app.route('/api/admin/pedidos_recientes', methods=['GET'])
+@admin_required
+def get_pedidos_recientes_api():
+    try:
+        sucursal_id = request.args.get('sucursal_id', 'all')
+        limit = request.args.get('limit', 10) # Default a 10
+        pedidos = get_recent_orders_data(sucursal_id, limit)
+        
+        # Formatear datos para el frontend si es necesario
+        formatted_pedidos = []
+        for p in pedidos:
+            formatted_pedidos.append({
+                "id_pedido": p['id_pedido'],
+                "id_usuario": p['id_usuario'],
+                "nombre_usuario": p['nombre_usuario'],
+                "apellido_paterno": p['apellido_paterno'],
+                "apellido_materno": p['apellido_materno'],
+                "email_usuario": p['email_usuario'],
+                "telefono_usuario": p['telefono_usuario'],
+                "fecha_pedido": p['fecha_pedido'].isoformat() if p['fecha_pedido'] else None,
+                "estado_pedido": p['estado_pedido'],
+                "total": p['total'],
+                "metodo_pago": p['metodo_pago'],
+                "transaccion_id": p['transaccion_id'],
+                "calle": p['calle'],
+                "numero_calle": p['numero_calle'],
+                "comuna": p['comuna'],
+                "ciudad": p['ciudad'],
+                "region": p['region'],
+                "productos_preview": p['productos_preview']
+            })
+        
+        return jsonify(formatted_pedidos)
+
+    except Exception as e:
+        print(f"Error en /api/admin/pedidos_recientes: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/api/admin/reportes/generar_informe', methods=['GET'])
+@admin_required
+def generar_informe_csv():
+    """
+    Genera y devuelve un archivo CSV basado en los parámetros.
+    """
+    try:
+        # 1. Obtener parámetros
+        tipo_reporte = request.args.get('tipo_reporte')
+        mes = request.args.get('mes')
+        sucursal_id = request.args.get('sucursal_id')
+        
+        # Obtener datos de la sucursal (para el nombre del archivo)
+        sucursal_nombre = "Todas"
+        if sucursal_id and sucursal_id != 'all':
+            conn_s = None
+            cur_s = None
+            try:
+                conn_s = get_db_connection()
+                cur_s = conn_s.cursor(cursor_factory=psycopg2.extras.DictCursor)
+                cur_s.execute("SELECT nombre_sucursal FROM sucursal WHERE id_sucursal = %s", (int(sucursal_id),))
+                sucursal_row = cur_s.fetchone()
+                if sucursal_row:
+                    sucursal_nombre = sucursal_row['nombre_sucursal'].replace(' ', '_')
+            except Exception as e:
+                print(f"Error al buscar nombre de sucursal: {e}")
+            finally:
+                if cur_s: cur_s.close()
+                if conn_s: return_db_connection(conn_s)
+
+        # 2. Obtener los datos
+        headers, data = get_report_data(tipo_reporte, mes, sucursal_id)
+        
+        if not headers or not data:
+             # Devolver un error simple si no hay datos
+             return jsonify({"error": "No se encontraron datos para este informe."}), 404
+
+        # 3. Obtener datos del pie de página
+        # Obtener partes del nombre
+        nombre = session.get("nombre_usuario", "")
+        apellido_p = session.get("apellido_paterno", "")
+        apellido_m = session.get("apellido_materno", "")
+        
+        # Unir solo las partes que existen
+        partes_nombre = [nombre, apellido_p, apellido_m]
+        nombre_completo = " ".join(parte for parte in partes_nombre if parte)
+        
+        # Usar el nombre completo o el fallback
+        nombre_admin = nombre_completo if nombre_completo else "Usuario no identificado"
+        
+        fecha_generacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ip_usuario = request.remote_addr
+        
+        # 4. Crear el archivo CSV en memoria
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Escribir cabecera
+        writer.writerow(headers)
+        
+        # Escribir datos
+        for row in data:
+            writer.writerow(row)
+            
+        # Escribir pie de página
+        writer.writerow([])
+        writer.writerow(["---", "---", "---"])
+        writer.writerow(["Informe Generado por:", nombre_admin])
+        writer.writerow(["Fecha de Generacion:", fecha_generacion])
+        writer.writerow(["Ubicacion (IP):", ip_usuario])
+
+        # 5. Preparar la respuesta
+        
+        # --- Traducción para el nombre del archivo ---
+        if tipo_reporte == 'ventas':
+            tipo_es = "Ventas"
+        elif tipo_reporte == 'pedidos':
+            tipo_es = "Pedidos"
+        elif tipo_reporte == 'clientes':
+            tipo_es = "Clientes"
+        else:
+            tipo_es = "Reporte"
+
+        if mes == 'pasado':
+            mes_es = "Mes Pasado"
+        else:
+            mes_es = "Mes Actual"
+            
+        num_aleatorio = random.randint(1000, 9999)
+
+        filename = f"Reporte {tipo_es} {mes_es} número {num_aleatorio}.csv"
+        
+        response = make_response(output.getvalue())
+        
+        response.headers["Content-Disposition"] = f"attachment; filename=\"{filename}\""
+        response.headers["Content-type"] = "text/csv; charset=utf-8"
+        
+        # --- ¡ESTA ES LA LÍNEA DE CORRECCIÓN! ---
+        # Permite que el navegador (JS) lea la cabecera Content-Disposition
+        response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+
+        return response
+
+    except Exception as e:
+        print(f"Error en /api/admin/reportes/generar_informe: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+# --- ▲▲▲ FIN NUEVAS RUTAS DE INFORMES ▲▲▲ ---
 
 
 # ===========================
