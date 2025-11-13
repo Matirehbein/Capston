@@ -1,4 +1,23 @@
-/* ====== Cuenta: mini menú ====== */
+/************************************
+ *  VARIABLES COMPATIBLES CON TEMAS
+ ************************************/
+:root {
+  /* Estas variables se ENLAZAN directamente a tus temas del style.css */
+  --card-bg: var(--card);
+  --card-border: var(--border);
+  --card-shadow: var(--shadow-soft);
+  --card-shadow-hover: var(--shadow-hover);
+  --text: var(--text);
+  --muted: var(--muted);
+
+  --state-paid: #2563eb;      /* puedes personalizar por tema si quieres */
+  --state-sent: #0891b2;
+  --state-delivered: #059669;
+}
+
+/************************************
+ * MINI MENÚ DE CUENTA
+ ************************************/
 .account-wrap {
   position: relative;
   display: inline-block;
@@ -15,16 +34,18 @@
   right: 0;
   top: calc(100% + 8px);
   min-width: 190px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+  box-shadow: var(--card-shadow);
   padding: 6px;
   display: none;
   z-index: 50;
 }
 
-.account-menu.show { display: block; }
+.account-menu.show {
+  display: block;
+}
 
 .account-menu a,
 .account-menu button {
@@ -38,17 +59,21 @@
   font: inherit;
   cursor: pointer;
   text-decoration: none;
-  color: #111827;
+  color: var(--text);
 }
 
 .account-menu a:hover,
 .account-menu button:hover {
-  background: #f3f4f6;
+  background: rgba(0, 0, 0, 0.04);
 }
 
-.muted { color: #6b7280; }
+.muted {
+  color: var(--muted);
+}
 
-/* ====== Contenedor de pedidos ====== */
+/************************************
+ * CONTENEDOR DE PEDIDOS
+ ************************************/
 .orders-container {
   margin: 40px auto;
   max-width: 1000px;
@@ -61,20 +86,22 @@
   margin-bottom: 14px;
 }
 
-/* ====== TARJETAS DE PEDIDOS (Nuevo Diseño) ====== */
+/************************************
+ * TARJETAS DE PEDIDOS
+ ************************************/
 .order-card {
-  background: #fff;
-  border: 1px solid #e0e3eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
 .order-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--card-shadow-hover);
 }
 
 .order-header {
@@ -86,7 +113,7 @@
 }
 
 .order-header span {
-  color: #6b7280;
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
@@ -103,18 +130,16 @@
   text-transform: capitalize;
 }
 
-/* ====== COLORES POR ESTADO DEL PEDIDO ====== */
-.estado.pagado {
-  color: #2563eb; /* Azul */
-}
-.estado.enviado {
-  color: #0891b2; /* Celeste */
-}
-.estado.entregado {
-  color: #059669; /* Verde */
-}
+/************************************
+ * COLORES POR ESTADO
+ ************************************/
+.estado.pagado { color: var(--state-paid); }
+.estado.enviado { color: var(--state-sent); }
+.estado.entregado { color: var(--state-delivered); }
 
-/* ====== Imagen futura de productos si quieres agregarla ====== */
+/************************************
+ * ITEMS DENTRO DEL PEDIDO
+ ************************************/
 .order-item {
   display: flex;
   align-items: center;
@@ -127,29 +152,37 @@
   height: 50px;
   object-fit: cover;
   border-radius: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--card-border);
 }
 
-/* ====== Estado "sin pedidos" ====== */
+/************************************
+ * ESTADO VACÍO
+ ************************************/
 #ordersEmpty {
   text-align: center;
   padding: 20px;
-  color: #6b7280;
+  color: var(--muted);
 }
 
-/* ====== HERO - sólo estética ====== */
+/************************************
+ * HERO
+ ************************************/
 .hero {
   height: 300px;
   background-size: cover;
   background-position: center;
 }
 
-/* ====== ELIMINAR ESTILOS ANTIGUOS (para que no rompan) ====== */
+/************************************
+ * OLD STYLES RESET
+ ************************************/
 .orders-list { border: none !important; }
 .order-row { display: none !important; }
 .badge { display: none !important; }
 
-/* ====== RESPONSIVO ====== */
+/************************************
+ * MOBILE RESPONSIVE
+ ************************************/
 @media (max-width: 600px) {
   .order-card {
     padding: 14px;

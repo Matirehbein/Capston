@@ -67,110 +67,103 @@ function skeletonCard() {
  * Lee la categoría desde el HASH (#categoria=...) de la URL.
  */
 async function loadProducts() {
-  console.log("[productosclientes.js] Iniciando loadProducts..."); // DEBUG
+  console.log("[productosclientes.js] Iniciando loadProducts...");
   const grid = $("#store-products-grid");
-  const pageTitleElement = document.querySelector('.section-title h2'); // Título H2
+  const pageTitleElement = document.querySelector(".section-title h2");
+  if (!grid) return console.error("Error: #store-products-grid no encontrado.");
 
-  if (!grid) { console.error('Error: Contenedor #store-products-grid no encontrado.'); return; }
+  grid.innerHTML = Array(8).fill(0).map(skeletonCard).join("");
 
-  grid.innerHTML = Array(8).fill(0).map(skeletonCard).join(""); // Muestra esqueletos
-
-  // --- ▼▼▼ LEER CATEGORÍA DESDE EL HASH (#) ▼▼▼ ---
-  console.log("[productosclientes.js] URL Completa:", window.location.href); // DEBUG
-  console.log("[productosclientes.js] URL Hash:", window.location.hash); // DEBUG
-
+  // --- Detectar tipo de filtro ---
   let categoria = null;
-  const hash = window.location.hash; // Ej: #categoria=Abrigos
-
-  // Verifica si el hash existe y empieza con #categoria=
-  if (hash && hash.startsWith('#categoria=')) {
-      // Extrae el valor después de #categoria= y decodifica caracteres especiales (como espacios %20)
-      categoria = decodeURIComponent(hash.substring('#categoria='.length));
+  const hash = window.location.hash;
+  if (hash && hash.startsWith("#categoria=")) {
+    categoria = decodeURIComponent(hash.substring("#categoria=".length));
   }
-  console.log("[productosclientes.js] Categoría leída desde Hash:", categoria); // DEBUG
-  // --- ▲▲▲ FIN LEER HASH ▲▲▲ ---
 
-  // Actualiza el título H2 si se está filtrando por categoría
-  if (categoria && pageTitleElement) {
-    pageTitleElement.textContent = categoria.charAt(0).toUpperCase() + categoria.slice(1).toLowerCase();
+  // --- Leer colección (desde sessionStorage, usada en verano.html, etc.) ---
+  const coleccion = sessionStorage.getItem("coleccion_filtro") || null;
+  console.log("[productosclientes.js] Colección activa:", coleccion);
+
+  // --- Configurar título dinámico ---
+  if (coleccion && pageTitleElement) {
+    pageTitleElement.textContent = `Colección ${coleccion}`;
+  } else if (categoria && pageTitleElement) {
+    pageTitleElement.textContent =
+      categoria.charAt(0).toUpperCase() + categoria.slice(1).toLowerCase();
   } else if (pageTitleElement) {
-    pageTitleElement.textContent = "Nuestros Productos"; // Título por defecto
+    pageTitleElement.textContent = "Nuestros Productos";
   }
 
   try {
-    // --- CONSTRUIR URL DE LA API ---
-    // La API sigue esperando el parámetro con '?', no con '#'
+    // --- Construcción de URL según filtro activo ---
     let apiUrl = `${API_BASE}/api/productos_public`;
-    if (categoria) { // Solo si se encontró una categoría en el hash...
-      apiUrl += `?categoria=${encodeURIComponent(categoria)}`; // ...añádela como parámetro de consulta '?'
-    }
-    console.log("[productosclientes.js] URL API final:", apiUrl); // DEBUG
-    // --- FIN CONSTRUIR URL ---
 
-    // Llama a la API (con o sin filtro de categoría)
+    const params = new URLSearchParams();
+    if (coleccion) params.append("coleccion", coleccion);
+    else if (categoria) params.append("categoria", categoria);
+
+    if (params.toString()) apiUrl += `?${params.toString()}`;
+    console.log("[productosclientes.js] URL API final:", apiUrl);
+
+    // --- Petición a la API ---
     const res = await fetch(apiUrl, {
-      headers: { Accept: "application/json" }, credentials: "include"
+      headers: { Accept: "application/json" },
+      credentials: "include",
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
 
-    // Manejo de errores de la respuesta
-    if (!res.ok) {
-        let errorMsg = `HTTP ${res.status}`;
-        try { errorMsg += `: ${await res.text()}`; } catch(_) {} // Intenta obtener cuerpo del error
-        throw new Error(errorMsg);
-    }
-
-    const data = await res.json(); // Convierte la respuesta a JSON
-
-    // Comprueba si la respuesta es válida y tiene productos
+    const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
-      grid.innerHTML = `<div class="empty-state"><p>No hay productos disponibles${categoria ? ` en la categoría "${categoria}"` : ''}.</p></div>`;
-      return; // No hacer nada más si no hay productos
+      grid.innerHTML = `<div class="empty-state"><p>No hay productos disponibles ${
+        coleccion
+          ? `en la colección "${coleccion}".`
+          : categoria
+          ? `en la categoría "${categoria}".`
+          : "actualmente."
+      }</p></div>`;
+      return;
     }
 
-    // Si hay productos, genera el HTML y lo inserta en la grilla
     grid.innerHTML = data.map(productCard).join("");
 
-    // --- Listener de Clics (Delegación - SIN CAMBIOS) ---
+    // --- Listeners (igual que antes) ---
     grid.addEventListener("click", (e) => {
-      // 1. Clic para ver detalle (en el wrapper de imagen/título)
       const wrapper = e.target.closest(".producto-link-wrapper");
       if (wrapper) {
-        e.preventDefault(); // Evita comportamiento por defecto si fuera un <a>
+        e.preventDefault();
         const id = wrapper.dataset.id;
-        if (id) {
-            // Asegúrate que la navegación a detalle también use HASH si es necesario
-            window.location.href = `detalle_producto.html#id=${id}`;
-        }
-        return; // Detiene la ejecución aquí
+        if (id) window.location.href = `detalle_producto.html#id=${id}`;
+        return;
       }
 
-      // 2. Clic en el botón "Añadir al carrito"
       const btn = e.target.closest(".btn-add-cart");
       if (btn) {
         const id = Number(btn.dataset.id);
         const name = decodeURIComponent(btn.dataset.name || "");
-        const price = Number(btn.dataset.price || 0); // Precio (ya es el final con/sin oferta)
+        const price = Number(btn.dataset.price || 0);
         const image = btn.dataset.img || "../Public/imagenes/placeholder.jpg";
-        const sku = btn.dataset.sku || `prod-${id}`; // SKU base o fallback si no hay específico
-
-        // Crea el objeto a añadir (asume Talla Única desde la grilla general)
-        const itemToAdd = { id, name, price, image, sku, variation: { talla: 'Única' } };
-        addItem(itemToAdd, 1); // Llama a la función de cart.js para añadir (y mostrar modal)
-
-        // Feedback visual en el botón
-        const prev = btn.textContent; btn.textContent = "¡Añadido!"; btn.disabled = true;
-        setTimeout(() => { btn.textContent = prev; btn.disabled = false; }, 900);
-        return; // Detiene la ejecución aquí
+        const sku = btn.dataset.sku || `prod-${id}`;
+        addItem({ id, name, price, image, sku, variation: { talla: "Única" } }, 1);
+        const prev = btn.textContent;
+        btn.textContent = "¡Añadido!";
+        btn.disabled = true;
+        setTimeout(() => {
+          btn.textContent = prev;
+          btn.disabled = false;
+        }, 900);
       }
     });
-    // --- Fin Listener ---
 
   } catch (err) {
-    // Muestra un error si falla la carga de productos
-    console.error(`[productos${categoria ? `/${categoria}` : ''}] Error cargando productos:`, err);
+    console.error("[productosclientes.js] Error:", err);
     grid.innerHTML = `<div class="error-state"><p>Ups, no pudimos cargar los productos.</p><pre>${err.message}</pre></div>`;
+  } finally {
+    // 🔹 Limpia el filtro de colección al terminar, para no afectar otras páginas
+    sessionStorage.removeItem("coleccion_filtro");
   }
 }
+
 
 // Se ejecuta cuando el HTML de la página está listo
 document.addEventListener("DOMContentLoaded", () => {

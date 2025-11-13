@@ -5,6 +5,12 @@
 --color-texto: #2B2B2B; /* carbón suave */
 --color-secundario: #8A7E73; /* neutral cálido */
 
+--card-bg: var(--card);
+--card-border: var(--border);
+--card-shadow: var(--shadow-soft);
+--card-shadow-hover: var(--shadow-hover);
+--text-color: var(--text);
+--muted-color: var(--muted);
 
 /* Dorados */
 --color-primario: #C7A45B; /* dorado satinado */

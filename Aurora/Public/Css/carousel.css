@@ -1,0 +1,78 @@
+/* ===== CARRUSEL RESPONSIVE ===== */
+.colecciones-carousel {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.4s ease-in-out;
+}
+
+.coleccion-card {
+  min-width: 100%;
+  position: relative;
+}
+
+.banner-img {
+  width: 100%;
+  height: 50vh;              /* Ocupa la mitad de la pantalla */
+  max-height: 500px;         /* Altura máxima para pantallas grandes */
+  object-fit: cover;         /* Ajusta sin deformar */
+  object-position: center;   /* Centra la imagen */
+  display: block;
+}
+
+/* Overlay responsivo */
+.coleccion-overlay {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: 20px;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  color: white;
+}
+
+/* Botones del carrusel */
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.4);
+  border: none;
+  color: white;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 22px;
+  z-index: 10;
+  border-radius: 50%;
+}
+
+.carousel-btn:hover {
+  background: rgba(0,0,0,0.7);
+}
+
+.carousel-btn.prev {
+  left: 10px;
+}
+
+.carousel-btn.next {
+  right: 10px;
+}
+
+/* Responsivo para celulares */
+@media (max-width: 768px) {
+  .banner-img {
+    height: 35vh;   /* más pequeño en móviles */
+  }
+
+  .coleccion-overlay h3 {
+    font-size: 1.4rem;
+  }
+
+  .coleccion-overlay p {
+    font-size: 0.9rem;
+  }
+}

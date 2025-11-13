@@ -1954,54 +1954,111 @@ def api_detalle_producto(id_producto):
 def api_list_productos_public():
     q = (request.args.get("q") or "").strip()
     categoria = (request.args.get("categoria") or "").strip()
-    print(f"\n--- [API Productos Public Recibido] ---"); print(f"Parámetro 'q': '{q}'"); print(f"Parámetro 'categoria': '{categoria}'")
-    conn = None; cur = None
+    coleccion = (request.args.get("coleccion") or "").strip()   # 🔥 NUEVO
+
+    print("\n--- [API Productos Public Recibido] ---")
+    print(f"q: '{q}'")
+    print(f"categoria: '{categoria}'")
+    print(f"coleccion: '{coleccion}'")
+
+    conn = None
+    cur = None
+
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
         base_sql = """
             SELECT
                 p.id_producto, p.sku, p.nombre_producto, p.descripcion_producto,
                 p.categoria_producto, p.precio_producto, p.imagen_url,
-                (SELECT COALESCE(SUM(i_sub.stock), 0) FROM variacion_producto v_sub
+                p.coleccion_producto,   -- 🔥 IMPORTANTE
+                (SELECT COALESCE(SUM(i_sub.stock), 0)
+                 FROM variacion_producto v_sub
                  JOIN inventario_sucursal i_sub ON i_sub.id_variacion = v_sub.id_variacion
-                 WHERE v_sub.id_producto = p.id_producto) as stock,
-                o.descuento_pct, o.fecha_fin
+                 WHERE v_sub.id_producto = p.id_producto) AS stock,
+                o.descuento_pct,
+                o.fecha_fin
             FROM producto p
             LEFT JOIN oferta_producto op ON p.id_producto = op.id_producto
             LEFT JOIN oferta o ON op.id_oferta = o.id_oferta
-                 AND CURRENT_DATE BETWEEN o.fecha_inicio AND o.fecha_fin AND o.vigente_bool = TRUE
+                 AND CURRENT_DATE BETWEEN o.fecha_inicio AND o.fecha_fin
+                 AND o.vigente_bool = TRUE
         """
-        where_clauses, params = [], []
-        if q: where_clauses.append("(p.sku ILIKE %s OR p.nombre_producto ILIKE %s)"); params.extend([f"%{q}%", f"%{q}%"])
-        if categoria: where_clauses.append("TRIM(LOWER(p.categoria_producto)) = LOWER(%s)"); params.append(categoria); print(f"Aplicando filtro EXACTO (lower/trim) por categoría: {categoria}")
-        if where_clauses: base_sql += " WHERE " + " AND ".join(where_clauses)
+
+        where_clauses = []
+        params = []
+
+        # --- Filtro por búsqueda ---
+        if q:
+            where_clauses.append("(p.sku ILIKE %s OR p.nombre_producto ILIKE %s)")
+            params.extend([f"%{q}%", f"%{q}%"])
+
+        # --- Filtro por categoría ---
+        if categoria:
+            where_clauses.append("TRIM(LOWER(p.categoria_producto)) = LOWER(%s)")
+            params.append(categoria)
+            print(f"→ Filtro aplicado: categoria = {categoria}")
+
+        # --- 🔥 NUEVO — filtro por colección ---
+        if coleccion:
+            where_clauses.append("TRIM(LOWER(p.coleccion_producto)) = LOWER(%s)")
+            params.append(coleccion)
+            print(f"→ Filtro aplicado: coleccion = {coleccion}")
+
+        # Combinar WHERE si corresponde
+        if where_clauses:
+            base_sql += " WHERE " + " AND ".join(where_clauses)
+
         base_sql += " ORDER BY p.id_producto;"
-        print("Query SQL final a ejecutar:\n", cur.mogrify(base_sql, tuple(params)).decode('utf-8', 'ignore'))
+
+        print("SQL FINAL:")
+        print(cur.mogrify(base_sql, tuple(params)).decode("utf-8"))
+
         cur.execute(base_sql, tuple(params))
         rows = cur.fetchall()
-        print(f"Productos encontrados: {len(rows)}"); print("------------------------------------\n")
-        data, processed_ids = [], set()
+
+        print(f"Productos encontrados: {len(rows)}")
+        print("------------------------------------\n")
+
+        data = []
+        processed = set()
+
+        # --- Procesador de ofertas ---
         for r in rows:
-            product_id = r['id_producto']
-            if product_id in processed_ids: continue
-            producto_dict = dict(r); precio_original = float(producto_dict.get('precio_producto', 0)); descuento = producto_dict.get('descuento_pct')
+            pid = r["id_producto"]
+            if pid in processed:
+                continue
+
+            producto = dict(r)
+            precio_original = float(producto["precio_producto"])
+            descuento = producto.get("descuento_pct")
+
             if descuento is not None:
                 try:
-                    descuento_float = float(descuento)
-                    precio_con_descuento = precio_original * (1 - descuento_float / 100.0)
-                    producto_dict['precio_oferta'] = round(precio_con_descuento)
-                    producto_dict['descuento_pct'] = descuento_float
-                except (ValueError, TypeError): producto_dict['precio_oferta'] = None; producto_dict['descuento_pct'] = None
-            else: producto_dict['precio_oferta'] = None; producto_dict['descuento_pct'] = None
-            data.append(producto_dict); processed_ids.add(product_id)
+                    d = float(descuento)
+                    producto["precio_oferta"] = round(precio_original * (1 - d / 100))
+                    producto["descuento_pct"] = d
+                except:
+                    producto["precio_oferta"] = None
+            else:
+                producto["precio_oferta"] = None
+
+            data.append(producto)
+            processed.add(pid)
+
         return jsonify(data), 200
+
     except Exception as e:
-        print(f"❌ Error en /api/productos_public: {e}"); traceback.print_exc()
+        print("❌ Error en /api/productos_public:", e)
+        traceback.print_exc()
         return jsonify({"error": "Error al cargar productos"}), 500
+
     finally:
-        if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
+        if cur:
+            cur.close()
+        if conn:
+            return_db_connection(conn)
 
 @app.route("/api/ofertas_public", methods=["GET"])
 def api_list_ofertas_public():

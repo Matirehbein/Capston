@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Aurora | Colección Verano</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../Public/Css/style.css" />
+</head>
+<body>
+  <!-- HEADER -->
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <a href="/src/main.html" class="logo">AURORA</a>
+
+        <ul class="nav-links">
+          <li><a href="/src/colecciones.html">Colecciones</a></li>
+          <li class="nav-item-with-megamenu">
+            <a href="/src/productos.html">Productos</a>
+            <div class="mega-menu">
+              <div class="mega-menu-content container">
+                <h4>Categorías</h4>
+                <ul class="mega-menu-list">
+                  <li><a href="/src/productos.html#categoria=Abrigos">Abrigos</a></li>
+                  <li><a href="/src/productos.html#categoria=Accesorios">Accesorios</a></li>
+                  <li><a href="/src/productos.html#categoria=Calzado">Calzado</a></li>
+                  <li><a href="/src/productos.html#categoria=Chaquetas">Chaquetas</a></li>
+                  <li><a href="/src/productos.html#categoria=Joyas">Joyas</a></li>
+                  <li><a href="/src/productos.html#categoria=Pantalones">Pantalones</a></li>
+                  <li><a href="/src/productos.html#categoria=Poleras">Poleras</a></li>
+                  <li><a href="/src/productos.html#categoria=Traje de baño">Traje de baño</a></li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          <li><a href="/src/ofertas.html">Ofertas</a></li>
+        </ul>
+
+        <div class="header-actions">
+          <div class="branch-selector">
+            <button id="branch-display-btn" class="branch-display-button" type="button">📍 Buscando...</button>
+            <div id="branch-list-dropdown" class="branch-dropdown-menu" style="display:none;">
+              <div class="dropdown-loading">Cargando sucursales...</div>
+            </div>
+          </div>
+
+          <a href="/src/carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+          <a href="/src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
+          <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
+          <a href="/src/perfil.html" id="perfil-menu-btn" class="icon-btn" style="display:none;" aria-label="Mi perfil">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </a>
+          <button id="logout-btn" class="icon-btn icon-logout" aria-label="Logout" style="display:none;background:none;border:none;cursor:pointer;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+          <span id="admin-menu-btn" style="display:none;">
+            <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light">Panel Admin</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero" style="background-image:url('../Public/imagenes/BannerVerano.jpeg'); background-size:cover; background-position:center; height:300px; display:flex; align-items:center; justify-content:center; color:white; text-shadow:0 2px 6px rgba(0,0,0,.6);">
+    <h1>Colección Verano</h1>
+  </section>
+
+  <!-- PRODUCTOS -->
+  <main>
+    <section class="container">
+      <div class="section-title">
+        <h2>Productos de Verano</h2>
+        <p>Descubre nuestras prendas ligeras, frescas y llenas de color, diseñadas para disfrutar los días soleados con estilo y comodidad.</p>
+      </div>
+
+      <section id="store-products-grid" class="productos-grid"></section>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <nav class="footer-top">
+        <ul class="footer-menu">
+          <li><a href="../src/sobre_nosotros.html">Sobre Nosotros</a></li>
+          <li><a href="../src/envios.html">Envíos</a></li>
+          <li><a href="../src/cambios_devoluciones.html">Cambios y Devoluciones</a></li>
+          <li><a href="../src/contacto.html">Contacto</a></li>
+          <li><a href="../src/sucursales.html">Sucursales</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="container">
+      <div class="footer-bottom">
+        <p>© 2025, Aurora-Chile · Moda y Belleza</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JS -->
+  <script type="module" src="../Public/js/productosclientes.js?v=10.1"></script>
+  <script type="module" src="../Public/js/colores.js"></script>
+  <script type="module" src="../Public/Js/geolocation.js"></script>
+  <script type="module" src="/Public/Js/navigation.js"></script> 
+
+  <script>
+  (async function checkUserSessionAndSetupUI() {
+    const adminBtnSpan = document.getElementById("admin-menu-btn");
+    const perfilBtnSpan = document.getElementById("perfil-menu-btn");
+    const welcomeMsg = document.getElementById("welcome-msg");
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+  
+    if (adminBtnSpan) adminBtnSpan.style.display = "none";
+    if (perfilBtnSpan) perfilBtnSpan.style.display = "none";
+    if (welcomeMsg) welcomeMsg.style.display = "none";
+    if (loginBtn) loginBtn.style.display = "inline-block";
+    if (logoutBtn) logoutBtn.style.display = "none";
+  
+    try {
+      const res = await fetch("http://localhost:5000/api/session_info", { method: "GET", credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.logged_in) {
+        if (welcomeMsg) {
+          welcomeMsg.textContent = `Hola, ${data.nombre || ''} ${data.apellido_paterno || ''}`.trim();
+          welcomeMsg.style.display = "inline";
+        }
+        if (loginBtn) loginBtn.style.display = "none";
+        if (logoutBtn) logoutBtn.style.display = "inline-block";
+        if (perfilBtnSpan) perfilBtnSpan.style.display = "inline";
+        if (adminBtnSpan && (data.rol === "admin" || data.rol === "soporte")) adminBtnSpan.style.display = "inline";
+      }
+    } catch (err) {
+      console.error("Error verificando sesión:", err);
+    }
+  
+    if (logoutBtn && !logoutBtn.dataset.listenerAttached) {
+      logoutBtn.addEventListener("click", () => {
+        window.location.href = "http://localhost:5000/logout";
+      });
+      logoutBtn.dataset.listenerAttached = "true";
+    }
+  })();
+  </script>
+
+  <script>
+  // ✅ Mostrar solo productos de la colección Verano
+  document.addEventListener("DOMContentLoaded", () => {
+    sessionStorage.setItem("coleccion_filtro", "verano");
+  });
+  </script>
+
+</body>
+</html>
