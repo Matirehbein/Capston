@@ -345,7 +345,7 @@ async function handleMercadoPagoCheckout(btn) {
   // --- PASO 2: Iniciar Pago en Mercado Pago ---
   btn.textContent = "Redirigiendo...";
   
-  const mpUrl = $("#cart-container")?.dataset?.mercadopago || "http://localhost:3010/mercadopago/create_preference";
+  const mpUrl = "http://localhost:3010/api/mercadopago/create";
   
   const itemsForMp = getCart().map((p) => ({
       id: p.sku,
