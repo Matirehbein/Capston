@@ -233,6 +233,7 @@ def crud_productos():
     filtro_categoria = request.args.get('filtro_categoria', '')
     filtro_nombre = request.args.get('filtro_nombre', '')
     filtro_sucursal = request.args.get('filtro_sucursal', '')
+    filtro_coleccion = request.args.get('filtro_coleccion', '') # <-- NUEVO
     q = request.args.get('q', '')
     conn = None; cur = None
     try:
@@ -243,41 +244,73 @@ def crud_productos():
         if filtro_sucursal:
             join_clause = "LEFT JOIN variacion_producto v ON v.id_producto = p.id_producto LEFT JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion AND i.id_sucursal = %s"
             params.append(filtro_sucursal)
+        
+        # --- CONSULTA BASE MODIFICADA ---
         base_query = f"""
             SELECT p.id_producto, p.sku, p.nombre_producto, p.precio_producto, 
             p.descripcion_producto, p.categoria_producto, p.imagen_url, 
+            p.coleccion_producto, -- <-- NUEVO
             COALESCE(SUM(i.stock), 0) as stock
             FROM producto p {join_clause}
         """
+        
         where_clauses = []
         if filtro_categoria: where_clauses.append("p.categoria_producto = %s"); params.append(filtro_categoria)
         if filtro_nombre: where_clauses.append("p.nombre_producto = %s"); params.append(filtro_nombre)
+        if filtro_coleccion: where_clauses.append("p.coleccion_producto = %s"); params.append(filtro_coleccion) # <-- NUEVO
         if filtro_sucursal: where_clauses.append("p.id_producto IN (SELECT v.id_producto FROM inventario_sucursal i JOIN variacion_producto v ON i.id_variacion = v.id_variacion WHERE i.id_sucursal = %s AND i.stock > 0)"); params.append(filtro_sucursal)
         if q: where_clauses.append("(p.id_producto::text ILIKE %s OR p.sku ILIKE %s)"); params.extend([f"%{q}%", f"%{q}%"])
+        
         final_query = base_query
         if where_clauses: final_query += " WHERE " + " AND ".join(where_clauses)
-        final_query += " GROUP BY p.id_producto ORDER BY p.id_producto;"
+        
+        # --- GROUP BY MODIFICADO ---
+        final_query += " GROUP BY p.id_producto, p.coleccion_producto ORDER BY p.id_producto;" # <-- NUEVO
+        
         cur.execute(final_query, tuple(params))
         productos = cur.fetchall()
+        
         cur.execute("SELECT DISTINCT categoria_producto FROM producto WHERE categoria_producto IS NOT NULL ORDER BY categoria_producto;")
         categorias = [row['categoria_producto'] for row in cur.fetchall()]
+        
+        # --- OBTENER COLECCIONES PARA FILTRO ---
+        cur.execute("SELECT DISTINCT coleccion_producto FROM producto WHERE coleccion_producto IS NOT NULL ORDER BY coleccion_producto;") # <-- NUEVO
+        colecciones = [row['coleccion_producto'] for row in cur.fetchall()] # <-- NUEVO
+        
         nombres_productos_query = "SELECT DISTINCT nombre_producto FROM producto"
         nombres_params = []
         if filtro_categoria: nombres_productos_query += " WHERE categoria_producto = %s"; nombres_params.append(filtro_categoria)
         nombres_productos_query += " ORDER BY nombre_producto;"
         cur.execute(nombres_productos_query, nombres_params)
         nombres_productos = [row['nombre_producto'] for row in cur.fetchall()]
+        
         cur.execute("SELECT * FROM sucursal ORDER BY id_sucursal;")
         sucursales = cur.fetchall()
-        filtros_activos = { 'categoria': filtro_categoria, 'nombre': filtro_nombre, 'sucursal': filtro_sucursal, 'q': q }
-        return render_template("productos/crud_productos.html", productos=productos, sucursales=sucursales, categorias=categorias, nombres_productos=nombres_productos, filtros_activos=filtros_activos)
+        
+        # --- FILTROS ACTIVOS MODIFICADOS ---
+        filtros_activos = { 
+            'categoria': filtro_categoria, 
+            'nombre': filtro_nombre, 
+            'sucursal': filtro_sucursal, 
+            'q': q,
+            'coleccion': filtro_coleccion # <-- NUEVO
+        }
+        
+        # --- RENDER TEMPLATE MODIFICADO ---
+        return render_template("productos/crud_productos.html", 
+                               productos=productos, 
+                               sucursales=sucursales, 
+                               categorias=categorias, 
+                               colecciones=colecciones, # <-- NUEVO
+                               nombres_productos=nombres_productos, 
+                               filtros_activos=filtros_activos)
     except Exception as e:
         print(f"Error en crud_productos: {e}"); traceback.print_exc()
         flash("Error al cargar productos", "danger")
         return redirect(url_for("index_options"))
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
+        if conn: return_db_connection(conn)
 
 @app.route("/api/productos/nombres_por_categoria")
 @login_required
@@ -331,7 +364,7 @@ def api_productos_por_color():
         if conn: return_db_connection(conn) # <-- CAMBIO
 
 @app.route("/add", methods=["POST"])
-@login_required # Añadido decorador
+@login_required
 def add_producto():
     conn = None; cur = None
     try:
@@ -339,6 +372,8 @@ def add_producto():
         nombre = request.form["nombre"]; precio = request.form["precio"]
         color = request.form.get("color"); descripcion = request.form.get("descripcion")
         categoria = request.form.get("categoria"); imagen_url = request.form.get("imagen_url")
+        coleccion = request.form.get("coleccion") # <-- NUEVO
+
         if not color: flash("❌ Error: Debes seleccionar un color.", "danger"); return redirect(url_for("crud_productos"))
         
         conn = get_db_connection()
@@ -347,10 +382,13 @@ def add_producto():
         if cur.fetchone():
             flash(f"❌ Error: El SKU '{sku}' ya está registrado.", "danger")
             return redirect(url_for("crud_productos"))
+        
+        # --- INSERT MODIFICADO ---
         cur.execute("""
-            INSERT INTO producto (sku, nombre_producto, precio_producto, descripcion_producto, categoria_producto, imagen_url)
-            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_producto;
-        """, (sku, nombre, precio, descripcion, categoria, imagen_url))
+            INSERT INTO producto (sku, nombre_producto, precio_producto, descripcion_producto, categoria_producto, imagen_url, coleccion_producto)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id_producto;
+        """, (sku, nombre, precio, descripcion, categoria, imagen_url, coleccion)) # <-- AÑADIDO
+        
         id_producto_nuevo = cur.fetchone()[0]
         sku_variacion_base = f"{sku}-{color[:3].upper()}"
         cur.execute("INSERT INTO variacion_producto (id_producto, color, sku_variacion) VALUES (%s, %s, %s);", (id_producto_nuevo, color, sku_variacion_base))
@@ -361,27 +399,33 @@ def add_producto():
         flash(f"❌ Ocurrió un error al agregar el producto: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
+        if conn: return_db_connection(conn)
     return redirect(url_for("crud_productos"))
 
 @app.route("/edit/<int:id>", methods=["POST"])
-@login_required # Añadido decorador
+@login_required
 def edit_producto(id):
     conn = None; cur = None
     try:
         sku = request.form["sku"]; nombre = request.form["nombre"]; precio = request.form["precio"]
         descripcion = request.form.get("descripcion"); categoria = request.form.get("categoria"); imagen_url = request.form.get("imagen_url")
+        coleccion = request.form.get("coleccion") # <-- NUEVO
+        
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT id_producto FROM producto WHERE sku = %s AND id_producto != %s", (sku, id))
         if cur.fetchone():
             flash(f"❌ Error: El SKU '{sku}' ya está registrado.", "danger")
             return redirect(url_for("crud_productos"))
+        
+        # --- UPDATE MODIFICADO ---
         cur.execute("""
             UPDATE producto SET sku = %s, nombre_producto = %s, precio_producto = %s,
-            descripcion_producto = %s, categoria_producto = %s, imagen_url = %s
+            descripcion_producto = %s, categoria_producto = %s, imagen_url = %s,
+            coleccion_producto = %s
             WHERE id_producto = %s
-        """, (sku, nombre, precio, descripcion, categoria, imagen_url, id))
+        """, (sku, nombre, precio, descripcion, categoria, imagen_url, coleccion, id)) # <-- AÑADIDO
+        
         conn.commit()
         flash("✅ Producto actualizado", "success")
     except Exception as e:
@@ -389,7 +433,7 @@ def edit_producto(id):
         flash(f"Error al editar producto: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
+        if conn: return_db_connection(conn)
     return redirect(url_for("crud_productos"))
 
 @app.route("/edit_stock/<int:id>", methods=["POST"])

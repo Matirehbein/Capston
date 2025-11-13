@@ -54,11 +54,11 @@
     <div class="card mb-4">
         <div class="card-body">
             <form action="{{ url_for('crud_productos') }}" method="GET" class="row g-3 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="q" class="form-label">ID o SKU</label>
                     <input type="text" name="q" id="q" class="form-control" placeholder="Buscar..." value="{{ filtros_activos.q }}">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="filtro_categoria" class="form-label">Categoría</label>
                     <select name="filtro_categoria" id="filtro_categoria" class="form-select">
                         <option value="">Todas</option>
@@ -85,12 +85,21 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <label for="filtro_coleccion" class="form-label">Colección</label>
+                    <select name="filtro_coleccion" id="filtro_coleccion" class="form-select">
+                        <option value="">Todas</option>
+                        {% for col in colecciones %}
+                            <option value="{{ col }}" {{ 'selected' if col == filtros_activos.coleccion }}>{{ col|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="col-md-2 d-flex">
                     <button type="submit" class="btn btn-primary me-2">Filtrar</button>
                     <a href="{{ url_for('crud_productos') }}" class="btn btn-warning">Limpiar</a>
                 </div>
             </form>
-        </div>
+            </div>
     </div>
     
     <div class="marco-piel mb-5">
@@ -107,11 +116,11 @@
                 <label for="nombre" class="form-label">Nombre del Producto</label>
                 <input type="text" class="form-control" id="nombre" name="nombre" placeholder="Ej: Polera Básica" required>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="precio" class="form-label">Precio</label>
                 <input type="number" step="1" class="form-control" id="precio" name="precio" placeholder="Ej: 10000" required>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="categoria_producto" class="form-label">Categoría</label>
                 <select name="categoria" id="categoria_producto" class="form-select" required>
                     <option value="" selected disabled>Selecciona una categoría...</option>
@@ -129,7 +138,7 @@
                     <option value="Traje de baño">Traje de baño</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="color_producto" class="form-label">Color</label>
                 <select name="color" id="color_producto" class="form-select" required>
                     <option value="" selected disabled>Selecciona un color...</option>
@@ -146,6 +155,16 @@
                     <option value="Café">Café</option>
                 </select>
             </div>
+            <div class="col-md-3">
+                <label for="coleccion" class="form-label">Colección</label>
+                <select name="coleccion" id="coleccion" class="form-select">
+                    <option value="" selected>Ninguna</option>
+                    <option value="invierno">Invierno</option>
+                    <option value="otoño">Otoño</option>
+                    <option value="primavera">Primavera</option>
+                    <option value="verano">Verano</option>
+                </select>
+            </div>
             <div class="col-md-12">
                 <label for="descripcion" class="form-label">Descripción</label>
                 <textarea class="form-control" id="descripcion" name="descripcion" placeholder="Descripción del producto"></textarea>
@@ -158,7 +177,7 @@
                 <button type="submit" class="btn btn-success w-100">Agregar Producto</button>
             </div>
         </form>
-    </div>
+        </div>
 
     <div class="marco-piel mb-5">
         <h2>Listado de Productos</h2>
@@ -171,7 +190,7 @@
                     <th>Precio</th>
                     <th>Descripción</th>
                     <th>Categoría</th>
-                    <th>Imagen</th>
+                    <th>Colección</th> <th>Imagen</th>
                     <th>Stock</th>
                     <th>Acciones</th>
                 </tr>
@@ -185,7 +204,7 @@
                     <td>${{ "%.2f"|format(p.precio_producto) }}</td>
                     <td>{{ p.descripcion_producto or "-" }}</td>
                     <td>{{ p.categoria_producto or "-" }}</td>
-                    <td>
+                    <td>{{ p.coleccion_producto or "-" }}</td> <td>
                         {% if p.imagen_url %}
                             <img src="{{ p.imagen_url }}" alt="Imagen producto" style="width:60px; height:auto;">
                         {% else %}
@@ -232,6 +251,17 @@
                             <label class="form-label">Categoría</label>
                             <input type="text" class="form-control" name="categoria" value="{{ p.categoria_producto }}">
                           </div>
+                          
+                          <div class="mb-2">
+                            <label class="form-label">Colección</label>
+                            <select name="coleccion" class="form-select">
+                                <option value="" {{ 'selected' if not p.coleccion_producto }}>Ninguna</option>
+                                <option value="invierno" {{ 'selected' if p.coleccion_producto == 'invierno' }}>Invierno</option>
+                                <option value="otoño" {{ 'selected' if p.coleccion_producto == 'otoño' }}>Otoño</option>
+                                <option value="primavera" {{ 'selected' if p.coleccion_producto == 'primavera' }}>Primavera</option>
+                                <option value="verano" {{ 'selected' if p.coleccion_producto == 'verano' }}>Verano</option>
+                            </select>
+                          </div>
                           <div class="mb-2">
                             <label class="form-label">URL de la imagen</label>
                             <input type="text" class="form-control" name="imagen_url" value="{{ p.imagen_url }}" placeholder="URL de la imagen">
@@ -239,7 +269,6 @@
                         </div>
                         <div class="modal-footer">
                           <a href="{{ url_for('gestionar_imagenes', id_producto=p.id_producto) }}" class="btn btn-success me-auto">Gestionar Imágenes</a>
-                          
                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                           <button type="submit" class="btn btn-primary">Guardar</button>
                         </div>
@@ -275,7 +304,7 @@
                 {% endfor %}
             </tbody>
         </table>
-    </div>
+        </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
