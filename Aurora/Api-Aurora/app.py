@@ -466,22 +466,68 @@ def edit_stock(id):
         if conn: return_db_connection(conn) # <-- USA POOL
     return redirect(url_for("crud_productos"))
 
+
+
 @app.route("/delete/<int:id>", methods=["POST"])
-@login_required # Añadido decorador
+@login_required 
 def delete_producto(id):
     conn = None; cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # --- NUEVA LÓGICA DE BORRADO EN CASCADA MANUAL ---
+        
+        # 1. Obtener todas las variaciones de este producto
+        cur.execute("SELECT id_variacion FROM variacion_producto WHERE id_producto = %s", (id,))
+        variaciones = cur.fetchall()
+        
+        if variaciones:
+            # 'variaciones' es una lista de tuplas, ej: [(28,), (29,)]
+            # Necesitamos una lista simple de IDs: [28, 29]
+            variacion_ids = [v[0] for v in variaciones]
+            
+            # 2. Desvincular 'detalle_pedido' (anular la FK)
+            # ¡Esto asume que id_variacion EN detalle_pedido PUEDE SER NULL!
+            # Si esto falla, debes alterar tu tabla: ALTER TABLE detalle_pedido ALTER COLUMN id_variacion DROP NOT NULL;
+            cur.execute("UPDATE detalle_pedido SET id_variacion = NULL WHERE id_variacion = ANY(%s)", (variacion_ids,))
+            
+            # 3. Eliminar de 'inventario_sucursal'
+            cur.execute("DELETE FROM inventario_sucursal WHERE id_variacion = ANY(%s)", (variacion_ids,))
+        
+        # 4. Eliminar de 'producto_imagenes' (si tienes esta tabla)
+        cur.execute("DELETE FROM producto_imagenes WHERE id_producto = %s", (id,))
+        
+        # 5. Eliminar de 'oferta_producto'
+        cur.execute("DELETE FROM oferta_producto WHERE id_producto = %s", (id,))
+
+        # 6. Eliminar de 'variacion_producto'
+        cur.execute("DELETE FROM variacion_producto WHERE id_producto = %s", (id,))
+        
+        # 7. Finalmente, eliminar el producto principal
         cur.execute("DELETE FROM producto WHERE id_producto = %s", (id,))
+        
+        # --- FIN NUEVA LÓGICA ---
+        
         conn.commit()
-        flash(" ❌ Producto eliminado", "danger")
+        # Cambiamos el mensaje a éxito
+        flash(" ❌ Producto eliminado y todas sus dependencias han sido limpiadas.", "success") 
+    
+    except psycopg2.Error as e:
+        if conn: conn.rollback()
+        # Proporcionar un error más detallado
+        print(f"Error de base de datos al eliminar: {e}")
+        traceback.print_exc()
+        flash(f"Error al eliminar producto: {e.pgerror}", "danger")
     except Exception as e:
         if conn: conn.rollback()
+        print(f"Error genérico al eliminar: {e}")
+        traceback.print_exc()
         flash(f"Error al eliminar producto: {e}", "danger")
     finally:
         if cur: cur.close()
-        if conn: return_db_connection(conn) # <-- USA POOL
+        if conn: return_db_connection(conn)
+    
     return redirect(url_for("crud_productos"))
 
 @app.route("/ver_stock/<int:id_producto>")
