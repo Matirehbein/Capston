@@ -33,13 +33,6 @@
   <header class="admin-topbar">
     <button class="sidebar-toggle" id="sidebarToggle">☰</button>
 
-    <div class="topbar-title-group">
-      <h1>Clientes</h1>
-      <!-- mismo selector de sucursal que usas en reportes -->
-      <select id="admin-sucursal-selector" name="sucursal">
-        <option value="all" selected>Todas las sucursales</option>
-      </select>
-    </div>
 
     <div class="admin-actions">
       <input class="admin-search" type="search" id="clientes-search"
@@ -51,7 +44,7 @@
   <!-- Tabla de clientes -->
   <section class="admin-section">
     <h2>Clientes </h2>
-
+    
     <div class="table-wrap" style="margin-top: 10px;">
       <table class="admin-table">
         <thead id="clientes-page-thead"></thead>
@@ -64,6 +57,43 @@
     </div>
   </section>
 </main>
+<!-- Modal detalle cliente -->
+<div class="modal-overlay" id="clientes-detail-modal">
+  <div class="modal-content" style="max-width: 1000px; height: 90vh;">
+    <div class="modal-header">
+      <h2>Historial de: <span id="detalle-cliente-nombre-modal">...</span></h2>
+      <button class="modal-close" id="clientes-detail-close-btn">&times;</button>
+    </div>
+    <div class="modal-body" style="overflow-y: auto;">
+      <div class="pedido-detail-section">
+        <h4>Datos del Cliente</h4>
+        <p><strong>Nombre:</strong> <span id="detalle-cliente-nombre-2">...</span></p>
+        <p><strong>Email:</strong> <span id="detalle-cliente-email-2">...</span></p>
+        <p><strong>Dirección:</strong> <span id="detalle-cliente-direccion-2">...</span></p>
+      </div>
+      <div class="pedido-detail-section">
+        <h4>Historial de Pedidos (<span id="detalle-cliente-total-pedidos">0</span>)</h4>
+        <div class="table-wrap" style="max-height: 400px; overflow-y: auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID Pedido</th>
+                <th>Fecha</th>
+                <th>Sucursal</th>
+                <th>Productos (preview)</th>
+                <th>Total</th>
+                
+              </tr>
+            </thead>
+            <tbody id="cliente-pedidos-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
 
 
