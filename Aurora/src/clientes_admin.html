@@ -6,97 +6,74 @@
   <title>Aurora | Clientes</title>
   <link rel="stylesheet" href="../Public/Css/style.css" />
 </head>
+
 <body>
   <div class="admin-layout">
-    <!-- Sidebar -->
+    <!-- Sidebar (no lo toco) -->
     <aside class="admin-sidebar" id="adminSidebar">
-      <div class="brand"><span class="brand-dot"></span><span>AURORA</span></div>
-      <nav class="menu">
-        <a class="menu-link" href="./main_menu.html">
-          <span>Panel</span>
-        </a>
-        <a class="menu-link" href="./pedidos.html">
-          <span>Pedidos</span>
-        </a>
-        <a class="menu-link" href="../src/Productos_admin.html">
-          <span>Productos</span>
-        </a>
-        <a class="menu-link active" href="./clientes_admin.html">
-          <span>Clientes</span>
-        </a>
-        <a class="menu-link" href="../src/reportes_admin.html">
-          <span>Reportes</span>
-        </a>
-        <div class="menu-sep"></div>
-        <a class="menu-link" href="./config_admin.html">
-          <span>Configuración</span>
-        </a>
-        <a class="menu-link" href="/src/login.html">
-          <span>Salir</span>
-        </a>
-        <!-- Boton para ir al CRUD -->
-         <a class="menu-link" href="http://localhost:5000/">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
-             10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
-          <span>CRUD</span>
-        </a>
+      <div class="brand">
+        <span class="brand-dot"></span><span>AURORA</span>
+      </div>
 
-        <a class="menu-link icon-reportes" href="../src/main.html">
-          <span>Volver al Inicio</span>
-        </a>
-        
+      <nav class="menu">
+        <a class="menu-link" href="./main_menu.html">Panel</a>
+        <a class="menu-link" href="./pedidos.html">Pedidos</a>
+        <a class="menu-link" href="../src/Productos_admin.html">Productos</a>
+        <a class="menu-link active" href="./clientes_admin.html">Clientes</a>
+        <a class="menu-link" href="../src/reportes_admin.html">Reportes</a>
+        <div class="menu-sep"></div>
+        <a class="menu-link" href="./config_admin.html">Configuración</a>
+        <a class="menu-link" href="/src/login.html">Salir</a>
+        <a class="menu-link" href="http://localhost:5000/">CRUD</a>
+        <a class="menu-link icon-reportes" href="../src/main.html">Volver al Inicio</a>
       </nav>
     </aside>
 
-    <!-- Main -->
-    <main class="admin-main">
-      <header class="admin-topbar">
-        <button class="sidebar-toggle" id="sidebarToggle">☰</button>
-        <h1>Clientes</h1>
-        <div class="admin-actions">
-          <input class="admin-search" type="search" id="searchClient" placeholder="Buscar por nombre, email…" />
-          <div class="admin-user"><span class="user-dot"></span><span>Admin</span></div>
-        </div>
-      </header>
+  <main class="admin-main">
+  <header class="admin-topbar">
+    <button class="sidebar-toggle" id="sidebarToggle">☰</button>
 
-      <div class="filter-row">
-        <button class="pill active" data-seg="todos">Todos</button>
-        <button class="pill" data-seg="nuevo">Nuevos</button>
-        </div>
-    <div class="muted" style="font-size:.9rem">Total: <span id="countClients">0</span></div>
+    <div class="topbar-title-group">
+      <h1>Clientes</h1>
+      <!-- mismo selector de sucursal que usas en reportes -->
+      <select id="admin-sucursal-selector" name="sucursal">
+        <option value="all" selected>Todas las sucursales</option>
+      </select>
+    </div>
+
+    <div class="admin-actions">
+      <input class="admin-search" type="search" id="clientes-search"
+             placeholder="Buscar por nombre o email…" />
+      <div class="admin-user"><span class="user-dot"></span><span>Admin</span></div>
+    </div>
+  </header>
+
+  <!-- Tabla de clientes -->
+  <section class="admin-section">
+    <h2>Clientes </h2>
+
+    <div class="table-wrap" style="margin-top: 10px;">
+      <table class="admin-table">
+        <thead id="clientes-page-thead"></thead>
+        <tbody id="clientes-page-tbody">
+          <tr>
+            <td colspan="3" class="no-data">Cargando clientes...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
 
 
-      <!-- Grid de tarjetas -->
-      <section id="clientsGrid" class="clients-grid"></section>
 
-      <!-- Modal perfil -->
-      <div class="modal" id="clientModal">
-        <div class="modal-card">
-          <div class="modal-head">
-            <h3 id="mName">—</h3>
-            <button class="close-x" id="closeClient">×</button>
-          </div>
-          <div class="modal-body">
-            <div class="client-detail">
-              <div class="avatar-xl" id="mAvatar">A</div>
-              <div class="client-fields">
-                <div><span class="muted">Email</span><p id="mEmail">—</p></div>
-                <div><span class="muted">Teléfono</span><p id="mPhone">—</p></div>
-                <div><span class="muted">Segmento</span><p id="mSegment">—</p></div>
-                <div><span class="muted">Última compra</span><p id="mLast">—</p></div>
-                <div><span class="muted">Total gastado</span><p id="mSpent">—</p></div>
-                <div><span class="muted">Pedidos</span><p id="mOrders">—</p></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-    </main>
-  </div>
 
-  <script type="module" src="../Public/js/clientes.js"></script>
-  <script type="module" src="../Public/js/colores.js"></script>
+  <script type="module" src="../Public/js/clientes_panel.js"></script>
+    <script type="module" src="../Public/js/colores.js"></script>
   <script type="module" src="../Public/js/geolocation.js"></script>
+
+  
 </body>
 </html>
+
