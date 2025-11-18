@@ -3419,6 +3419,199 @@ def generar_informe_csv():
 # --- ▲▲▲ FIN NUEVAS RUTAS DE INFORMES ▲▲▲ ---
 
 
+# ===============================================
+# --- RUTAS PARA DASHBOARD (main_menu.html) ---
+# ===============================================
+
+@app.route('/api/admin/dashboard/kpi_ventas_hoy', methods=['GET'])
+@admin_required
+def get_dashboard_kpi_ventas_hoy():
+    """
+    Calcula las ventas totales de HOY (sysdate) y las compara con AYER.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # --- 1. Ventas de HOY (Aprobadas) ---
+        cur.execute("""
+            SELECT COALESCE(SUM(monto), 0) as total
+            FROM pago
+            WHERE estado_pago = 'aprobado'
+            AND fecha_pago >= date_trunc('day', CURRENT_DATE)
+            AND fecha_pago < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day';
+        """)
+        ventas_hoy = cur.fetchone()['total']
+
+        # --- 2. Ventas de AYER (Aprobadas) ---
+        cur.execute("""
+            SELECT COALESCE(SUM(monto), 0) as total
+            FROM pago
+            WHERE estado_pago = 'aprobado'
+            AND fecha_pago >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
+            AND fecha_pago < date_trunc('day', CURRENT_DATE);
+        """)
+        ventas_ayer = cur.fetchone()['total']
+
+        # --- 3. Calcular Porcentaje de Cambio ---
+        porcentaje_vs_ayer = 0
+        if ventas_ayer > 0:
+            porcentaje_vs_ayer = ((ventas_hoy - ventas_ayer) / ventas_ayer) * 100
+        elif ventas_hoy > 0:
+            porcentaje_vs_ayer = 100 # Si ayer fue 0 y hoy no, 100% de aumento
+
+        return jsonify({
+            "ventas_hoy": float(ventas_hoy),
+            "ventas_ayer": float(ventas_ayer),
+            "porcentaje_vs_ayer": round(porcentaje_vs_ayer, 2)
+        })
+
+    except Exception as e:
+        print(f"Error en /api/admin/dashboard/kpi_ventas_hoy: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+@app.route('/api/admin/dashboard/chart_ventas', methods=['GET'])
+@admin_required
+def get_dashboard_chart_ventas():
+    """
+    Obtiene los datos de ventas para el gráfico de comparación.
+    Acepta ?periodo=ayer|semana|mes
+    """
+    periodo = request.args.get('periodo', 'ayer')
+    conn = None
+    cur = None
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # --- 1. Ventas de HOY (Base) ---
+        cur.execute("""
+            SELECT COALESCE(SUM(monto), 0) as total
+            FROM pago
+            WHERE estado_pago = 'aprobado'
+            AND fecha_pago >= date_trunc('day', CURRENT_DATE)
+            AND fecha_pago < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day';
+        """)
+        ventas_hoy = float(cur.fetchone()['total'])
+
+        labels = ["Hoy"]
+        data = [ventas_hoy]
+
+        # --- 2. Ventas del Periodo de Comparación ---
+        if periodo == 'ayer':
+            cur.execute("""
+                SELECT COALESCE(SUM(monto), 0) as total
+                FROM pago
+                WHERE estado_pago = 'aprobado'
+                AND fecha_pago >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
+                AND fecha_pago < date_trunc('day', CURRENT_DATE);
+            """)
+            ventas_comparacion = float(cur.fetchone()['total'])
+            labels.append("Ayer")
+            data.append(ventas_comparacion)
+
+        elif periodo == 'semana':
+            # Nota: date_trunc('week', ...) considera que la semana empieza el Lunes
+            cur.execute("""
+                SELECT COALESCE(SUM(monto), 0) as total
+                FROM pago
+                WHERE estado_pago = 'aprobado'
+                AND fecha_pago >= date_trunc('week', CURRENT_DATE) -- Lunes de esta semana
+                AND fecha_pago < date_trunc('day', CURRENT_DATE); -- Hasta ayer
+            """)
+            ventas_comparacion = float(cur.fetchone()['total'])
+            labels.append("Semana (acum.)")
+            data.append(ventas_comparacion)
+            
+        elif periodo == 'mes':
+            cur.execute("""
+                SELECT COALESCE(SUM(monto), 0) as total
+                FROM pago
+                WHERE estado_pago = 'aprobado'
+                AND fecha_pago >= date_trunc('month', CURRENT_DATE) -- Día 1 de este mes
+                AND fecha_pago < date_trunc('day', CURRENT_DATE); -- Hasta ayer
+            """)
+            ventas_comparacion = float(cur.fetchone()['total'])
+            labels.append("Mes (acum.)")
+            data.append(ventas_comparacion)
+        
+        else: # Default es 'ayer'
+            cur.execute("""
+                SELECT COALESCE(SUM(monto), 0) as total
+                FROM pago
+                WHERE estado_pago = 'aprobado'
+                AND fecha_pago >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
+                AND fecha_pago < date_trunc('day', CURRENT_DATE);
+            """)
+            ventas_comparacion = float(cur.fetchone()['total'])
+            labels.append("Ayer")
+            data.append(ventas_comparacion)
+
+        return jsonify({"labels": labels, "data": data})
+
+    except Exception as e:
+        print(f"Error en /api/admin/dashboard/chart_ventas: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+@app.route('/api/admin/dashboard/lista_ventas_hoy', methods=['GET'])
+@admin_required
+def get_dashboard_lista_ventas_hoy():
+    """
+    Obtiene la lista de pedidos (ventas) aprobados de HOY para el modal.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # Obtenemos pedidos pagados HOY
+        cur.execute("""
+            SELECT 
+                p.id_pedido,
+                p.creado_en,
+                CONCAT_WS(' ', u.nombre_usuario, u.apellido_paterno) as cliente_nombre,
+                (
+                    SELECT STRING_AGG(pr.nombre_producto, ', ')
+                    FROM detalle_pedido dp
+                    LEFT JOIN variacion_producto v ON dp.sku_producto = v.sku_variacion
+                    LEFT JOIN producto pr ON v.id_producto = pr.id_producto
+                    WHERE dp.id_pedido = p.id_pedido
+                    LIMIT 3
+                ) as productos_preview
+            FROM pedido p
+            JOIN usuario u ON p.id_usuario = u.id_usuario
+            JOIN pago pa ON p.id_pedido = pa.id_pedido
+            WHERE pa.estado_pago = 'aprobado'
+            AND pa.fecha_pago >= date_trunc('day', CURRENT_DATE)
+            AND pa.fecha_pago < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day'
+            GROUP BY p.id_pedido, u.nombre_usuario, u.apellido_paterno
+            ORDER BY p.creado_en DESC;
+        """)
+        
+        ventas = cur.fetchall()
+        return jsonify([dict(row) for row in ventas])
+
+    except Exception as e:
+        print(f"Error en /api/admin/dashboard/lista_ventas_hoy: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+
 # ===========================
 # Ruta de ver los pedidos
 # ===========================

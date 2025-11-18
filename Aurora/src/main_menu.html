@@ -1,126 +1,450 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aurora | Admin</title>
-  <link rel="stylesheet" href="/Public/Css/style.css"/>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Aurora | Admin</title>
+    <link rel="stylesheet" href="/Public/Css/style.css"/>
+    <!-- Chart.js para el gráfico -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- --- ▼▼▼ ESTILOS PARA EL PANEL ▼▼▼ --- -->
+    <style>
+        .admin-main {
+            width: 100%;
+        }
+        /* Estilos para Tarjetas KPI */
+        .kpi-card {
+            background-color: var(--card-bg, #fff);
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .kpi-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-color-muted, #555);
+            margin-bottom: 8px;
+        }
+        .kpi-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text-color, #111);
+            margin-bottom: 5px;
+            line-height: 1.1;
+        }
+        .kpi-sub {
+            font-size: 0.9rem;
+            color: var(--text-color-muted, #777);
+        }
+        .kpi-trend { font-weight: 600; }
+        .kpi-trend.positive { color: #198754; }
+        .kpi-trend.negative { color: #dc3545; }
+        .kpi-trend.neutral { color: #6c757d; }
+
+        /* Tarjeta de ventas cliqueable */
+        #kpi-ventas-hoy-card {
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #kpi-ventas-hoy-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        /* Estilos para Modales (Overlay) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 1040; /* Nivel base para modales */
+        }
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content-wrapper {
+            background-color: var(--card-bg, #fff);
+            color: var(--text-color, #333);
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 900px;
+            height: 90vh;
+            max-height: 700px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.visible .modal-content-wrapper {
+            transform: scale(1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color, #eee);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.5rem; }
+        .modal-close {
+            font-size: 2rem; font-weight: 300; line-height: 1;
+            background: none; border: none; color: var(--text-color, #333);
+            cursor: pointer; opacity: 0.7;
+        }
+        .modal-close:hover { opacity: 1; }
+        .modal-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        
+        /* Z-Indexes para apilar */
+        #sales-chart-modal { z-index: 1050; }
+        #pedidos-detail-modal { z-index: 1060; } /* El modal de detalle va encima */
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+        
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .list-header h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        /* Estilos para la tabla y foto */
+        .table-wrap { overflow-y: auto; }
+        .admin-table { 
+            width: 100%; 
+            border-collapse: collapse;
+        }
+        .admin-table th, .admin-table td {
+            padding: 0.75rem;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color, #eee);
+        }
+        .admin-table th {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-color-muted, #555);
+            text-align: left;
+        }
+        .admin-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        [data-theme="noir"] .admin-table th {
+             color: var(--text-color-muted, #aaa);
+        }
+
+        .item-foto {
+            width: 45px;
+            height: 45px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--border-color, #eee);
+        }
+        [data-theme="noir"] .item-foto {
+            border-color: #444;
+        }
+
+        .sale-detail-link {
+            color: var(--primary-color, #0d6efd);
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .sale-detail-link:hover { text-decoration: underline; }
+        
+        /* Grid de detalle en Modal 2 */
+        .pedido-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .pedido-detail-section h4 {
+            font-size: 1.1rem;
+            color: var(--primary-color, #0d6efd);
+            border-bottom: 1px solid var(--border-color, #eee);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .pedido-detail-section p { margin: 0.5rem 0; font-size: 0.9rem; }
+        .pedido-detail-section p strong {
+            display: inline-block;
+            min-width: 100px;
+            color: var(--text-color-muted, #6c757d);
+        }
+
+        /* Estilos para select y form-control (Bootstrap-like) */
+        .form-select {
+            display: block;
+            width: 100%;
+            padding: .375rem 2.25rem .375rem .75rem;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--text-color, #212529);
+            background-color: var(--card-bg, #fff);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right .75rem center;
+            background-size: 16px 12px;
+            border: 1px solid var(--border-color, #ced4da);
+            border-radius: .375rem;
+            appearance: none;
+        }
+        [data-theme="noir"] .form-select {
+            color: var(--text-color, #f1f1f1);
+            background-color: var(--sidebar-bg, #3a3a3f);
+            border-color: #555;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f1f1f1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+        }
+
+    </style>
+    <!-- --- ▲▲▲ FIN ESTILOS ▲▲▲ --- -->
+
 </head>
 <body>
 
-  <!-- Layout Admin -->
-  <div class="admin-layout">
+    <div class="admin-layout">
 
-    <!-- Sidebar -->
-    <aside class="admin-sidebar" id="adminSidebar">
-      <div class="brand">
-        <span class="brand-dot"></span>
-        <span>AURORA</span>
-      </div>
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="brand">
+                <span class="brand-dot"></span>
+                <span>AURORA</span>
+            </div>
 
-      <nav class="menu">
-        <a class="menu-link icon-dashboard active" href="#">
-          <span>Panel</span>
-        </a>
-        <a class="menu-link icon-pedidos" href="../src/pedidos.html">
-          <span>Pedidos</span>
-        </a>
-        <a class="menu-link icon-productos" href="../src/Productos_admin.html">
-          <span>Productos</span>
-        </a>
-        <a class="menu-link icon-clientes" href="../src/clientes_admin.html">
-          <span>Clientes</span>
-        </a>
-        <a class="menu-link icon-reportes" href="../src/reportes_admin.html">
-          <span>Reportes</span>
-        </a>
-        <div class="menu-sep"></div>
-        <a class="menu-link icon-config" href="./config_admin.html">
-          <span>Configuración</span>
-        </a>
-        <a class="menu-link icon-salir" href="/src/login.html">
-          <span>Salir</span>
-        </a>
-        <a class="menu-link icon-reportes" href="../src/main.html">
-          <span>Volver al Inicio</span>
-        </a>
-        <!-- Boton para ir al CRUD -->
-         <a class="menu-link" href="http://localhost:5000/">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
-             10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
-          <span>CRUD</span>
-        </a>
-      </nav>
-    </aside>
+            <nav class="menu">
+                <a class="menu-link icon-dashboard active" href="#">
+                    <span>Panel</span>
+                </a>
+                <a class="menu-link icon-pedidos" href="../src/pedidos.html">
+                    <span>Pedidos</span>
+                </a>
+                <a class="menu-link icon-productos" href="{{ url_for('crud_productos') }}">
+                    <span>Productos</span>
+                </a>
+                <a class="menu-link icon-clientes" href="../src/clientes_admin.html">
+                    <span>Clientes</span>
+                </a>
+                <a class="menu-link icon-reportes" href="{{ url_for('reportes_admin') }}">
+                    <span>Reportes</span>
+                </a>
+                <div class="menu-sep"></div>
+                <a class="menu-link icon-config" href="./config_admin.html">
+                    <span>Configuración</span>
+                </a>
+                <a class="menu-link icon-salir" href="/src/login.html">
+                    <span>Salir</span>
+                </a>
+                <a class="menu-link icon-reportes" href="../src/main.html">
+                    <span>Volver al Inicio</span>
+                </a>
+                <a class="menu-link" href="http://localhost:5000/">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
+                    10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
+                    <span>CRUD</span>
+                </a>
+            </nav>
+        </aside>
 
-    <!-- Contenido principal -->
-    <main class="admin-main">
-      <header class="admin-topbar">
-        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir/cerrar menú">☰</button>
-        <h1>Panel de administración</h1>
-        <div class="admin-actions">
-          <input class="admin-search" type="search" placeholder="Buscar…" />
-          <div class="admin-user">
-            <span class="user-dot"></span>
-            <span>Admin</span>
-          </div>
+        <main class="admin-main">
+            <header class="admin-topbar">
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir/cerrar menú">☰</button>
+                <h1>Panel de administración</h1>
+                <div class="admin-actions">
+                    <input class="admin-search" type="search" placeholder="Buscar…" />
+                    <div class="admin-user">
+                        <span class="user-dot"></span>
+                        <span>Admin</span>
+                    </div>
+                </div>
+            </header>
+
+            <section class="kpi-grid">
+                <!-- --- ▼▼▼ TARJETA "VENTAS HOY" (MODIFICADA CON IDs) ▼▼▼ --- -->
+                <div class="kpi-card" id="kpi-ventas-hoy-card" title="Ver detalle de ventas">
+                    <h3>Ventas hoy</h3>
+                    <p class="kpi-number">
+                        <span id="kpi-ventas-hoy-monto">—</span>
+                    </p>
+                    <span class="kpi-trend neutral" id="kpi-ventas-hoy-trend">—</span>
+                </div>
+                <!-- --- ▲▲▲ FIN TARJETA ▲▲▲ --- -->
+
+                <div class="kpi-card" id="kpi-pedidos-pendientes-card">
+                    <h3>Pedidos pendientes</h3>
+                    <p class="kpi-number"><span id="kpi-pendientes">—</span></p>
+                    <span class="kpi-trend" id="kpi-pendientes-sub">—</span>
+                </div>
+
+                <div class="kpi-card" id="kpi-bajo-stock-card">
+                    <h3>Productos con bajo stock</h3>
+                    <p class="kpi-number"><span id="kpi-bajostock">—</span></p>
+                    <span class="kpi-trend warn" id="kpi-bajostock-note">—</span>
+                </div>
+
+                <div class="kpi-card" id="kpi-nuevos-clientes-card">
+                    <h3>Nuevos clientes</h3>
+                    <p class="kpi-number"><span id="kpi-clientes">—</span></p>
+                    <span class="kpi-trend up" id="kpi-clientes-trend">—</span>
+                </div>
+            </section>
+
+            <section class="quick-grid">
+                <a href="./pedidos.html" class="quick-card">
+                    <h4>Gestionar pedidos</h4>
+                    <p>Aprueba, prepara y despacha.</p>
+                </a>
+                <a href="{{ url_for('crud_productos') }}" class="quick-card">
+                    <h4>Nuevo producto</h4>
+                    <p>Crea y publica en un paso.</p>
+                </a>
+                <a href="{{ url_for('reportes_admin') }}" class="quick-card">
+                    <h4>Ver reportes</h4>
+                    <p>Ventas, clientes y márgenes.</p>
+                </a>
+                <a href="./config_admin.html" class="quick-card">
+                    <h4>Configuración</h4>
+                    <p>Pagos, envíos y branding.</p>
+                </a>
+            </section>
+        </main>
+    </div>
+
+    <!-- --- ▼▼▼ MODAL 1: GRÁFICO Y LISTA DE VENTAS DE HOY (NUEVO) ▼▼▼ --- -->
+    <div class="modal-overlay" id="sales-chart-modal">
+        <div class="modal-content-wrapper">
+            <div class="modal-header">
+                <h2>Detalle de Ventas de Hoy</h2>
+                <button class="modal-close" id="sales-chart-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Gráfico -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Comparativa de Ventas</h4>
+                    <div style="width: 200px;">
+                        <select class="form-select" id="sales-comparison-filter">
+                            <option value="ayer" selected>Hoy vs. Ayer</option>
+                            <option value="semana">Hoy vs. Semana Actual (acum.)</option>
+                            <option value="mes">Hoy vs. Mes Actual (acum.)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="salesChartCanvas"></canvas>
+                </div>
+                
+                <!-- Lista de Ventas de Hoy -->
+                <div class="list-header">
+                    <h4>Ventas de Hoy</h4>
+                </div>
+                <div class="table-wrap" style="max-height: 250px; overflow-y: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID Venta</th>
+                                <th>Cliente</th>
+                                <th>Detalle (Preview)</th>
+                                <th>Hora</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-list-tbody">
+                            <!-- Contenido se carga por JS -->
+                            <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-      </header>
+    </div>
+    <!-- --- ▲▲▲ FIN MODAL 1 ▲▲▲ --- -->
 
-      <!-- KPIs -->
-      <section class="kpi-grid">
-        <div class="kpi-card">
-          <h3>Ventas hoy</h3>
-          <p class="kpi-number">
-            <span id="kpi-ventas">—</span>
-          </p>
-          <span class="kpi-trend up" id="kpi-ventas-trend">—</span>
+    <!-- --- ▼▼▼ MODAL 2: DETALLE DE PEDIDO (Reutilizado de Reportes) ▼▼▼ --- -->
+    <div class="modal-overlay" id="pedidos-detail-modal">
+        <div class="modal-content-wrapper" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>Detalle del Pedido: #<span id="detalle-pedido-id">...</span></h2>
+                <button class="modal-close" id="pedidos-detail-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto;">
+                <div class="pedido-detail-grid">
+                    <div class="pedido-detail-section">
+                        <h4>Datos del Cliente</h4>
+                        <p><strong>Nombre:</strong> <span id="detalle-cliente-nombre">...</span></p>
+                        <p><strong>Email:</strong> <span id="detalle-cliente-email">...</span></p>
+                        <p><strong>Teléfono:</strong> <span id="detalle-cliente-telefono">...</span></p>
+                        <p><strong>Dirección:</strong> <span id="detalle-cliente-direccion">...</span></p>
+                        <p><strong>Comuna:</strong> <span id="detalle-cliente-comuna">...</span></p>
+                        <p><strong>Ciudad:</strong> <span id="detalle-cliente-ciudad">...</span></p>
+                        <p><strong>Región:</strong> <span id="detalle-cliente-region">...</span></p>
+                    </div>
+                    <div class="pedido-detail-section">
+                        <h4>Datos del Pedido</h4>
+                        <p><strong>ID Pedido:</strong> <span id="detalle-pedido-id-2">...</span></p>
+                        <p><strong>Sucursal:</strong> <span id="detalle-pedido-sucursal">...</span></p>
+                        <p><strong>Fecha:</strong> <span id="detalle-pedido-fecha">...</span></p>
+                        <p><strong>Total Pagado:</strong> <span id="detalle-pedido-total">...</span></p>
+                        <p><strong>Método Pago:</strong> <span id="detalle-pedido-metodo">...</span></p>
+                        <p><strong>Estado Pago:</strong> <span id="detalle-pedido-estado-pago">...</span></p>
+                        <p><strong>Estado Pedido:</strong> <span id="detalle-pedido-estado-pedido">...</span></p>
+                    </div>
+                </div>
+                <div class="pedido-detail-section">
+                    <h4>Items Comprados</h4>
+                    <div class="table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Foto</th> 
+                                    <th>Producto</th>
+                                    <th>SKU</th>
+                                    <th>Talla</th>
+                                    <th>Color</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio Unit.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detalle-items-tbody">
+                                <!-- Items se cargan por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
+    <!-- --- ▲▲▲ FIN MODAL 2 ▲▲▲ --- -->
 
-        <div class="kpi-card">
-          <h3>Pedidos pendientes</h3>
-          <p class="kpi-number"><span id="kpi-pendientes">—</span></p>
-          <span class="kpi-trend" id="kpi-pendientes-sub">—</span>
-        </div>
-
-        <div class="kpi-card">
-          <h3>Productos con bajo stock</h3>
-          <p class="kpi-number"><span id="kpi-bajostock">—</span></p>
-          <span class="kpi-trend warn" id="kpi-bajostock-note">—</span>
-        </div>
-
-        <div class="kpi-card">
-          <h3>Nuevos clientes</h3>
-          <p class="kpi-number"><span id="kpi-clientes">—</span></p>
-          <span class="kpi-trend up" id="kpi-clientes-trend">—</span>
-        </div>
-      </section>
-
-      <!-- Acciones rápidas -->
-      <section class="quick-grid">
-        <a href="./pedidos.html" class="quick-card">
-          <h4>Gestionar pedidos</h4>
-          <p>Aprueba, prepara y despacha.</p>
-        </a>
-        <a href="./productos.html" class="quick-card">
-          <h4>Nuevo producto</h4>
-          <p>Crea y publica en un paso.</p>
-        </a>
-        <a href="./reportes.html" class="quick-card">
-          <h4>Ver reportes</h4>
-          <p>Ventas, clientes y márgenes.</p>
-        </a>
-        <a href="./config.html" class="quick-card">
-          <h4>Configuración</h4>
-          <p>Pagos, envíos y branding.</p>
-        </a>
-      </section>
-
-    </main>
-  </div>
-
-  <script type="module" src="../Public/js/dashboard.js"></script>
-  <script type="module" src="../Public/js/colores.js"></script>
-  
+    <!-- El script de colores maneja la lógica del sidebar -->
+    <script type="module" src="../Public/js/colores.js"></script> 
+    <!-- Este es el JS nuevo para esta página -->
+    <script type="module" src="../Public/js/dashboard.js?v=1.0"></script>
 </body>
 </html>
