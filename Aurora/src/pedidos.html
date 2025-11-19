@@ -77,26 +77,25 @@
       <div class="admin-subtop">
        <div class="filter-row">
           <button class="pill active" data-status="todos">Todos</button>
-          <button class="pill" data-status="pendiente">Pendiente pago</button>
           <button class="pill" data-status="preparando">Preparando</button>
           <button class="pill" data-status="despachado">Despachado</button>
+          <button class="pill" data-status="entregado">Entregado</button>
           <button class="pill" data-status="cancelado">Cancelado</button>
         </div>
 
-        <button id="newOrderBtn" class="btn-sm">+ Nuevo pedido</button>
       </div>
 
       <!-- Acciones masivas -->
       <div class="bulk-row">
         <select id="bulkStatus" class="status-select">
           <option value="">Cambiar estado…</option>
-          <option value="pendiente">Pendiente pago</option>
           <option value="preparando">Preparando</option>
           <option value="despachado">Despachado</option>
+          <option value="Entregado">Entregado</option>
           <option value="cancelado">Cancelado</option>
+
         </select>
         <button id="applyBulk" class="btn-sm">Aplicar</button>
-        <button id="deleteBulk" class="btn-sm alt">Eliminar</button>
       </div>
 
       <!-- Tabla -->
@@ -140,48 +139,6 @@
         </div>
       </div>
 
-      <!-- Modal nuevo pedido -->
-      <div class="modal" id="newOrderModal">
-        <div class="modal-card">
-          <div class="modal-head">
-            <h3>Nuevo pedido</h3>
-            <button class="close-x" id="closeNewOrder">×</button>
-          </div>
-          <div class="modal-body">
-            <form id="newOrderForm" class="detail-grid">
-              <div>
-                <label class="muted">Cliente</label>
-                <input id="fCliente" type="text" required />
-              </div>
-              <div>
-                <label class="muted">Fecha</label>
-                <input id="fFecha" type="date" required />
-              </div>
-              <div>
-                <label class="muted">Estado</label>
-                <select id="fEstado" required>
-                  <option value="pendiente">Pendiente pago</option>
-                  <option value="preparando" selected>Preparando</option>
-                  <option value="despachado">Despachado</option>
-                  <option value="cancelado">Cancelado</option>
-                </select>
-              </div>
-              <div>
-                <label class="muted">Total (CLP)</label>
-                <input id="fTotal" type="number" min="0" required />
-              </div>
-              <div style="grid-column:1/-1">
-                <label class="muted">Items (1 por línea)</label>
-                <textarea id="fItems" rows="3"></textarea>
-              </div>
-              <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;">
-                <button type="button" id="cancelNewOrder" class="btn-sm alt">Cancelar</button>
-                <button type="submit" class="btn-sm">Guardar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
 
     </main>
   </div>

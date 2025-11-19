@@ -2044,6 +2044,134 @@ a.branch-option.active {
     /* Ajusta 'brightness' si 'invert(1)' los deja grises */
 }
 
+/* Celda de cliente con avatar */
+.cliente-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.05);
+  color: #555;
+}
+
+[data-theme="noir"] .avatar-sm {
+  background: #2f2f33;
+  color: #f5f5f5;
+}
+
+.cliente-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.cliente-nombre {
+  font-weight: 600;
+}
+
+.cliente-email {
+  font-size: 0.8rem;
+  color: var(--text-color-muted, #6c757d);
+}
+
+/* Hover en filas */
+.admin-table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="noir"] .admin-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .2s ease, visibility .2s ease;
+  z-index: 1000;
+}
+
+.modal-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-content {
+  background: var(--card-bg, #fff);
+  color: var(--text-color, #333);
+  border-radius: 10px;
+  padding: 1.5rem 2rem;
+  max-width: 900px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color, #eee);
+  padding-bottom: .75rem;
+  margin-bottom: 1rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  opacity: .7;
+}
+
+.modal-close:hover {
+  opacity: 1;
+}
+
+.clientes-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+}
+
+.clientes-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clientes-toolbar-right select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #ddd);
+  background-color: var(--card-bg, #fff);
+  color: var(--text-color, #333);
+  font-size: 0.85rem;
+}
+
+[data-theme="noir"] .clientes-toolbar-right select {
+  background-color: var(--sidebar-bg, #3a3a3f);
+  color: var(--text-color, #f1f1f1);
+  border-color: #555;
+}
 
 /* === FIN: Corrección de Contraste === */
 
