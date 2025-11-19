@@ -20,7 +20,7 @@ from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
 import smtplib
 from email.utils import make_msgid
-
+import traceback
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey" # ¡Mantén esto seguro y secreto!
@@ -3678,6 +3678,92 @@ def api_mis_pedidos():
     conn.close()
 
     return jsonify(resultado), 200
+
+# Implementacion producto en admin_producto
+@app.route("/api/admin/productos/<int:id_producto>/detalle", methods=["GET"])
+def admin_detalle_producto(id_producto):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # ----------------------------------------------------------------
+        # 1. PRODUCTO GENERAL
+        # ----------------------------------------------------------------
+        cur.execute("""
+            SELECT 
+                p.id_producto,
+                p.sku,
+                p.nombre_producto,
+                p.descripcion_producto,
+                p.categoria_producto,
+                p.precio_producto,
+                p.imagen_url
+            FROM producto p
+            WHERE p.id_producto = %s
+        """, (id_producto,))
+        
+        prod = cur.fetchone()
+        if not prod:
+            return jsonify({"error": "Producto no encontrado"}), 404
+        
+        producto_dict = dict(prod)
+
+        # ----------------------------------------------------------------
+        # 2. VARIACIONES
+        # ----------------------------------------------------------------
+        cur.execute("""
+            SELECT 
+                id_variacion,
+                talla,
+                color,
+                sku_variacion
+            FROM variacion_producto
+            WHERE id_producto = %s
+            ORDER BY talla, color
+        """, (id_producto,))
+        
+        variaciones = [dict(row) for row in cur.fetchall()]
+
+        # ----------------------------------------------------------------
+        # 3. STOCK POR SUCURSAL
+        # ----------------------------------------------------------------
+        cur.execute("""
+            SELECT 
+                s.nombre_sucursal,
+                v.talla,
+                i.stock
+            FROM variacion_producto v
+            JOIN inventario_sucursal i ON i.id_variacion = v.id_variacion
+            JOIN sucursal s ON s.id_sucursal = i.id_sucursal
+            WHERE v.id_producto = %s
+            ORDER BY s.nombre_sucursal, v.talla
+        """, (id_producto,))
+
+        stock_sucursales = []
+        for row in cur.fetchall():
+            stock_sucursales.append({
+                "sucursal": row["nombre_sucursal"],
+                "talla": row["talla"],
+                "stock": row["stock"]
+            })
+
+        # ----------------------------------------------------------------
+        # RESPUESTA FINAL SIN VENTAS
+        # ----------------------------------------------------------------
+        return jsonify({
+            "producto": producto_dict,
+            "variaciones": variaciones,
+            "stock_sucursales": stock_sucursales
+        })
+
+    except Exception as e:
+        print("❌ Error en admin_detalle_producto:", e)
+        traceback.print_exc()
+        return jsonify({"error": "Error al obtener detalle del producto"}), 500
+
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
 
 # ===========================
 # RUN (SIN CAMBIOS)

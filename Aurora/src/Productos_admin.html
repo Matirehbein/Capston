@@ -3,62 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aurora | Productos</title>
+  <title>Aurora | Admin Productos</title>
+
   <link rel="stylesheet" href="../Public/Css/style.css" />
+  <link rel="stylesheet" href="../Public/Css/modal_producto.css" />
+
 </head>
+
 <body>
   <div class="admin-layout">
-    <!-- Sidebar con íconos -->
+
+    <!-- SIDEBAR -->
     <aside class="admin-sidebar" id="adminSidebar">
       <div class="brand"><span class="brand-dot"></span><span>AURORA</span></div>
+
       <nav class="menu">
-        <a class="menu-link" href="./main_menu.html">
-          <span>Panel</span>
-        </a>
-        <a class="menu-link" href="./pedidos.html">
-          <span>Pedidos</span>
-        </a>
-        <a class="menu-link active" href="./Productos_admin.html">
-          <span>Productos</span>
-        </a>
-        <a class="menu-link" href="../src/clientes_admin.html">
-          <span>Clientes</span>
-        </a>
-        <a class="menu-link" href="../src/reportes_admin.html">
-          <span>Reportes</span>
-        </a>
+        <a class="menu-link" href="./main_menu.html"><span>Panel</span></a>
+        <a class="menu-link" href="./pedidos.html"><span>Pedidos</span></a>
+        <a class="menu-link active" href="./Productos_admin.html"><span>Productos</span></a>
+        <a class="menu-link" href="./clientes_admin.html"><span>Clientes</span></a>
+        <a class="menu-link" href="./reportes_admin.html"><span>Reportes</span></a>
+
         <div class="menu-sep"></div>
-        <a class="menu-link" href="./config_admin.html">
-          <span>Configuración</span>
-        </a>
-        <a class="menu-link" href="/src/login.html">
-          <span>Salir</span>
-        </a>
-        <!-- Boton para ir al CRUD -->
-         <a class="menu-link" href="http://localhost:5000">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
-             10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
+
+        <a class="menu-link" href="./config_admin.html"><span>Configuración</span></a>
+        <a class="menu-link" href="/src/login.html"><span>Salir</span></a>
+
+        <a class="menu-link" href="http://localhost:5000">
           <span>CRUD</span>
         </a>
 
         <a class="menu-link icon-reportes" href="../src/main.html">
           <span>Volver al Inicio</span>
         </a>
-        
       </nav>
     </aside>
 
-    <!-- Contenido principal -->
+    <!-- MAIN -->
     <main class="admin-main">
+
       <header class="admin-topbar">
         <button class="sidebar-toggle" id="sidebarToggle">☰</button>
         <h1>Productos</h1>
+
         <div class="admin-actions">
-          <input class="admin-search" type="search" id="searchInput" placeholder="Buscar por nombre, SKU…" />
-          <div class="admin-user"><span class="user-dot"></span><span>Admin</span></div>
+          <input class="admin-search" type="search" id="searchInput" placeholder="Buscar por nombre o SKU…" />
+          <div class="admin-user">
+            <span class="user-dot"></span><span>Admin</span>
+          </div>
         </div>
       </header>
 
+      <!-- FILTROS -->
       <div class="admin-subtop">
         <div class="filter-row">
           <button class="pill active" data-cat="todas">Todas</button>
@@ -77,66 +73,98 @@
         </div>
       </div>
 
+      <!-- TABLA -->
       <div class="table-wrap">
         <table class="admin-table" id="productsTable">
           <thead>
             <tr>
-              <th><input type="checkbox" id="selectAllProd"></th>
-              <th>SKU</th><th>Nombre</th><th>Categoría</th><th>Stock</th><th>Precio</th>
+              <th>SKU</th>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Stock Total</th>
+              <th>Precio</th>
             </tr>
           </thead>
-          <tbody><!-- se llena por JS --></tbody>
+          <tbody><!-- JS llena aquí --></tbody>
         </table>
-      </div>
-
-      <!-- Modal: nuevo producto -->
-      <div class="modal" id="newProdModal">
-        <div class="modal-card">
-          <div class="modal-head">
-            <h3>Nuevo producto</h3>
-            <button class="close-x" id="closeNewProd">×</button>
-          </div>
-          <div class="modal-body">
-            <form id="newProdForm" class="detail-grid">
-              <div>
-                <label class="muted">SKU</label>
-                <input id="pSku" type="text" required />
-              </div>
-              <div>
-              <label class="muted">Imagen (URL) — opcional</label>
-              <input id="pImagen" type="url" placeholder="https://.../foto.jpg" />
-              </div>
-
-              <div>
-                <label class="muted">Nombre</label>
-                <input id="pNombre" type="text" required />
-              </div>
-              <div>
-                <label class="muted">Categoría</label>
-                <input id="pCategoria" type="text" placeholder="Vestidos / Blusas / ..." required />
-              </div>
-              <div>
-                <label class="muted">Stock</label>
-                <input id="pStock" type="number" min="0" required />
-              </div>
-              <div>
-                <label class="muted">Precio (CLP)</label>
-                <input id="pPrecio" type="number" min="0" step="100" required />
-              </div>
-              <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;">
-                <button type="button" id="cancelNewProd" class="btn-sm alt">Cancelar</button>
-                <button type="submit" class="btn-sm">Guardar</button>
-              </div>
-            </form>
-          </div>
-        </div>
       </div>
 
     </main>
   </div>
 
-  <!-- Scripts -->
+    <!-- ===========================
+      MODAL DETALLE PRODUCTO
+  =========================== -->
+  <div class="modal-producto-overlay" id="producto-modal">
+    <div class="modal-producto-content">
+
+      <!-- HEADER -->
+      <div class="modal-producto-header">
+        <h2 id="modal-producto-nombre">Producto</h2>
+        <button id="modal-close" class="modal-close-btn">✕</button>
+      </div>
+
+      <!-- BODY -->
+      <div class="modal-producto-body">
+
+        <!-- IMAGEN Y DATOS -->
+        <div class="modal-section">
+          <h3 class="modal-section-title">Datos generales</h3>
+
+          <div class="modal-producto-imagen">
+            <img id="modal-producto-img" src="" alt="">
+          </div>
+
+          <div class="modal-producto-info">
+            <p><strong>SKU:</strong> <span id="modal-sku"></span></p>
+            <p><strong>Categoría:</strong> <span id="modal-categoria"></span></p>
+            <p><strong>Precio:</strong> <span id="modal-precio"></span></p>
+            <p><strong>Descripción:</strong> <span id="modal-descripcion"></span></p>
+          </div>
+        </div>
+
+        <!-- VARIACIONES -->
+        <div class="modal-section">
+          <h3 class="modal-section-title">Variaciones</h3>
+          <table class="modal-table">
+            <thead>
+              <tr>
+                <th>Talla</th>
+                <th>Color</th>
+                <th>SKU Variación</th>
+              </tr>
+            </thead>
+            <tbody id="modal-variaciones"></tbody>
+          </table>
+        </div>
+
+        <!-- STOCK POR SUCURSAL -->
+        <div class="modal-section">
+          <h3 class="modal-section-title">Stock por sucursal</h3>
+
+          <!-- SELECTOR DE SUCURSAL -->
+          <select id="modal-filtro-sucursal" class="modal-filtro">
+            <option value="todas">Todas las sucursales</option>
+          </select>
+
+          <table class="modal-table">
+            <thead>
+              <tr>
+                <th>Sucursal</th><th>Talla</th><th>Stock</th>
+              </tr>
+            </thead>
+            <tbody id="modal-stock-sucursales"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- SCRIPTS -->
   <script type="module" src="../Public/js/productos.js"></script>
   <script type="module" src="../Public/js/colores.js"></script>
+
 </body>
 </html>
