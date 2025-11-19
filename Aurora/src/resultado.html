@@ -1,278 +1,325 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script>
+    if (window.location.hostname.includes('ngrok')) {
+        console.warn("Detectado Ngrok en resultado. Redirigiendo a localhost...");
+        const nuevaUrl = 'http://localhost:3000' + window.location.pathname + window.location.search;
+        window.location.href = nuevaUrl;
+    }
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comprobante de Compra</title>
     <link rel="stylesheet" href="../Public/Css/style.css" />
     <style>
-        /* Estilos básicos si style.css no carga bien */
-        body { font-family: sans-serif; }
-        .container { max-width: 600px; margin: 20px auto; padding: 20px; }
-        .card { border: 1px solid #eee; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .title { text-align: center; margin-bottom: 20px; }
-        .muted { color: #666; font-size: 0.9em; }
+        /* --- TUS ESTILOS ORIGINALES --- */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f9f9f9; }
+        .container { max-width: 700px; margin: 40px auto; padding: 20px; }
+        .card { background: white; border: 1px solid #e1e1e1; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .title { text-align: center; margin-bottom: 10px; color: #333; }
+        
+        /* Mensajes de Estado */
+        .status-message { text-align: center; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; }
+        .status-approved { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .status-rejected { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .status-pending { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+
+        /* Detalles Header */
+        .row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 2px dashed #eee; }
+        .muted { color: #6c757d; font-size: 0.9em; margin-top: 4px; }
+        
+        /* Items */
         .items { margin: 20px 0; }
-        .item { display: grid; grid-template-columns: 70px 1fr auto; gap: 14px; padding: 14px 0; border-bottom: 1px dashed #eee; align-items: center;}
-        .item:last-child { border-bottom: none; }
-        .thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; background: #f1f1f1; }
-        .name { margin: 0 0 4px; font-weight: 600; }
-        .meta { color: #777; font-size: .9rem; line-height: 1.5; } /* Añadido line-height */
-        .price { font-weight: 700; white-space: nowrap; }
-        .totals { text-align: right; margin-top: 20px; line-height: 1.6; }
-        .actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
-        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
-        .btn.ghost { background: #eee; color: #333; }
-        .btn:not(.ghost) { background: #007bff; color: white; }
-         /* Estilo para mensajes de estado */
-        .status-message { text-align: center; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; }
-        .status-aprobado { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;}
-        .status-rechazado, .status-abortado, .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;}
-        .status-pendiente, .status-desconocido { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;}
+        .item { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #f0f0f0; align-items: center; }
+        .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; background: #eee; border: 1px solid #ddd; }
+        .details { flex-grow: 1; }
+        .name { font-weight: 600; margin: 0 0 5px; font-size: 0.95rem; }
+        .meta { font-size: 0.85rem; color: #777; line-height: 1.4; }
+        .price { font-weight: 700; font-size: 1rem; }
+
+        /* Totales */
+        .totals { text-align: right; margin-top: 20px; line-height: 1.8; font-size: 0.95rem; background: #fafafa; padding: 15px; border-radius: 8px; }
+        .grand-total { font-size: 1.3rem; font-weight: 800; color: #333; margin-top: 10px; display: block; border-top: 1px solid #ddd; padding-top: 10px;}
+
+        /* Botones */
+        .actions { display: flex; gap: 10px; justify-content: center; margin-top: 30px; }
+        .btn { padding: 12px 20px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; border: none; display: flex; align-items: center; gap: 8px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-ghost { background: #f1f3f5; color: #333; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Loader */
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <main class="container">
-      <h2 class="title">🧾 Comprobante de Compra</h2>
 
-       <div id="statusMessage" class="status-message"></div>
+<main class="container">
+    <div class="card" id="receipt-card">
+        <h2 class="title" id="main-title">Procesando Pago...</h2>
+        <p style="text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 20px;">Gracias por tu preferencia</p>
+        
+        <div id="statusMessage" class="status-message status-pending" style="display:none;"></div>
 
-      <div class="card">
-        <div class="row" style="display: flex; justify-content:space-between; align-items: flex-start; margin-bottom: 15px;">
-          <div>
-            <div style="font-weight:600">Orden <span id="orderId">—</span></div>
-            <div class="muted">Fecha: <span id="orderDate">—</span></div>
-             <div class="muted" style="font-size: 0.8em;">Auth Code: <span id="authCode">-</span></div>
-             <div class="muted" style="font-size: 0.8em;">Tarjeta: **** <span id="last4">-</span></div>
-          </div>
-          <div class="muted">Total Pagado: <b id="orderTotal" style="font-size: 1.1em; color: #333;">$0</b></div>
+        <div class="row">
+            <div>
+                <div style="font-weight:700; font-size: 1.1rem;">Orden #<span id="orderId">...</span></div>
+                <div class="muted">Fecha: <span id="orderDate">-</span></div>
+                <div class="muted">Hora: <span id="orderTime">-</span></div>
+                <div class="muted">Método Pago: <b id="paymentMethod">-</b></div>
+                <div class="muted" style="font-size: 0.8rem;">ID Transacción: <span id="authCode">-</span></div>
+            </div>
         </div>
 
+        <h4 style="margin-bottom: 10px; color: #555;">Detalle de Productos</h4>
         <div id="items" class="items">
-            <p style="text-align: center; color: #888;">Cargando detalle...</p>
+            <div class="loader"></div>
+            <p style="text-align:center; color:#888; font-size: 0.9rem;">Cargando detalle...</p>
         </div>
 
         <div class="totals">
-          Subtotal (referencial): $<span id="subTotal">0</span><br/>
-          Impuestos (IVA 19%): $<span id="ivaAmount">0</span><br/>
-          Envío (referencial): $<span id="shipping">0</span><br/>
-          <b>Total Pagado: $<span id="grandTotal">0</span></b>
+            Subtotal (Neto): $<span id="subTotal">0</span><br>
+            IVA (19%): $<span id="ivaAmount">0</span><br>
+            Envío: $<span id="shipping">0</span><br>
+            <span class="grand-total">Total Pagado: $<span id="grandTotal">0</span></span>
         </div>
 
         <div class="actions">
-          <button class="btn ghost" id="btn-print">🖨 Imprimir</button>
-          <button class="btn ghost" id="btn-download">📄 Descargar</button>
-          <a class="btn" href="./main.html">Volver al inicio</a>
+            <button class="btn btn-ghost" id="btn-print">🖨 Imprimir</button>
+            <button class="btn btn-secondary" id="btn-download">⬇ Descargar Boleta</button>
+            <a class="btn btn-primary" href="./main.html">Volver a la Tienda</a>
         </div>
-      </div>
-    </main>
+    </div>
+</main>
 
-    <!-- ▼▼▼ INICIO SCRIPT ▼▼▼ -->
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-          const $ = (s) => document.querySelector(s);
-          const fmt = (n) => Number(n || 0).toLocaleString("es-CL");
+<script type="module">
+    import { saveCart } from '../Public/js/cart.js'; 
 
-          console.log("Script de resultado.html iniciado.");
+    // Configuración Backend
+    const API_BACKEND = "http://localhost:5000"; 
+    const $ = (s) => document.querySelector(s);
+    const fmt = (n) => Number(n || 0).toLocaleString("es-CL");
 
-          try {
-              // --- 1. LEER PARÁMETROS DE LA URL (DESDE EL HASH '#') ---
-              const hashParams = window.location.hash.substring(1);
-              const params = new URLSearchParams(hashParams);
-              const estadoTransaccion = params.get("estado") || "desconocido";
-              const montoPagado = params.get("amount");
-              const ordenCompraTBK = params.get("buy_order");
-              const codigoAutorizacion = params.get("authorization_code") || '-';
-              const ultimos4Digitos = params.get("last4") || '-';
+    // VARIABLE GLOBAL PARA GUARDAR LOS DATOS ANTES DE BORRAR EL CARRITO
+    let datosCompra = {
+        items: [],
+        total: 0,
+        fecha: new Date()
+    };
 
-              console.log("Parámetros leídos:", { estado: estadoTransaccion, monto: montoPagado });
+    async function init() {
+        console.log("🚀 Iniciando script de resultado...");
+        
+        // 1. Rescatar datos (LocalStorage)
+        rescatarDatosDelStorage();
 
-              // --- 2. MOSTRAR DATOS PRINCIPALES (DE LA URL) ---
-              $('#orderId').textContent = ordenCompraTBK || "N/A";
-              $('#orderDate').textContent = new Date().toLocaleString("es-CL");
-              $('#orderTotal').textContent = "$" + fmt(montoPagado);
-              $('#grandTotal').textContent = fmt(montoPagado);
-              $('#authCode').textContent = codigoAutorizacion;
-              $('#last4').textContent = ultimos4Digitos;
+        // 2. Leer parámetros de la URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
-              // --- 3. MOSTRAR MENSAJE DE ESTADO ---
-              const statusDiv = $('#statusMessage');
-              let statusText = `Estado: ${estadoTransaccion.charAt(0).toUpperCase() + estadoTransaccion.slice(1)}`;
-              statusDiv.textContent = statusText;
-              statusDiv.className = `status-message status-${estadoTransaccion}`;
+        // 3. Detectar origen del pago
+        if (searchParams.has("status") && searchParams.has("external_reference")) {
+            await procesarMercadoPago(searchParams);
+        } else if (searchParams.has("buy_order") && searchParams.has("authorization_code")) {
+            // Webpay (A veces llega por Query Params normales, no por Hash)
+            procesarWebpay(searchParams);
+        } else if (hashParams.has("buy_order")) {
+            // Webpay (Legacy por hash)
+            procesarWebpay(hashParams);
+        } else {
+            renderizarBoleta();
+        }
+    }
 
-               if (estadoTransaccion === "aprobado") { $('.title').textContent = '✅ Compra Exitosa'; }
-               else if (estadoTransaccion === "rechazado") { $('.title').textContent = '❌ Compra Rechazada'; }
-               else if (estadoTransaccion === "abortado") { $('.title').textContent = '⚠️ Compra Abortada'; statusDiv.textContent = 'El pago fue cancelado o abortado.'; }
-               else if (estadoTransaccion === "error") { $('.title').textContent = '❌ Error en la Compra'; statusDiv.textContent = 'Ocurrió un error al procesar el pago.'; }
-               else { $('.title').textContent = '❓ Estado Desconocido'; }
+    function rescatarDatosDelStorage() {
+        try {
+            const raw = localStorage.getItem("ultimaCompra");
+            if (raw) {
+                const data = JSON.parse(raw);
+                if (data.items) datosCompra.items = data.items;
+                if (data.total) datosCompra.total = data.total;
+            }
+        } catch (e) { console.error("Error rescatando datos:", e); }
+    }
 
-              // --- 4. CARGAR DETALLE DE PRODUCTOS (¡ANTES DE LIMPIAR!) ---
-              let compraLocalStorage = null;
-              let subTotalCalculado = 0;
-              let ivaCalculado = 0;
-              let costoEnvio = 0;
-              const itemsContainer = $("#items");
-              itemsContainer.innerHTML = ''; // Limpiar "Cargando..."
+    // --- PROCESAR WEBPAY (CORREGIDO) ---
+    function procesarWebpay(params) {
+        const estado = params.get("estado") || "aprobado"; // Webpay suele redirigir si aprueba
+        const buyOrder = params.get("buy_order");
+        const authCode = params.get("authorization_code");
+        const amount = params.get("amount");
+        const paymentType = params.get("payment_type_code"); // VN, VD, etc.
+        const last4 = params.get("last4");
 
-              try {
-                console.log("Intentando cargar detalle desde 'ultimaCompra'...");
-                // Leemos 'ultimaCompra' que guardó carrito.js
-                const ultimaCompraRaw = localStorage.getItem("ultimaCompra");
-                if (ultimaCompraRaw) {
-                   compraLocalStorage = JSON.parse(ultimaCompraRaw);
-                   console.log("Encontrado 'ultimaCompra':", compraLocalStorage);
-                } else {
-                    console.log("'ultimaCompra' no encontrada.");
-                }
+        console.log(`Webpay Detectado | Estado: ${estado}`);
 
-                // Renderizar items si se encontraron
-                if (compraLocalStorage && compraLocalStorage.items && compraLocalStorage.items.length > 0) {
-                    compraLocalStorage.items.forEach((it) => {
-                      const line = (Number(it.price) || 0) * (Number(it.qty) || 1);
-                      subTotalCalculado += line;
-                      const row = document.createElement("div");
-                      row.className = "item";
+        // 1. Traducir códigos de Transbank
+        let metodoTexto = "Webpay Plus";
+        if (paymentType === 'VD') metodoTexto = "Redcompra (Débito)";
+        else if (['VN', 'VC', 'SI', 'S2', 'NC'].includes(paymentType)) metodoTexto = "Tarjeta de Crédito";
+        
+        if(last4) metodoTexto += ` ****${last4}`;
 
-                      // --- ▼▼▼ LÓGICA DE TALLA Y COLOR AÑADIDA ▼▼▼ ---
-                      let variationDetails = '';
-                      // 'it.variation' viene del 'ultimaCompra' que guardó carrito.js
-                      const talla = it.variation?.talla;
-                      const color = it.variation?.color;
+        // 2. Actualizar UI
+        $('#orderId').textContent = buyOrder;
+        $('#authCode').textContent = authCode || "N/A";
+        $('#orderDate').textContent = datosCompra.fecha.toLocaleDateString("es-CL");
+        $('#orderTime').textContent = datosCompra.fecha.toLocaleTimeString("es-CL");
+        $('#paymentMethod').textContent = metodoTexto;
+        
+        // Si Webpay trae el monto en la URL, lo usamos (es más preciso)
+        if (amount) {
+            datosCompra.total = Number(amount);
+        }
 
-                      if (talla && talla !== 'Única' && talla !== 'Estándar') {
-                          variationDetails += `Talla: ${talla}`;
-                      }
-                      if (color) {
-                          if (variationDetails) variationDetails += ' • '; // Separador
-                          variationDetails += `Color: ${color}`;
-                      }
-                      
-                      // Si hay detalles de variación, los preparamos para el HTML
-                      if (variationDetails) {
-                        variationDetails = `<span style="font-size: 0.9em; color: #777;">${variationDetails}</span><br>`;
-                      }
-                      // --- ▲▲▲ FIN LÓGICA TALLA Y COLOR ▲▲▲ ---
+        updateUI(estado === 'aprobado' || estado === 'AUTHORIZED' ? 'approved' : 'rejected', 
+                 estado === 'aprobado' ? '¡Tu pago con Webpay fue exitoso!' : 'Pago rechazado');
+        
+        renderizarBoleta();
 
-                      // --- HTML DEL ITEM ACTUALIZADO ---
-                      row.innerHTML = `
-                        <img class="thumb" src="${it.image || ""}" alt="${it.title || 'Producto'}" onerror="this.src='../Public/imagenes/placeholder.jpg'">
-                        <div>
-                          <p class="name">${it.title || 'Producto Sin Nombre'}</p>
-                          <div class="meta">
-                            ${variationDetails} <!-- Muestra Talla y Color -->
-                            x${it.qty || 1} • $${fmt(it.price)} c/u
-                          </div>
-                        </div>
-                        <div class="price">$${fmt(line)}</div>
-                      `;
-                      itemsContainer.appendChild(row);
-                    });
-                    
-                    ivaCalculado = Number(compraLocalStorage.iva || 0);
-                    costoEnvio = Number(compraLocalStorage.envio || 0);
-                    console.log("Items renderizados.");
-                } else {
-                     itemsContainer.innerHTML = '<p style="text-align: center; color: #888;">No se encontró detalle de productos en el historial.</p>';
-                     console.log("No se renderizaron items.");
-                }
-              } catch (e) { console.error("Error al leer/renderizar items:", e); itemsContainer.innerHTML = '<p style="color:red;">Error al cargar detalle.</p>'; }
+        if (estado === 'aprobado' || estado === 'AUTHORIZED') {
+            saveCart([]); 
+            localStorage.removeItem('ultimaCompra');
+        }
+    }
 
-              // --- 5. ACTUALIZAR TOTALES REFERENCIALES ---
-              $('#subTotal').textContent = fmt(subTotalCalculado);
-              $('#ivaAmount').textContent = fmt(ivaCalculado); // Mostrar IVA
-              $('#shipping').textContent = fmt(costoEnvio);
+    async function procesarMercadoPago(params) {
+        const status = params.get("status");
+        const external_reference = params.get("external_reference");
+        const payment_id = params.get("payment_id");
+        const payment_type = params.get("payment_type");
 
-              // --- 6. BOTÓN IMPRIMIR ---
-              $('#btn-print').addEventListener("click", () => window.print());
+        console.log(`MP Detectado | Estado: ${status}`);
 
-              // --- 7. BOTÓN DESCARGAR (CÓDIGO COMPLETO) ---
-              const btnDownload = $('#btn-download');
-              if (btnDownload) {
-                btnDownload.addEventListener("click", () => {
-                  console.log("Botón descargar presionado.");
-                  try {
-                    const orderInfoHtml = $('.card .row')?.innerHTML || 'Error al obtener datos de orden.';
-                    const itemsHtml = $('#items')?.innerHTML || 'Error al obtener items.';
-                    const totalsHtml = $('.card .totals')?.innerHTML || 'Error al obtener totales.';
-                    const orderIdForFilename = ordenCompraTBK || 'boleta';
+        let metodoTexto = "Mercado Pago";
+        if(payment_type === 'credit_card') metodoTexto = "Tarjeta de Crédito";
+        else if(payment_type === 'debit_card') metodoTexto = "Tarjeta de Débito";
+        else if(payment_type === 'account_money') metodoTexto = "Dinero en Cuenta MP";
 
-                    const styles = `
-                      <style>
-                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 20px; color: #333; }
-                        .receipt-container { border: 1px solid #eee; border-radius: 8px; padding: 20px; max-width: 600px; margin: auto; }
-                        .row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-                        .muted { color: #666; font-size: 0.9em; }
-                        .items { margin: 20px 0; }
-                        .item { display: grid; grid-template-columns: 70px 1fr auto; gap: 14px; padding: 14px 0; border-bottom: 1px dashed #eee; align-items: center; }
-                        .item:last-child { border-bottom: none; }
-                        .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; vertical-align: middle; margin-right: 10px;}
-                        .name { margin: 0 0 4px; font-weight: 600; }
-                        .meta { color: #777; font-size: .9rem; line-height: 1.5; } /* Añadido line-height */
-                        .price { font-weight: 700; white-space: nowrap; }
-                        .totals { text-align: right; margin-top: 20px; line-height: 1.6; border-top: 1px solid #eee; padding-top: 10px; }
-                        img { max-width: 100%; height: auto; }
-                        .actions { display: none; }
-                      </style>`;
+        $('#orderId').textContent = external_reference;
+        $('#authCode').textContent = payment_id || "N/A";
+        $('#orderDate').textContent = datosCompra.fecha.toLocaleDateString("es-CL");
+        $('#orderTime').textContent = datosCompra.fecha.toLocaleTimeString("es-CL");
+        $('#paymentMethod').textContent = metodoTexto;
 
-                    const fileContent = `
-                      <!DOCTYPE html>
-                      <html lang="es">
-                      <head>
-                        <meta charset="UTF-8">
-                        <title>Boleta ${orderIdForFilename}</title>
-                        ${styles}
-                      </head>
-                      <body>
-                        <h1>Comprobante de Compra</h1>
-                        <div class="receipt-container">
-                          <div class="row">${orderInfoHtml}</div>
-                          <div class="items">${itemsHtml}</div>
-                          <div class="totals">${totalsHtml}</div>
-                        </div>
-                      </body>
-                      </html>`;
-
-                    const blob = new Blob([fileContent], { type: 'text/html;charset=utf-8' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `boleta-${orderIdForFilename.replace(/[^a-zA-Z0-9_-]/g, '-')}.html`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(link.href);
-                  } catch (downloadError) {
-                    console.error("Error al generar descarga:", downloadError);
-                    alert("No se pudo generar el archivo para descargar.");
-                  }
+        if (status === 'approved') {
+            updateUI("approved", "¡Tu pago con Mercado Pago fue exitoso!");
+            try {
+                const response = await fetch(`${API_BACKEND}/api/mercadopago/registrar-pago-mp`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status, external_reference, payment_id })
                 });
-              }
+                if (response.ok) {
+                    renderizarBoleta();
+                    saveCart([]); 
+                    localStorage.removeItem('ultimaCompra');
+                }
+            } catch (error) { console.error("Error MP Backend:", error); }
+        } else {
+            updateUI("rejected", "El pago fue rechazado.");
+            renderizarBoleta();
+        }
+    }
 
-              // --- 8. LIMPIAR CARRITO (AL FINAL DE TODO) ---
-              console.log("Verificando si limpiar carrito. Estado:", estadoTransaccion);
-              if (estadoTransaccion === 'aprobado') {
-                 console.log("Estado es 'aprobado'. Intentando limpiar localStorage...");
-                 try {
-                     localStorage.removeItem('aurora_cart');
-                     console.log("'aurora_cart' eliminado de localStorage.");
-                     localStorage.removeItem('aurora_cart_v1');
-                     console.log("'aurora_cart_v1' eliminado de localStorage.");
-                     localStorage.removeItem('ultimaCompra');
-                     console.log("'ultimaCompra' eliminada de localStorage.");
-                 } catch (clearError) {
-                     console.error("Error al limpiar localStorage:", clearError);
-                 }
-              } else {
-                  console.log("Estado no es 'aprobado', no se limpia localStorage.");
-              }
-              // --- FIN LIMPIAR CARRITO ---
+    function renderizarBoleta() {
+        const container = $('#items');
+        container.innerHTML = ''; 
 
-          } catch (error) {
-              console.error("Error general al ejecutar el script de resultado.html:", error);
-              document.body.innerHTML = `<div style="padding: 20px; text-align: center; color: red;"><h2>Error al cargar el comprobante</h2><p>${error.message}</p><p>Revisa la consola (F12).</p></div>`;
-          }
-      });
-    </script>
-    <!-- ▲▲▲ FIN SCRIPT ▼▼▼ -->
+        if (datosCompra.items.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding: 20px;">No se encontraron productos.</p>';
+            return;
+        }
+
+        const total = Number(datosCompra.total) || 0;
+        const neto = Math.round(total / 1.19);
+        const iva = total - neto;
+
+        $('#grandTotal').textContent = fmt(total);
+        $('#subTotal').textContent = fmt(neto);
+        $('#ivaAmount').textContent = fmt(iva);
+
+        datosCompra.items.forEach(item => {
+            let detalles = '';
+            const talla = item.variation?.talla || item.talla;
+            const color = item.variation?.color || item.color;
+            if (talla) detalles += `Talla: ${talla} `;
+            if (color) detalles += `| Color: ${color}`;
+
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `
+                <img src="${item.image || ''}" class="thumb" onerror="this.style.display='none'">
+                <div class="details">
+                    <div class="name">${item.title}</div>
+                    <div class="meta">${detalles}</div>
+                    <div class="meta">Cant: ${item.qty}</div>
+                </div>
+                <div class="price">$${fmt(item.price * item.qty)}</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function updateUI(status, message) {
+        const statusDiv = $('#statusMessage');
+        const title = $('#main-title');
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = message;
+        statusDiv.className = 'status-message';
+
+        if (status === 'approved') {
+            statusDiv.classList.add('status-approved');
+            title.textContent = "✅ Compra Finalizada";
+        } else if (status === 'rejected') {
+            statusDiv.classList.add('status-rejected');
+            title.textContent = "❌ Pago Rechazado";
+        } else {
+            statusDiv.classList.add('status-pending');
+            title.textContent = "⚠️ Estado Pendiente";
+        }
+    }
+
+    function descargarBoleta() {
+        const contenidoBoleta = document.getElementById('receipt-card').innerHTML;
+        const htmlContent = `
+            <html>
+            <head>
+                <title>Boleta-${$('#orderId').textContent}</title>
+                <style>
+                    body { font-family: sans-serif; padding: 20px; }
+                    .card { border: 1px solid #ccc; padding: 20px; max-width: 600px; margin: auto; }
+                    .row { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px;}
+                    .item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px dotted #ccc; }
+                    .thumb { width: 50px; height: 50px; object-fit: cover; }
+                    .details { flex-grow: 1; }
+                    .price { font-weight: bold; }
+                    .totals { text-align: right; margin-top: 20px; background: #f9f9f9; padding: 10px;}
+                    .actions { display: none; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    ${contenidoBoleta}
+                </div>
+            </body>
+            </html>
+        `;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Comprobante_Pedido_${$('#orderId').textContent}.html`;
+        link.click();
+    }
+
+    $('#btn-print').addEventListener('click', () => window.print());
+    $('#btn-download').addEventListener('click', descargarBoleta);
+
+    init();
+</script>
 </body>
 </html>
