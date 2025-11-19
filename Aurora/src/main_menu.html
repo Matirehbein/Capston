@@ -43,16 +43,54 @@
         .kpi-trend.positive { color: #198754; }
         .kpi-trend.negative { color: #dc3545; }
         .kpi-trend.neutral { color: #6c757d; }
+        .kpi-trend.warn { color: #ffc107; } /* Para bajo stock */
 
-        /* Tarjeta de ventas cliqueable */
-        #kpi-ventas-hoy-card {
+        /* Tarjetas KPI cliqueables */
+        #kpi-ventas-hoy-card,
+        #kpi-pedidos-pendientes-card,
+        #kpi-bajo-stock-card,
+        #kpi-nuevos-clientes-card {
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        #kpi-ventas-hoy-card:hover {
+        #kpi-ventas-hoy-card:hover,
+        #kpi-pedidos-pendientes-card:hover,
+        #kpi-bajo-stock-card:hover,
+        #kpi-nuevos-clientes-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         }
+
+        /* --- ▼▼▼ ESTILOS PARA EL FILTRO DE SUCURSAL ▼▼▼ --- */
+        .topbar-title-group {
+            display: flex;
+            align-items: center;
+            gap: 20px; 
+            flex-grow: 1; /* Para que ocupe espacio */
+        }
+        .topbar-title-group h1 {
+            margin-bottom: 0; /* Alinea el H1 con el select */
+        }
+
+        #admin-sucursal-selector {
+            font-size: 0.9rem;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color, #ddd);
+            background-color: var(--card-bg, #fff);
+            color: var(--text-color, #333);
+            font-weight: 500;
+            max-width: 250px; /* Límite de ancho */
+        }
+        
+        [data-theme="noir"] #admin-sucursal-selector,
+        [data-theme="ocean"] #admin-sucursal-selector {
+            background-color: var(--card-bg, #2a2a2e);
+            color: var(--text-color, #f1f1f1);
+            border-color: var(--border-color, #444);
+        }
+        /* --- ▲▲▲ FIN ESTILOS FILTRO ▲▲▲ --- */
+
 
         /* Estilos para Modales (Overlay) */
         .modal-overlay {
@@ -113,9 +151,22 @@
             min-height: 0;
         }
         
-        /* Z-Indexes para apilar */
-        #sales-chart-modal { z-index: 1050; }
-        #pedidos-detail-modal { z-index: 1060; } /* El modal de detalle va encima */
+        /* --- ▼▼▼ Z-INDEXES CORREGIDOS ▼▼▼ --- */
+        #sales-chart-modal,
+        #stock-categoria-modal,
+        #clientes-list-modal { /* Modales Nivel 1 */
+             z-index: 1050; 
+        }
+        
+        #stock-producto-modal,
+        #clientes-detail-modal { /* Modales Nivel 2 */
+             z-index: 1060; 
+        }
+
+        #pedidos-detail-modal { /* Modal Nivel 3 (el más alto) */
+             z-index: 1070; 
+        }
+        /* --- ▲▲▲ FIN Z-INDEXES ▲▲▲ --- */
         
         .chart-container {
             position: relative;
@@ -171,13 +222,19 @@
             border-color: #444;
         }
 
-        .sale-detail-link {
+        .sale-detail-link,
+        .stock-categoria-link,
+        .cliente-detail-link { /* <-- AÑADIDO */
             color: var(--primary-color, #0d6efd);
             font-weight: 500;
             text-decoration: none;
             cursor: pointer;
         }
-        .sale-detail-link:hover { text-decoration: underline; }
+        .sale-detail-link:hover,
+        .stock-categoria-link:hover,
+        .cliente-detail-link:hover { /* <-- AÑADIDO */
+             text-decoration: underline; 
+        }
         
         /* Grid de detalle en Modal 2 */
         .pedido-detail-grid {
@@ -225,6 +282,33 @@
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f1f1f1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
         }
 
+        /* --- ▼▼▼ NUEVOS ESTILOS PARA STOCK Y CLIENTES ▼▼▼ --- */
+        .text-danger { color: #dc3545 !important; }
+        .text-warning { color: #ffc107 !important; }
+        .text-success { color: #198754 !important; }
+        .fw-bold { font-weight: 700 !important; }
+
+        .modal-back-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color, #0d6efd);
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0;
+        }
+        .modal-back-btn:hover {
+            text-decoration: underline;
+        }
+        
+        [data-theme="noir"] .sale-detail-link,
+        [data-theme="noir"] .cliente-detail-link,
+        [data-theme="noir"] .modal-back-btn,
+        [data-theme="noir"] .stock-categoria-link { 
+            color: #58a6ff;
+        }
+        /* --- ▲▲▲ FIN NUEVOS ESTILOS ▲▲▲ --- */
+
     </style>
     <!-- --- ▲▲▲ FIN ESTILOS ▲▲▲ --- -->
 
@@ -239,20 +323,21 @@
                 <span>AURORA</span>
             </div>
 
+            <!-- --- BARRA LATERAL (Enlaces Relativos) --- -->
             <nav class="menu">
-                <a class="menu-link icon-dashboard active" href="#">
+                <a class="menu-link icon-dashboard active" href="./main_menu.html">
                     <span>Panel</span>
                 </a>
-                <a class="menu-link icon-pedidos" href="../src/pedidos.html">
+                <a class="menu-link icon-pedidos" href="./pedidos.html">
                     <span>Pedidos</span>
                 </a>
                 <a class="menu-link icon-productos" href="../src/Productos_admin.html">
                     <span>Productos</span>
                 </a>
-                <a class="menu-link icon-clientes" href="../src/clientes_admin.html">
+                <a class="menu-link icon-clientes" href="./clientes_admin.html">
                     <span>Clientes</span>
                 </a>
-                <a class="menu-link icon-reportes" href="{{ url_for('reportes_admin') }}">
+                <a class="menu-link icon-reportes" href="./reportes_admin.html">
                     <span>Reportes</span>
                 </a>
                 <div class="menu-sep"></div>
@@ -274,9 +359,18 @@
         </aside>
 
         <main class="admin-main">
+            <!-- --- TOPBAR CON FILTRO --- -->
             <header class="admin-topbar">
                 <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir/cerrar menú">☰</button>
-                <h1>Panel de administración</h1>
+                
+                <div class="topbar-title-group">
+                    <h1>Panel de administración</h1>
+                    <select id="admin-sucursal-selector" name="sucursal">
+                        <option value="all" selected>Todas las sucursales</option>
+                        <!-- Opciones se cargarán por JS -->
+                    </select>
+                </div>
+
                 <div class="admin-actions">
                     <input class="admin-search" type="search" placeholder="Buscar…" />
                     <div class="admin-user">
@@ -287,33 +381,36 @@
             </header>
 
             <section class="kpi-grid">
-                <!-- --- ▼▼▼ TARJETA "VENTAS HOY" (MODIFICADA CON IDs) ▼▼▼ --- -->
+                <!-- Tarjeta "Ventas hoy" -->
                 <div class="kpi-card" id="kpi-ventas-hoy-card" title="Ver detalle de ventas">
                     <h3>Ventas hoy</h3>
                     <p class="kpi-number">
-                        <span id="kpi-ventas-hoy-monto">—</span>
+                        <span id="kpi-ventas">—</span> 
                     </p>
-                    <span class="kpi-trend neutral" id="kpi-ventas-hoy-trend">—</span>
+                    <span class="kpi-trend neutral" id="kpi-ventas-trend">—</span>
                 </div>
-                <!-- --- ▲▲▲ FIN TARJETA ▲▲▲ --- -->
 
+                <!-- Tarjeta "Pedidos pendientes" -->
                 <div class="kpi-card" id="kpi-pedidos-pendientes-card">
                     <h3>Pedidos pendientes</h3>
                     <p class="kpi-number"><span id="kpi-pendientes">—</span></p>
                     <span class="kpi-trend" id="kpi-pendientes-sub">—</span>
                 </div>
 
-                <div class="kpi-card" id="kpi-bajo-stock-card">
+                <!-- Tarjeta "Bajo stock" -->
+                <div class="kpi-card" id="kpi-bajo-stock-card" title="Ver detalle de stock">
                     <h3>Productos con bajo stock</h3>
                     <p class="kpi-number"><span id="kpi-bajostock">—</span></p>
                     <span class="kpi-trend warn" id="kpi-bajostock-note">—</span>
                 </div>
 
-                <div class="kpi-card" id="kpi-nuevos-clientes-card">
+                <!-- --- ▼▼▼ TARJETA "NUEVOS CLIENTES" (CON IDs) ▼▼▼ --- -->
+                <div class="kpi-card" id="kpi-nuevos-clientes-card" title="Ver detalle de nuevos clientes">
                     <h3>Nuevos clientes</h3>
                     <p class="kpi-number"><span id="kpi-clientes">—</span></p>
                     <span class="kpi-trend up" id="kpi-clientes-trend">—</span>
                 </div>
+                <!-- --- ▲▲▲ FIN TARJETA ▲▲▲ --- -->
             </section>
 
             <section class="quick-grid">
@@ -321,11 +418,11 @@
                     <h4>Gestionar pedidos</h4>
                     <p>Aprueba, prepara y despacha.</p>
                 </a>
-                <a href="{{ url_for('crud_productos') }}" class="quick-card">
+                <a href="http://localhost:5000/productos" class="quick-card">
                     <h4>Nuevo producto</h4>
                     <p>Crea y publica en un paso.</p>
                 </a>
-                <a href="{{ url_for('reportes_admin') }}" class="quick-card">
+                <a href="./reportes_admin.html" class="quick-card">
                     <h4>Ver reportes</h4>
                     <p>Ventas, clientes y márgenes.</p>
                 </a>
@@ -337,7 +434,7 @@
         </main>
     </div>
 
-    <!-- --- ▼▼▼ MODAL 1: GRÁFICO Y LISTA DE VENTAS DE HOY (NUEVO) ▼▼▼ --- -->
+    <!-- --- MODAL 1: VENTAS HOY --- -->
     <div class="modal-overlay" id="sales-chart-modal">
         <div class="modal-content-wrapper">
             <div class="modal-header">
@@ -345,7 +442,6 @@
                 <button class="modal-close" id="sales-chart-close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <!-- Gráfico -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h4 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Comparativa de Ventas</h4>
                     <div style="width: 200px;">
@@ -360,7 +456,6 @@
                     <canvas id="salesChartCanvas"></canvas>
                 </div>
                 
-                <!-- Lista de Ventas de Hoy -->
                 <div class="list-header">
                     <h4>Ventas de Hoy</h4>
                 </div>
@@ -376,7 +471,6 @@
                             </tr>
                         </thead>
                         <tbody id="sales-list-tbody">
-                            <!-- Contenido se carga por JS -->
                             <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
                         </tbody>
                     </table>
@@ -384,9 +478,8 @@
             </div>
         </div>
     </div>
-    <!-- --- ▲▲▲ FIN MODAL 1 ▲▲▲ --- -->
 
-    <!-- --- ▼▼▼ MODAL 2: DETALLE DE PEDIDO (Reutilizado de Reportes) ▼▼▼ --- -->
+    <!-- --- MODAL 2: DETALLE DE PEDIDO --- -->
     <div class="modal-overlay" id="pedidos-detail-modal">
         <div class="modal-content-wrapper" style="max-width: 900px;">
             <div class="modal-header">
@@ -432,7 +525,133 @@
                                 </tr>
                             </thead>
                             <tbody id="detalle-items-tbody">
-                                <!-- Items se cargan por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- --- MODAL 1: BAJO STOCK (Categorías) --- -->
+    <div class="modal-overlay" id="stock-categoria-modal">
+        <div class="modal-content-wrapper" style="max-width: 600px; height: auto; max-height: 80vh;">
+            <div class="modal-header">
+                <h2>Stock por Categoría</h2>
+                <button class="modal-close" id="stock-categoria-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="kpi-sub">Mostrando categorías que tienen productos con 20 unidades o menos.</p>
+                <div class="table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Categoría</th>
+                                <th>Productos con Bajo Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-categoria-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- --- MODAL 2: BAJO STOCK (Productos) --- -->
+    <div class="modal-overlay" id="stock-producto-modal">
+        <div class="modal-content-wrapper" style="max-width: 700px; height: 90vh;">
+            <div class="modal-header">
+                <button class="modal-back-btn" id="stock-producto-back-btn">← Volver a Categorías</button>
+                <button class="modal-close" id="stock-producto-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3 id="stock-producto-titulo" style="margin-top: 0; font-weight: 600;">Productos en ...</h3>
+                <div class="table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Foto</th>
+                                <th>Producto</th>
+                                <th>Stock Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-producto-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- --- ▼▼▼ MODAL 1: NUEVOS CLIENTES (Lista) ▼▼▼ --- -->
+    <div class="modal-overlay" id="clientes-list-modal">
+        <div class="modal-content-wrapper" style="max-width: 800px; height: 90vh;">
+            <div class="modal-header">
+                <h2>Nuevos Clientes</h2>
+                <button class="modal-close" id="clientes-list-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1rem;">
+                    <label for="clientes-periodo-filter" style="margin-right: 10px; font-weight: 500;">Mostrar:</label>
+                    <select class="form-select" id="clientes-periodo-filter" style="width: 200px;">
+                        <option value="hoy" selected>Hoy</option>
+                        <option value="semana">Esta Semana</option>
+                        <option value="mes">Este Mes</option>
+                    </select>
+                </div>
+                <div class="table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre Cliente</th>
+                                <th>Email</th>
+                                <th>Fecha Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientes-list-tbody">
+                            <!-- Contenido se carga por JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- --- ▲▲▲ FIN MODAL 1 ▲▲▲ --- -->
+
+    <!-- --- ▼▼▼ MODAL 2: DETALLE CLIENTE (Historial) ▼▼▼ --- -->
+    <div class="modal-overlay" id="clientes-detail-modal">
+        <div class="modal-content-wrapper" style="max-width: 1000px; height: 90vh;">
+            <div class="modal-header">
+                <h2>Historial de: <span id="detail-cliente-nombre-modal">...</span></h2>
+                <button class="modal-back-btn" id="clientes-detail-back-btn">← Volver a la lista</button>
+                <button class="modal-close" id="clientes-detail-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto;">
+                
+                <div class="pedido-detail-section">
+                    <h4>Datos del Cliente</h4>
+                    <p><strong>Nombre:</strong> <span id="detail-cliente-nombre-2">...</span></p>
+                    <p><strong>Email:</strong> <span id="detail-cliente-email-2">...</span></p>
+                    <p><strong>Dirección:</strong> <span id="detail-cliente-direccion-2">...</span></p>
+                </div>
+
+                <div class="pedido-detail-section">
+                    <h4>Historial de Pedidos (<span id="detail-cliente-total-pedidos">0</span>)</h4>
+                    <div class="table-wrap" style="max-height: 400px; overflow-y: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Pedido</th>
+                                    <th>Fecha</th>
+                                    <th>Sucursal</th>
+                                    <th>Productos (preview)</th>
+                                    <th>Total</th>
+                                    <th>Ver</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cliente-pedidos-tbody">
+                                <!-- Pedidos se cargan por JS -->
                             </tbody>
                         </table>
                     </div>
@@ -445,6 +664,6 @@
     <!-- El script de colores maneja la lógica del sidebar -->
     <script type="module" src="../Public/js/colores.js"></script> 
     <!-- Este es el JS nuevo para esta página -->
-    <script type="module" src="../Public/js/dashboard.js?v=1.0"></script>
+    <script type="module" src="../Public/js/dashboard.js?v=1.2"></script>
 </body>
 </html>

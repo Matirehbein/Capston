@@ -3423,36 +3423,53 @@ def generar_informe_csv():
 # --- RUTAS PARA DASHBOARD (main_menu.html) ---
 # ===============================================
 
+# --- Rutas para "Ventas Hoy" ---
+
 @app.route('/api/admin/dashboard/kpi_ventas_hoy', methods=['GET'])
 @admin_required
 def get_dashboard_kpi_ventas_hoy():
     """
     Calcula las ventas totales de HOY (sysdate) y las compara con AYER.
+    Filtra por sucursal_id si se provee.
     """
+    sucursal_id_str = request.args.get('sucursal_id')
     conn = None
     cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
+        params_hoy = ['aprobado']
+        params_ayer = ['aprobado']
+        
+        filtro_sql = ""
+        if sucursal_id_str and sucursal_id_str != 'all':
+            filtro_sql = " AND p.id_sucursal = %s"
+            params_hoy.append(int(sucursal_id_str))
+            params_ayer.append(int(sucursal_id_str))
+
         # --- 1. Ventas de HOY (Aprobadas) ---
-        cur.execute("""
-            SELECT COALESCE(SUM(monto), 0) as total
-            FROM pago
-            WHERE estado_pago = 'aprobado'
-            AND fecha_pago >= date_trunc('day', CURRENT_DATE)
-            AND fecha_pago < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day';
-        """)
+        cur.execute(f"""
+            SELECT COALESCE(SUM(pa.monto), 0) as total
+            FROM pago pa
+            LEFT JOIN pedido p ON pa.id_pedido = p.id_pedido
+            WHERE pa.estado_pago = %s
+            AND pa.fecha_pago >= date_trunc('day', CURRENT_DATE)
+            AND pa.fecha_pago < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day'
+            {filtro_sql};
+        """, tuple(params_hoy))
         ventas_hoy = cur.fetchone()['total']
 
         # --- 2. Ventas de AYER (Aprobadas) ---
-        cur.execute("""
-            SELECT COALESCE(SUM(monto), 0) as total
-            FROM pago
-            WHERE estado_pago = 'aprobado'
-            AND fecha_pago >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
-            AND fecha_pago < date_trunc('day', CURRENT_DATE);
-        """)
+        cur.execute(f"""
+            SELECT COALESCE(SUM(pa.monto), 0) as total
+            FROM pago pa
+            LEFT JOIN pedido p ON pa.id_pedido = p.id_pedido
+            WHERE pa.estado_pago = %s
+            AND pa.fecha_pago >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
+            AND pa.fecha_pago < date_trunc('day', CURRENT_DATE)
+            {filtro_sql};
+        """, tuple(params_ayer))
         ventas_ayer = cur.fetchone()['total']
 
         # --- 3. Calcular Porcentaje de Cambio ---
@@ -3460,7 +3477,7 @@ def get_dashboard_kpi_ventas_hoy():
         if ventas_ayer > 0:
             porcentaje_vs_ayer = ((ventas_hoy - ventas_ayer) / ventas_ayer) * 100
         elif ventas_hoy > 0:
-            porcentaje_vs_ayer = 100 # Si ayer fue 0 y hoy no, 100% de aumento
+            porcentaje_vs_ayer = 100
 
         return jsonify({
             "ventas_hoy": float(ventas_hoy),
@@ -3482,8 +3499,10 @@ def get_dashboard_chart_ventas():
     """
     Obtiene los datos de ventas para el gráfico de comparación.
     Acepta ?periodo=ayer|semana|mes
+    Acepta ?sucursal_id=...
     """
     periodo = request.args.get('periodo', 'ayer')
+    sucursal_id_str = request.args.get('sucursal_id')
     conn = None
     cur = None
     
@@ -3491,68 +3510,77 @@ def get_dashboard_chart_ventas():
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
+        filtro_sql = ""
+        params = ['aprobado']
+        if sucursal_id_str and sucursal_id_str != 'all':
+            filtro_sql = " AND p.id_sucursal = %s"
+            params.append(int(sucursal_id_str))
+
         # --- 1. Ventas de HOY (Base) ---
-        cur.execute("""
-            SELECT COALESCE(SUM(monto), 0) as total
-            FROM pago
-            WHERE estado_pago = 'aprobado'
-            AND fecha_pago >= date_trunc('day', CURRENT_DATE)
-            AND fecha_pago < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day';
-        """)
+        cur.execute(f"""
+            SELECT COALESCE(SUM(pa.monto), 0) as total
+            FROM pago pa
+            LEFT JOIN pedido p ON pa.id_pedido = p.id_pedido
+            WHERE pa.estado_pago = %s
+            AND pa.fecha_pago >= date_trunc('day', CURRENT_DATE)
+            AND pa.fecha_pago < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day'
+            {filtro_sql};
+        """, tuple(params))
         ventas_hoy = float(cur.fetchone()['total'])
 
         labels = ["Hoy"]
         data = [ventas_hoy]
+        
+        params_comp = ['aprobado']
+        if sucursal_id_str and sucursal_id_str != 'all':
+            params_comp.append(int(sucursal_id_str))
 
         # --- 2. Ventas del Periodo de Comparación ---
+        query_comp = ""
         if periodo == 'ayer':
-            cur.execute("""
-                SELECT COALESCE(SUM(monto), 0) as total
-                FROM pago
-                WHERE estado_pago = 'aprobado'
-                AND fecha_pago >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
-                AND fecha_pago < date_trunc('day', CURRENT_DATE);
-            """)
-            ventas_comparacion = float(cur.fetchone()['total'])
+            query_comp = f"""
+                SELECT COALESCE(SUM(pa.monto), 0) as total
+                FROM pago pa
+                LEFT JOIN pedido p ON pa.id_pedido = p.id_pedido
+                WHERE pa.estado_pago = %s
+                AND pa.fecha_pago >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
+                AND pa.fecha_pago < date_trunc('day', CURRENT_DATE)
+                {filtro_sql};
+            """
             labels.append("Ayer")
-            data.append(ventas_comparacion)
 
         elif periodo == 'semana':
-            # Nota: date_trunc('week', ...) considera que la semana empieza el Lunes
-            cur.execute("""
-                SELECT COALESCE(SUM(monto), 0) as total
-                FROM pago
-                WHERE estado_pago = 'aprobado'
-                AND fecha_pago >= date_trunc('week', CURRENT_DATE) -- Lunes de esta semana
-                AND fecha_pago < date_trunc('day', CURRENT_DATE); -- Hasta ayer
-            """)
-            ventas_comparacion = float(cur.fetchone()['total'])
+            query_comp = f"""
+                SELECT COALESCE(SUM(pa.monto), 0) as total
+                FROM pago pa
+                LEFT JOIN pedido p ON pa.id_pedido = p.id_pedido
+                WHERE pa.estado_pago = %s
+                AND pa.fecha_pago >= date_trunc('week', CURRENT_DATE)
+                AND pa.fecha_pago < date_trunc('day', CURRENT_DATE)
+                {filtro_sql};
+            """
             labels.append("Semana (acum.)")
-            data.append(ventas_comparacion)
             
         elif periodo == 'mes':
-            cur.execute("""
-                SELECT COALESCE(SUM(monto), 0) as total
-                FROM pago
-                WHERE estado_pago = 'aprobado'
-                AND fecha_pago >= date_trunc('month', CURRENT_DATE) -- Día 1 de este mes
-                AND fecha_pago < date_trunc('day', CURRENT_DATE); -- Hasta ayer
-            """)
-            ventas_comparacion = float(cur.fetchone()['total'])
+            query_comp = f"""
+                SELECT COALESCE(SUM(pa.monto), 0) as total
+                FROM pago pa
+                LEFT JOIN pedido p ON pa.id_pedido = p.id_pedido
+                WHERE pa.estado_pago = %s
+                AND pa.fecha_pago >= date_trunc('month', CURRENT_DATE)
+                AND pa.fecha_pago < date_trunc('day', CURRENT_DATE)
+                {filtro_sql};
+            """
             labels.append("Mes (acum.)")
-            data.append(ventas_comparacion)
         
-        else: # Default es 'ayer'
-            cur.execute("""
-                SELECT COALESCE(SUM(monto), 0) as total
-                FROM pago
-                WHERE estado_pago = 'aprobado'
-                AND fecha_pago >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
-                AND fecha_pago < date_trunc('day', CURRENT_DATE);
-            """)
+        if query_comp:
+            cur.execute(query_comp, tuple(params_comp))
             ventas_comparacion = float(cur.fetchone()['total'])
-            labels.append("Ayer")
             data.append(ventas_comparacion)
+        else: # Fallback por si el periodo no es válido
+            labels.append("Ayer")
+            data.append(0)
+
 
         return jsonify({"labels": labels, "data": data})
 
@@ -3569,15 +3597,22 @@ def get_dashboard_chart_ventas():
 def get_dashboard_lista_ventas_hoy():
     """
     Obtiene la lista de pedidos (ventas) aprobados de HOY para el modal.
+    Filtra por sucursal_id si se provee.
     """
+    sucursal_id_str = request.args.get('sucursal_id')
     conn = None
     cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-        # Obtenemos pedidos pagados HOY
-        cur.execute("""
+        params = ['aprobado']
+        filtro_sql = ""
+        if sucursal_id_str and sucursal_id_str != 'all':
+            filtro_sql = " AND p.id_sucursal = %s"
+            params.append(int(sucursal_id_str))
+
+        cur.execute(f"""
             SELECT 
                 p.id_pedido,
                 p.creado_en,
@@ -3593,12 +3628,13 @@ def get_dashboard_lista_ventas_hoy():
             FROM pedido p
             JOIN usuario u ON p.id_usuario = u.id_usuario
             JOIN pago pa ON p.id_pedido = pa.id_pedido
-            WHERE pa.estado_pago = 'aprobado'
+            WHERE pa.estado_pago = %s
             AND pa.fecha_pago >= date_trunc('day', CURRENT_DATE)
             AND pa.fecha_pago < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day'
+            {filtro_sql}
             GROUP BY p.id_pedido, u.nombre_usuario, u.apellido_paterno
             ORDER BY p.creado_en DESC;
-        """)
+        """, tuple(params))
         
         ventas = cur.fetchall()
         return jsonify([dict(row) for row in ventas])
@@ -3609,6 +3645,446 @@ def get_dashboard_lista_ventas_hoy():
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
+
+# --- Rutas para "Productos con bajo stock" ---
+
+@app.route('/api/admin/dashboard/kpi_bajo_stock', methods=['GET'])
+@admin_required
+def get_dashboard_kpi_bajo_stock():
+    """
+    Calcula el KPI: Conteo de productos con stock total <= 20.
+    Filtra por sucursal_id si se provee.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        filtro_sql = ""
+        params = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            # Si filtramos por sucursal, el stock total es SOLO de esa sucursal
+            filtro_sql = " WHERE i.id_sucursal = %s"
+            params.append(int(sucursal_id_str))
+
+        cur.execute(f"""
+            SELECT COUNT(*) as conteo_total
+            FROM (
+                SELECT 
+                    p.id_producto, 
+                    COALESCE(SUM(i.stock), 0) as total_stock
+                FROM producto p
+                LEFT JOIN variacion_producto v ON p.id_producto = v.id_producto
+                LEFT JOIN inventario_sucursal i ON v.id_variacion = i.id_variacion
+                {filtro_sql} 
+                GROUP BY p.id_producto
+                HAVING COALESCE(SUM(i.stock), 0) <= 20
+            ) as productos_bajo_stock;
+        """, tuple(params))
+        
+        conteo_bajo_stock = cur.fetchone()['conteo_total']
+
+        return jsonify({
+            "conteo_bajo_stock": int(conteo_bajo_stock)
+        })
+
+    except Exception as e:
+        print(f"Error en /api/admin/dashboard/kpi_bajo_stock: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+@app.route('/api/admin/dashboard/stock_por_categoria', methods=['GET'])
+@admin_required
+def get_dashboard_stock_por_categoria():
+    """
+    Obtiene la lista de categorías y el conteo de productos con bajo stock en c/u.
+    Filtra por sucursal_id si se provee.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        filtro_sql = ""
+        params = []
+        if sucursal_id_str and sucursal_id_str != 'all':
+            filtro_sql = " WHERE i.id_sucursal = %s"
+            params.append(int(sucursal_id_str))
+
+        cur.execute(f"""
+            WITH StockPorProducto AS (
+                SELECT 
+                    p.id_producto, 
+                    COALESCE(p.categoria_producto, 'Sin Categoría') as categoria,
+                    COALESCE(SUM(i.stock), 0) as total_stock
+                FROM producto p
+                LEFT JOIN variacion_producto v ON p.id_producto = v.id_producto
+                LEFT JOIN inventario_sucursal i ON v.id_variacion = i.id_variacion
+                {filtro_sql}
+                GROUP BY p.id_producto, p.categoria_producto
+            )
+            SELECT 
+                categoria,
+                COUNT(*) as total_productos,
+                SUM(CASE WHEN total_stock <= 20 THEN 1 ELSE 0 END) as conteo_bajo_stock
+            FROM StockPorProducto
+            GROUP BY categoria
+            ORDER BY categoria;
+        """, tuple(params))
+        
+        categorias = cur.fetchall()
+        return jsonify([dict(row) for row in categorias])
+
+    except Exception as e:
+        print(f"Error en /api/admin/dashboard/stock_por_categoria: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+@app.route('/api/admin/dashboard/productos_por_categoria', methods=['GET'])
+@admin_required
+def get_dashboard_productos_por_categoria():
+    """
+    Obtiene todos los productos de una categoría específica, con su stock total.
+    Acepta ?categoria=...
+    Filtra por sucursal_id si se provee.
+    """
+    categoria = request.args.get('categoria')
+    sucursal_id_str = request.args.get('sucursal_id')
+    
+    if not categoria:
+        return jsonify({"error": "Se requiere una categoría"}), 400
+        
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        filtro_sucursal_sql = ""
+        params = []
+        
+        if categoria == 'Sin Categoría':
+            filtro_sql = " WHERE p.categoria_producto IS NULL"
+        else:
+            filtro_sql = " WHERE p.categoria_producto = %s"
+            params.append(categoria)
+        
+        if sucursal_id_str and sucursal_id_str != 'all':
+            filtro_sucursal_sql = " AND i.id_sucursal = %s"
+            params.append(int(sucursal_id_str))
+            
+        sql = f"""
+            SELECT 
+                p.id_producto, 
+                p.nombre_producto, 
+                p.imagen_url, 
+                COALESCE(SUM(i.stock), 0) as total_stock
+            FROM producto p
+            LEFT JOIN variacion_producto v ON p.id_producto = v.id_producto
+            LEFT JOIN inventario_sucursal i ON v.id_variacion = i.id_variacion
+            {filtro_sql} {filtro_sucursal_sql}
+            GROUP BY p.id_producto, p.nombre_producto, p.imagen_url
+            ORDER BY total_stock ASC, p.nombre_producto;
+        """
+        
+        cur.execute(sql, tuple(params))
+        productos = cur.fetchall()
+        
+        return jsonify([dict(row) for row in productos])
+
+    except Exception as e:
+        print(f"Error en /api/admin/dashboard/productos_por_categoria: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+# --- Rutas para "Nuevos Clientes" ---
+
+@app.route('/api/admin/dashboard/kpi_nuevos_clientes', methods=['GET'])
+@admin_required
+def get_dashboard_kpi_nuevos_clientes():
+    """
+    Calcula el KPI de nuevos clientes de HOY vs AYER.
+    Filtra por sucursal_id si se provee (basado en dónde compraron).
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        params_hoy = []
+        params_ayer = []
+        
+        # Si filtramos por sucursal, la consulta es más compleja
+        if sucursal_id_str and sucursal_id_str != 'all':
+            filtro_sql = " AND p.id_sucursal = %s"
+            params_hoy.append(int(sucursal_id_str))
+            params_ayer.append(int(sucursal_id_str))
+            
+            # Clientes de HOY (que compraron en sucursal)
+            cur.execute(f"""
+                SELECT COUNT(DISTINCT u.id_usuario) as total
+                FROM usuario u
+                JOIN pedido p ON u.id_usuario = p.id_usuario
+                WHERE u.creado_en >= date_trunc('day', CURRENT_DATE)
+                AND u.creado_en < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day'
+                {filtro_sql};
+            """, tuple(params_hoy))
+            clientes_hoy = cur.fetchone()['total']
+
+            # Clientes de AYER (que compraron en sucursal)
+            cur.execute(f"""
+                SELECT COUNT(DISTINCT u.id_usuario) as total
+                FROM usuario u
+                JOIN pedido p ON u.id_usuario = p.id_usuario
+                WHERE u.creado_en >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
+                AND u.creado_en < date_trunc('day', CURRENT_DATE)
+                {filtro_sql};
+            """, tuple(params_ayer))
+            clientes_ayer = cur.fetchone()['total']
+
+        else:
+            # Conteo global (más simple)
+            cur.execute("""
+                SELECT COUNT(id_usuario) as total
+                FROM usuario
+                WHERE creado_en >= date_trunc('day', CURRENT_DATE)
+                AND creado_en < date_trunc('day', CURRENT_DATE) + INTERVAL '1 day';
+            """)
+            clientes_hoy = cur.fetchone()['total']
+
+            cur.execute("""
+                SELECT COUNT(id_usuario) as total
+                FROM usuario
+                WHERE creado_en >= date_trunc('day', CURRENT_DATE) - INTERVAL '1 day'
+                AND creado_en < date_trunc('day', CURRENT_DATE);
+            """)
+            clientes_ayer = cur.fetchone()['total']
+
+        # Calcular Porcentaje de Cambio
+        porcentaje_vs_ayer = 0
+        if clientes_ayer > 0:
+            porcentaje_vs_ayer = ((clientes_hoy - clientes_ayer) / clientes_ayer) * 100
+        elif clientes_hoy > 0:
+            porcentaje_vs_ayer = 100
+
+        return jsonify({
+            "clientes_hoy": int(clientes_hoy),
+            "clientes_ayer": int(clientes_ayer),
+            "porcentaje_vs_ayer": round(porcentaje_vs_ayer, 2)
+        })
+
+    except Exception as e:
+        print(f"Error en /api/admin/dashboard/kpi_nuevos_clientes: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+
+@app.route('/api/admin/dashboard/lista_nuevos_clientes', methods=['GET'])
+@admin_required
+def get_dashboard_lista_nuevos_clientes():
+    """
+    Obtiene la lista de nuevos clientes según el período (hoy, semana, mes).
+    Filtra por sucursal_id si se provee.
+    """
+    sucursal_id_str = request.args.get('sucursal_id')
+    periodo = request.args.get('periodo', 'hoy')
+    conn = None
+    cur = None
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # Definir el rango de fechas según el período
+        if periodo == 'semana':
+            fecha_inicio_sql = "date_trunc('week', CURRENT_DATE)"
+            fecha_fin_sql = "date_trunc('week', CURRENT_DATE) + INTERVAL '1 week'"
+        elif periodo == 'mes':
+            fecha_inicio_sql = "date_trunc('month', CURRENT_DATE)"
+            fecha_fin_sql = "date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'"
+        else: # 'hoy' o default
+            fecha_inicio_sql = "date_trunc('day', CURRENT_DATE)"
+            fecha_fin_sql = "date_trunc('day', CURRENT_DATE) + INTERVAL '1 day'"
+
+        # Definir la consulta base y los parámetros
+        sql = """
+            SELECT DISTINCT
+                u.id_usuario, 
+                CONCAT_WS(' ', u.nombre_usuario, u.apellido_paterno, u.apellido_materno) as cliente_nombre,
+                u.email_usuario, 
+                u.creado_en
+            FROM usuario u
+        """
+        params = []
+        
+        if sucursal_id_str and sucursal_id_str != 'all':
+            # Si hay sucursal, unimos con pedidos
+            sql += " JOIN pedido p ON u.id_usuario = p.id_usuario"
+            sql += " WHERE p.id_sucursal = %s"
+            params.append(int(sucursal_id_str))
+            # Y añadimos el filtro de fecha
+            sql += f" AND u.creado_en >= {fecha_inicio_sql} AND u.creado_en < {fecha_fin_sql}"
+        else:
+            # Si no hay sucursal, solo filtramos por fecha
+            sql += f" WHERE u.creado_en >= {fecha_inicio_sql} AND u.creado_en < {fecha_fin_sql}"
+        
+        sql += " ORDER BY u.creado_en DESC;"
+        
+        cur.execute(sql, tuple(params))
+        clientes = cur.fetchall()
+        
+        return jsonify([dict(row) for row in clientes])
+
+    except Exception as e:
+        print(f"Error en /api/admin/dashboard/lista_nuevos_clientes: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+# --- ▲▲▲ FIN NUEVAS RUTAS ▲▲▲ ---
+
+# ===============================================
+# --- NUEVA RUTA PARA REGISTRAR PAGO DE MERCADOPAGO ---
+# ===============================================
+
+@app.route('/api/mercadopago/registrar-pago-mp', methods=['POST'])
+def registrar_pago_mercadopago():
+    """
+    Recibe la confirmación del pago desde resultado.js
+    y actualiza la base de datos.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No se recibieron datos JSON"}), 400
+        
+    print(f"Recibiendo datos de pago MP: {data}")
+
+    try:
+        # Datos que SÍ recibimos de la redirección de MP
+        id_pedido = data.get('external_reference')
+        estado_pago_mp = data.get('status')
+        payment_id = data.get('payment_id') # ID de la transacción en MP
+
+        if not id_pedido or not estado_pago_mp:
+            return jsonify({"error": "Faltan external_reference o status"}), 400
+        
+        # Convertir id_pedido a integer
+        try:
+            id_pedido = int(id_pedido)
+        except ValueError:
+             print(f"Error: external_reference (id_pedido) no es un número válido: {id_pedido}")
+             return jsonify({"error": "ID de pedido inválido"}), 400
+
+
+        # Traducir estado
+        estado_db = 'pendiente'
+        estado_pedido_db = 'pendiente'
+        
+        if estado_pago_mp == 'approved':
+            estado_db = 'aprobado'
+            estado_pedido_db = 'pagado'
+        elif estado_pago_mp == 'rejected':
+            estado_db = 'rechazado'
+            estado_pedido_db = 'rechazado'
+
+        metodo_db = 'MercadoPago'
+        
+        conn = None
+        cur = None
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+            # 1. Obtener el monto total del pedido original
+            cur.execute("SELECT total FROM pedido WHERE id_pedido = %s", (id_pedido,))
+            pedido_row = cur.fetchone()
+            if not pedido_row:
+                raise Exception(f"ID de pedido {id_pedido} no encontrado en la base de datos")
+            
+            monto = pedido_row['total']
+
+            # 2. Insertar en la tabla PAGO
+            sql_pago = """
+                INSERT INTO pago (id_pedido, monto, metodo_pago, estado_pago, transaccion_id, observaciones)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id_pago;
+            """
+            cur.execute(sql_pago, (
+                id_pedido, monto, metodo_db, estado_db, payment_id,
+                json.dumps(data) # Guardamos toda la respuesta de MP
+            ))
+            id_pago_nuevo = cur.fetchone()['id_pago']
+            print(f"Pago MP {id_pago_nuevo} registrado para pedido {id_pedido} con transaccion_id {payment_id}")
+
+            # 3. Actualizar el estado del Pedido principal
+            sql_update_pedido = "UPDATE pedido SET estado_pedido = %s WHERE id_pedido = %s;"
+            cur.execute(sql_update_pedido, (estado_pedido_db, id_pedido))
+            print(f"Pedido {id_pedido} actualizado a '{estado_pedido_db}'")
+
+            # 4. Descontar Stock (SI FUE APROBADO)
+            if estado_db == 'aprobado':
+                print(f"Iniciando descuento de stock para Pedido {id_pedido}...")
+                
+                cur.execute("SELECT id_sucursal FROM pedido WHERE id_pedido = %s", (id_pedido,))
+                pedido_data = cur.fetchone()
+                id_sucursal_venta = pedido_data['id_sucursal'] if pedido_data else None
+
+                if id_sucursal_venta:
+                    cur.execute("SELECT sku_producto, cantidad FROM detalle_pedido WHERE id_pedido = %s", (id_pedido,))
+                    items_vendidos = cur.fetchall()
+                    
+                    for item in items_vendidos:
+                        item_sku = item['sku_producto']
+                        item_cantidad = item['cantidad']
+                        
+                        cur.execute("SELECT id_variacion FROM variacion_producto WHERE sku_variacion = %s", (item_sku,))
+                        variacion_data = cur.fetchone()
+                        
+                        if variacion_data:
+                            id_variacion_vendida = variacion_data['id_variacion']
+                            sql_update_stock = """
+                                UPDATE inventario_sucursal
+                                SET stock = stock - %s
+                                WHERE id_variacion = %s AND id_sucursal = %s;
+                            """
+                            cur.execute(sql_update_stock, (item_cantidad, id_variacion_vendida, id_sucursal_venta))
+                            print(f"Stock para SKU {item_sku} actualizado en sucursal {id_sucursal_venta}.")
+                        else:
+                            print(f"ADVERTENCIA: No se encontró id_variacion para SKU {item_sku}. No se descontó stock.")
+                else:
+                    print(f"ADVERTENCIA: Pedido {id_pedido} no tiene sucursal asignada. No se descontó stock.")
+            
+            conn.commit()
+            return jsonify({"success": True, "id_pago": id_pago_nuevo}), 201
+
+        except Exception as e:
+            if conn: conn.rollback()
+            print(f"Error en /api/mercadopago/registrar-pago-mp: {e}"); traceback.print_exc()
+            return jsonify({"error": f"Error de servidor al registrar pago: {e}"}), 500
+        finally:
+            if cur: cur.close()
+            if conn: return_db_connection(conn)
+
+    except Exception as e:
+        print(f"Error parseando datos de pago MP: {e}")
+        return jsonify({"error": f"Datos de pago incompletos o malformados: {e}"}), 400
 
 
 
