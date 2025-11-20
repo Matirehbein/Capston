@@ -1,19 +1,16 @@
 // ../Public/js/clientes.js
 
-// Helpers
+// ==== Helpers ====
 const $ = (s, r = document) => r.querySelector(s);
 const $all = (s, r = document) => r.querySelectorAll(s);
 
-// API_BACKEND ya lo usas en otros JS (reportes_admin.js).
-// Si no existe, puedes poner directamente tu URL, por ejemplo:
 const API_BACKEND = "http://localhost:5000";
 console.log("[clientes.js] cargado");
 
-// Formato de fecha igual que en reportes
 function formatFecha(fechaStr) {
   if (!fechaStr) return "—";
   const d = new Date(fechaStr);
-  if (isNaN(d.getTime())) return fechaStr; // por si ya viene formateada
+  if (isNaN(d.getTime())) return fechaStr;
   return d.toLocaleString("es-CL", {
     year: "numeric",
     month: "2-digit",
@@ -31,7 +28,6 @@ function getInitials(nombreCompleto = "") {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-// --- NUEVO: formatear CLP para el historial de pedidos ---
 function formatCLP(n) {
   const num = Number(n) || 0;
   return num.toLocaleString("es-CL", {
@@ -43,41 +39,25 @@ function formatCLP(n) {
 
 let clientesCache = [];
 
-// Cargar y pintar clientes en la tabla principal
+// ==========================================================
+// =============== Cargar lista de clientes =================
+// ==========================================================
+
 async function loadClientesPage() {
   const tbody = $("#clientes-page-tbody");
   const thead = $("#clientes-page-thead");
   const sucursalSelector = $("#admin-sucursal-selector");
 
-  if (!tbody || !thead) {
-    console.error("[clientes.js] No se encontró thead/tbody de clientes");
-    return;
-  }
+  if (!tbody || !thead) return;
 
   const sucursalId = sucursalSelector?.value || "all";
   const esTodas = sucursalId === "all";
 
-  // Encabezados (igual que en el modal)
-  if (esTodas) {
-    thead.innerHTML = `
-      <tr>
-        <th>Nombre Cliente</th>
-        <th>Email</th>
-        <th>Fecha Registro</th>
-      </tr>`;
-  } else {
-    thead.innerHTML = `
-      <tr>
-        <th>Nombre Cliente</th>
-        <th>Email</th>
-        <th>Dirección</th>
-      </tr>`;
-  }
+  thead.innerHTML = esTodas
+    ? `<tr><th>Nombre Cliente</th><th>Email</th><th>Fecha Registro</th></tr>`
+    : `<tr><th>Nombre Cliente</th><th>Email</th><th>Dirección</th></tr>`;
 
-  tbody.innerHTML = `
-    <tr>
-      <td colspan="3" class="no-data">Cargando clientes...</td>
-    </tr>`;
+  tbody.innerHTML = `<tr><td colspan="3" class="no-data">Cargando clientes...</td></tr>`;
 
   try {
     const url = `${API_BACKEND}/api/admin/reportes/lista_nuevos_clientes?sucursal_id=${encodeURIComponent(
@@ -88,36 +68,27 @@ async function loadClientesPage() {
 
     const res = await fetch(url, { credentials: "include" });
 
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const clientes = await res.json();
-    console.log("[clientes.js] Clientes recibidos:", clientes);
-
     clientesCache = Array.isArray(clientes) ? clientes : [];
 
     if (!clientesCache.length) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="3" class="no-data">No se encontraron clientes.</td>
-        </tr>`;
+      tbody.innerHTML = `<tr><td colspan="3" class="no-data">No se encontraron clientes.</td></tr>`;
       return;
     }
 
     renderClientesTable(esTodas);
   } catch (err) {
     console.error("[clientes.js] Error cargando clientes:", err);
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="3" class="no-data" style="color:red;">
-          Error al cargar clientes.
-        </td>
-      </tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="no-data" style="color:red;">Error al cargar clientes.</td></tr>`;
   }
 }
 
-// Pinta la tabla usando clientesCache y filtro de búsqueda si hay
+// ==========================================================
+// ====================== Render tabla ======================
+// ==========================================================
+
 function renderClientesTable(esTodas) {
   const tbody = $("#clientes-page-tbody");
   const searchInput = $("#clientes-search");
@@ -129,9 +100,7 @@ function renderClientesTable(esTodas) {
   const lista = clientesCache.filter((cliente) => {
     const nombreCompleto = `${cliente.nombre_usuario || ""} ${
       cliente.apellido_paterno || ""
-    } ${cliente.apellido_materno || ""}`
-      .trim()
-      .toLowerCase();
+    } ${cliente.apellido_materno || ""}`.trim().toLowerCase();
 
     const email = (cliente.email_usuario || "").toLowerCase();
 
@@ -140,12 +109,7 @@ function renderClientesTable(esTodas) {
   });
 
   if (!lista.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="3" class="no-data">
-          No se encontraron clientes que coincidan con la búsqueda.
-        </td>
-      </tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="no-data">No se encontraron resultados.</td></tr>`;
     return;
   }
 
@@ -159,24 +123,20 @@ function renderClientesTable(esTodas) {
     const email = cliente.email_usuario || "(Sin correo)";
     const initials = getInitials(nombreCompleto || email);
 
-    // 👇 AQUÍ solo cambiamos el <tr> para que sea clicable con el id
     html += `<tr data-id-cliente="${cliente.id_usuario}">`;
 
-    // Primera columna: avatar + nombre + email
     html += `
       <td class="cliente-cell">
         <div class="avatar-sm">${initials}</div>
         <div class="cliente-texts">
-          <span class="cliente-nombre">${nombreCompleto || "(Sin nombre)"}</span>
+          <span class="cliente-nombre">${nombreCompleto}</span>
           <span class="cliente-email">${email}</span>
         </div>
       </td>
     `;
 
-    // Segunda columna: email
     html += `<td>${email}</td>`;
 
-    // Tercera: fecha o dirección
     if (esTodas) {
       html += `<td>${formatFecha(cliente.creado_en)}</td>`;
     } else {
@@ -186,16 +146,19 @@ function renderClientesTable(esTodas) {
         .replace(/, ,/g, ",")
         .replace(/^, | ,$/g, "")
         .trim();
+
       html += `<td>${direccion || "(Sin dirección)"}</td>`;
     }
 
-    html += "</tr>";
+    html += `</tr>`;
   });
 
   tbody.innerHTML = html;
 }
 
-/* ========= NUEVO: MODAL DETALLE CLIENTE ========= */
+// ==========================================================
+// ==================== MODAL CLIENTE =======================
+// ==========================================================
 
 function openClienteDetailModal(idCliente) {
   const overlay = $("#clientes-detail-modal");
@@ -209,145 +172,261 @@ function closeClienteDetailModal() {
   if (!overlay) return;
   overlay.classList.remove("visible");
 
-  // Limpiar textos
   $all('#clientes-detail-modal span[id^="detalle-cliente-"]').forEach(
-    (span) => (span.textContent = "...")
+    (s) => (s.textContent = "...")
   );
-  const tbody = $("#cliente-pedidos-tbody");
-  if (tbody) tbody.innerHTML = "";
+
+  $("#cliente-pedidos-tbody").innerHTML = "";
 }
+
+// ==========================================================
+// ============== Cargar historial del cliente ==============
+// ==========================================================
 
 async function loadClienteDetailData(idCliente) {
   const sucursalId = $("#admin-sucursal-selector")?.value || "all";
 
-  $all('#clientes-detail-modal span[id^="detalle-cliente-"]').forEach(
-    (span) => (span.textContent = "...")
-  );
-  const pedidosTbody = $("#cliente-pedidos-tbody");
-  if (pedidosTbody) {
-    pedidosTbody.innerHTML =
-      '<tr><td colspan="6" class="no-data">Cargando...</td></tr>';
-  }
+  const pedidosBody = $("#cliente-pedidos-tbody");
+  pedidosBody.innerHTML =
+    '<tr><td colspan="6" class="no-data">Cargando...</td></tr>';
 
   try {
     const url = `${API_BACKEND}/api/admin/reportes/historial_cliente/${idCliente}?sucursal_id=${encodeURIComponent(
       sucursalId
     )}`;
+
     console.log("[clientes.js] Historial cliente:", url);
 
     const res = await fetch(url, { credentials: "include" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
+
     const usuario = data.usuario || {};
-    const pedidos = Array.isArray(data.pedidos) ? data.pedidos : [];
+    const pedidos = data.pedidos || [];
 
     const nombreCompleto = `${usuario.nombre_usuario || ""} ${
       usuario.apellido_paterno || ""
     } ${usuario.apellido_materno || ""}`.trim();
 
-    const direccionCompleta = `${usuario.region || ""}, ${
-      usuario.ciudad || ""
-    }, ${usuario.comuna || ""}, ${usuario.calle || ""} ${
-      usuario.numero_calle || ""
-    }`
-      .replace(/, ,/g, ",")
-      .replace(/^, | ,$/g, "")
-      .trim();
+    const direccion = `${usuario.calle || ""} ${usuario.numero_calle || ""}`.trim();
 
-    $("#detalle-cliente-nombre-modal").textContent =
-      nombreCompleto || "(Sin nombre)";
-    $("#detalle-cliente-nombre-2").textContent =
-      nombreCompleto || "(Sin nombre)";
-    $("#detalle-cliente-email-2").textContent =
-      usuario.email_usuario || "N/A";
-    $("#detalle-cliente-direccion-2").textContent =
-      direccionCompleta || "N/A";
+    $("#detalle-cliente-nombre-modal").textContent = nombreCompleto;
+    $("#detalle-cliente-nombre-2").textContent = nombreCompleto;
+    $("#detalle-cliente-email-2").textContent = usuario.email_usuario || "N/A";
+    $("#detalle-cliente-direccion-2").textContent = direccion || "N/A";
     $("#detalle-cliente-total-pedidos").textContent =
-      data.total_pedidos || pedidos.length || 0;
+      pedidos.length || data.total_pedidos || 0;
 
     if (!pedidos.length) {
-      if (pedidosTbody) {
-        pedidosTbody.innerHTML =
-          '<tr><td colspan="6" class="no-data">Este cliente no tiene pedidos.</td></tr>';
+      pedidosBody.innerHTML =
+        '<tr><td colspan="6" class="no-data">El cliente no tiene pedidos.</td></tr>';
+      return;
+    }
+
+    let html = "";
+
+    pedidos.forEach((p) => {
+      html += `
+        <tr>
+          <td>#${p.id_pedido}</td>
+          <td>${formatFecha(p.creado_en)}</td>
+          <td>${p.nombre_sucursal || "N/A"}</td>
+
+          <td style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" 
+              title="${p.productos_preview || ""}">
+            ${p.productos_preview || "N/A"}
+          </td>
+
+          <td>${formatCLP(p.total)}</td>
+
+          <td>
+            <a href="#" class="pedido-detail-link" data-id-pedido="${p.id_pedido}">
+              Ver
+            </a>
+          </td>
+        </tr>`;
+    });
+
+    pedidosBody.innerHTML = html;
+  } catch (err) {
+    console.error("[clientes.js] Error:", err);
+    pedidosBody.innerHTML =
+      '<tr><td colspan="6" class="no-data" style="color:red;">Error al cargar historial.</td></tr>';
+  }
+}
+
+// ==========================================================
+// ============ MODAL DETALLE DEL PEDIDO ====================
+// ==========================================================
+
+function openClientePedidoDetailModal(idPedido) {
+  const modal = $("#cliente-pedido-detail-modal");
+  if (!modal) return;
+  modal.classList.add("visible");
+  loadClientePedidoDetailData(idPedido);
+}
+
+function closeClientePedidoDetailModal() {
+  const modal = $("#cliente-pedido-detail-modal");
+  if (!modal) return;
+
+  modal.classList.remove("visible");
+
+  
+  [
+    "cliente-detalle-pedido-id",
+    "cliente-detalle-pedido-id-2",
+    "cliente-detalle-pedido-fecha",
+    "cliente-detalle-pedido-total",
+    "cliente-detalle-pedido-metodo",
+    "cliente-detalle-pedido-estado",
+    "cliente-detalle-pedido-transaccion",
+  ].forEach((id) => {
+    const el = $(`#${id}`);
+    if (el) el.textContent = "...";
+  });
+
+  const itemsBody = $("#cliente-detalle-items-tbody");
+  if (itemsBody) itemsBody.innerHTML = "";
+}
+
+
+// =========== Cargar detalle del pedido ===========
+async function loadClientePedidoDetailData(idPedido) {
+  const sucursalId = $("#admin-sucursal-selector")?.value || "all";
+  const itemsBody = $("#cliente-detalle-items-tbody");
+
+  if (itemsBody) {
+    itemsBody.innerHTML =
+      '<tr><td colspan="7" class="no-data">Cargando items...</td></tr>';
+  }
+
+  try {
+    const url = `${API_BACKEND}/api/admin/reportes/detalle_pedido/${idPedido}?sucursal_id=${encodeURIComponent(
+      sucursalId
+    )}`;
+    console.log("[clientes.js] Detalle pedido:", url);
+
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const pedido = data.pedido || {};
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    //  Datos del pedido
+    $("#cliente-detalle-pedido-id").textContent = pedido.id_pedido || idPedido;
+    $("#cliente-detalle-pedido-id-2").textContent =
+      pedido.id_pedido || idPedido;
+    $("#cliente-detalle-pedido-fecha").textContent = formatFecha(
+      pedido.creado_en
+    );
+    $("#cliente-detalle-pedido-total").textContent = formatCLP(
+      pedido.total || pedido.total_pagado
+    );
+    $("#cliente-detalle-pedido-metodo").textContent =
+      pedido.metodo_pago || "N/A";
+    $("#cliente-detalle-pedido-estado").textContent =
+      pedido.estado_pago || pedido.estado_pedido || "N/A";
+    $("#cliente-detalle-pedido-transaccion").textContent =
+      pedido.id_transaccion || pedido.transaction_id || "N/A";
+
+    //  Items comprados
+    if (!items.length) {
+      if (itemsBody) {
+        itemsBody.innerHTML =
+          '<tr><td colspan="7" class="no-data">Este pedido no tiene items registrados.</td></tr>';
       }
       return;
     }
 
-    let pedidosHtml = "";
-    pedidos.forEach((pedido) => {
-      pedidosHtml += `
+    let html = "";
+    items.forEach((it) => {
+      const foto =
+        it.foto_url ||
+        it.foto_producto ||
+        it.imagen_url ||
+        it.url_imagen ||
+        it.url_foto ||
+        "";
+
+      html += `
         <tr>
-          <td>#${pedido.id_pedido}</td>
-          <td>${formatFecha(pedido.creado_en)}</td>
-          <td>${pedido.nombre_sucursal || "N/A"}</td>
-          <td style="font-size:.8em; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" 
-              title="${pedido.productos_preview || ""}">
-            ${pedido.productos_preview || "N/A"}
-          </td>
-          <td>${formatCLP(pedido.total)}</td>
-          <td><a href="#" class="pedido-detail-link" data-id-pedido="${pedido.id_pedido}"></a></td>
+          <td>${
+            foto
+              ? `<img src="${foto}" class="item-foto" alt="producto" />`
+              : "-"
+          }</td>
+          <td>${it.nombre_producto || it.nombre || "Producto"}</td>
+          <td>${it.sku || it.sku_producto || "—"}</td>
+          <td>${it.talla || "—"}</td>
+          <td>${it.color || "—"}</td>
+          <td>${it.cantidad || 0}</td>
+          <td>${formatCLP(it.precio_unitario || it.precio || 0)}</td>
         </tr>`;
     });
 
-    if (pedidosTbody) {
-      pedidosTbody.innerHTML = pedidosHtml;
-    }
+    if (itemsBody) itemsBody.innerHTML = html;
   } catch (err) {
-    console.error("[clientes.js] Error historial cliente:", err);
-    if (pedidosTbody) {
-      pedidosTbody.innerHTML = `
+    console.error("[clientes.js] Error detalle pedido:", err);
+    if (itemsBody) {
+      itemsBody.innerHTML = `
         <tr>
-          <td colspan="6" class="no-data" style="color:red;">
-            Error al cargar historial.
+          <td colspan="7" class="no-data" style="color:red;">
+            Error al cargar el detalle del pedido.
           </td>
         </tr>`;
     }
   }
 }
 
-/* ========= INICIALIZAR EVENTOS ========= */
+
+// ==========================================================
+// ===================== EVENTOS ============================
+// ==========================================================
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[clientes.js] DOMContentLoaded");
 
-  // Cargar clientes al entrar
   loadClientesPage();
 
-  // Recargar al cambiar sucursal
-  $("#admin-sucursal-selector")?.addEventListener("change", () =>
-    loadClientesPage()
-  );
+  $("#admin-sucursal-selector")?.addEventListener("change", loadClientesPage);
 
-  // Buscar mientras escribe
   $("#clientes-search")?.addEventListener("input", () => {
-    const sucursalId = $("#admin-sucursal-selector")?.value || "all";
-    const esTodas = sucursalId === "all";
+    const esTodas = ($("#admin-sucursal-selector")?.value || "all") === "all";
     renderClientesTable(esTodas);
   });
 
-  // 👉 NUEVO: click en filas -> abrir modal detalle
+  // Click en fila del cliente
   $("#clientes-page-tbody")?.addEventListener("click", (e) => {
     const tr = e.target.closest("tr[data-id-cliente]");
     if (!tr) return;
-    const idCliente = tr.dataset.idCliente;
-    if (idCliente) {
-      openClienteDetailModal(idCliente);
-    }
+    openClienteDetailModal(tr.dataset.idCliente);
   });
 
-  // 👉 NUEVO: cerrar modal
-  $("#clientes-detail-close-btn")?.addEventListener("click", closeClienteDetailModal);
-
-  $("#clientes-detail-modal")?.addEventListener("click", (e) => {
-    if (e.target === $("#clientes-detail-modal")) {
-      closeClienteDetailModal();
-    }
+  // Click en botón VER dentro del historial
+  $("#cliente-pedidos-tbody")?.addEventListener("click", (e) => {
+    const a = e.target.closest(".pedido-detail-link");
+    if (!a) return;
+    const idPedido = a.dataset.idPedido;
+    openClientePedidoDetailModal(idPedido);
   });
+
+  // Cerrar modals
+  $("#clientes-detail-close-btn")?.addEventListener(
+    "click",
+    closeClienteDetailModal
+  );
+  $("#cliente-pedido-detail-close-btn")?.addEventListener(
+    "click",
+    closeClientePedidoDetailModal
+  );
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeClienteDetailModal();
+      closeClientePedidoDetailModal();
     }
   });
 });

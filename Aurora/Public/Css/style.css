@@ -2173,5 +2173,15 @@ a.branch-option.active {
   border-color: #555;
 }
 
+/* Miniatura de la foto en la tabla de items comprados */
+.item-foto {
+  width: 45px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #eee);
+  display: block;
+}
+
 /* === FIN: Corrección de Contraste === */
 

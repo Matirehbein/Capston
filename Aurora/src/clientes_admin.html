@@ -82,10 +82,58 @@
                 <th>Sucursal</th>
                 <th>Productos (preview)</th>
                 <th>Total</th>
+                <th>Ver</th>
                 
               </tr>
             </thead>
             <tbody id="cliente-pedidos-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalle del Pedido del Cliente (solo datos del pedido) -->
+<div class="modal-overlay" id="cliente-pedido-detail-modal">
+  <div class="modal-content" style="max-width: 900px; height: 90vh;">
+    <div class="modal-header">
+      <h2>Detalle del Pedido: #<span id="cliente-detalle-pedido-id">...</span></h2>
+      <button class="modal-close" id="cliente-pedido-detail-close-btn">&times;</button>
+    </div>
+
+    <div class="modal-body" style="overflow-y: auto;">
+
+      <!-- DATOS DEL PEDIDO -->
+      <div class="pedido-detail-grid">
+        <div class="pedido-detail-section">
+          <h4>Datos del Pedido</h4>
+          <p><strong>ID Pedido:</strong> <span id="cliente-detalle-pedido-id-2">...</span></p>
+          <p><strong>Fecha:</strong> <span id="cliente-detalle-pedido-fecha">...</span></p>
+          <p><strong>Total Pagado:</strong> <span id="cliente-detalle-pedido-total">...</span></p>
+          <p><strong>Método Pago:</strong> <span id="cliente-detalle-pedido-metodo">...</span></p>
+          <p><strong>Estado:</strong> <span id="cliente-detalle-pedido-estado">...</span></p>
+          <p><strong>ID Transacción:</strong> <span id="cliente-detalle-pedido-transaccion">...</span></p>
+        </div>
+      </div>
+
+      <!-- ITEMS COMPRADOS -->
+      <div class="pedido-detail-section">
+        <h4>Items Comprados</h4>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Foto</th>
+                <th>Producto</th>
+                <th>SKU</th>
+                <th>Talla</th>
+                <th>Color</th>
+                <th>Cantidad</th>
+                <th>Precio Unit.</th>
+              </tr>
+            </thead>
+            <tbody id="cliente-detalle-items-tbody"></tbody>
           </table>
         </div>
       </div>
