@@ -4196,6 +4196,160 @@ def admin_detalle_producto(id_producto):
         if cur: cur.close()
         if conn: return_db_connection(conn)
 
+@app.route("/api/admin/pedidos", methods=["GET"])
+def admin_list_pedidos():
+    try:
+        status = request.args.get("status")
+        q = request.args.get("q", "")
+
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        query = """
+            SELECT 
+                p.id_pedido,
+                CONCAT(u.nombre_usuario, ' ', u.apellido_paterno) AS cliente,
+                p.creado_en AS fecha,
+                COALESCE(p.estado_pedido, 'pendiente') AS estado,
+                p.total
+            FROM pedido p
+            JOIN usuario u ON u.id_usuario = p.id_usuario
+            WHERE 1=1
+        """
+
+        params = []
+
+        # Filtro por estado (si no es "todos")
+        if status and status != "todos":
+            query += " AND LOWER(p.estado_pedido) = LOWER(%s)"
+            params.append(status)
+
+        # Filtro búsqueda por cliente o id_pedido
+        if q:
+            query += " AND (CAST(p.id_pedido AS TEXT) ILIKE %s OR u.nombre_usuario ILIKE %s)"
+            params.extend([f"%{q}%", f"%{q}%"])
+
+        query += " ORDER BY p.creado_en DESC"
+
+        cur.execute(query, params)
+        pedidos = [dict(row) for row in cur.fetchall()]
+
+        return jsonify(pedidos)
+
+    except Exception as e:
+        print("❌ Error:", e)
+        return jsonify({"error": "Error obteniendo pedidos"}), 500
+
+    finally:
+        if conn: return_db_connection(conn)
+
+
+@app.route("/api/admin/pedidos/<int:id_pedido>", methods=["GET"])
+def admin_detalle_pedido(id_pedido):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # ----------------------------------------
+        # PEDIDO GENERAL
+        # ----------------------------------------
+        cur.execute("""
+            SELECT 
+                p.id_pedido,
+                p.creado_en,
+                p.estado_pedido,
+                p.total,
+                u.nombre_usuario,
+                u.apellido_paterno
+            FROM pedido p
+            JOIN usuario u ON u.id_usuario = p.id_usuario
+            WHERE p.id_pedido = %s
+        """, (id_pedido,))
+
+        ped = cur.fetchone()
+        if not ped:
+            return jsonify({"error": "Pedido no encontrado"}), 404
+
+        pedido = {
+            "id_pedido": ped["id_pedido"],
+            "cliente": f"{ped['nombre_usuario']} {ped['apellido_paterno']}",
+            "fecha": ped["creado_en"],
+            "estado": ped["estado_pedido"],
+            "total": float(ped["total"]),
+        }
+
+        # ----------------------------------------
+        # ITEMS DEL PEDIDO
+        # ----------------------------------------
+        cur.execute("""
+            SELECT 
+                dp.cantidad,
+                dp.precio_unitario,
+                v.talla,
+                v.color,
+                v.sku_variacion,
+                pr.nombre_producto
+            FROM detalle_pedido dp
+            JOIN variacion_producto v ON v.id_variacion = dp.id_variacion
+            JOIN producto pr ON pr.id_producto = v.id_producto
+            WHERE dp.id_pedido = %s
+        """, (id_pedido,))
+
+        items = []
+        for row in cur.fetchall():
+            items.append({
+                "producto": row["nombre_producto"],
+                "talla": row["talla"],
+                "color": row["color"],
+                "sku": row["sku_variacion"],
+                "cantidad": row["cantidad"],
+                "precio_unitario": float(row["precio_unitario"]),
+            })
+
+        return jsonify({
+            "pedido": pedido,
+            "items": items
+        })
+
+    except Exception as e:
+        print("❌ Error obteniendo detalle:", e)
+        traceback.print_exc()
+        return jsonify({"error": "Error al obtener detalle del pedido"}), 500
+
+    finally:
+        if conn: return_db_connection(conn)
+
+@app.route("/api/admin/pedidos/bulk_estado", methods=["PUT"])
+def bulk_update_estado():
+    try:
+        data = request.get_json()
+        ids = data.get("ids", [])
+        estado = data.get("estado")
+
+        if not ids or not estado:
+            return jsonify({"error": "Datos inválidos"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        query = """
+            UPDATE pedido 
+            SET estado_pedido = %s
+            WHERE id_pedido = ANY(%s)
+        """
+        cur.execute(query, (estado, ids))
+
+        conn.commit()
+
+        return jsonify({"ok": True})
+
+    except Exception as e:
+        print("❌ Error bulk:", e)
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if conn: return_db_connection(conn)
+
 # ===========================
 # RUN (SIN CAMBIOS)
 # ===========================

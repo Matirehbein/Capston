@@ -1,0 +1,219 @@
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: none;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 40px;
+  overflow-y: auto;
+  z-index: 9999;
+}
+
+.modal.visible {
+  display: flex;
+}
+
+/**************************************
+  CONTENEDOR DEL MODAL
+**************************************/
+.modal-card {
+  background: var(--card-bg, #fff);
+  color: var(--text, #111);
+  width: 90%;
+  max-width: 600px;
+  border-radius: 14px;
+  padding: 25px 30px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .35);
+  animation: fadeInUp .25s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/**************************************
+  HEADER DEL MODAL
+**************************************/
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.modal-head h3 {
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.close-x {
+  font-size: 1.7rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text, #000);
+  transition: .2s;
+}
+
+.close-x:hover {
+  color: var(--accent, #c6a67e);
+}
+
+/**************************************
+  BODY DEL MODAL
+**************************************/
+.modal-body {
+  font-size: 0.95rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+  margin-bottom: 10px;
+}
+
+.detail-grid .muted {
+  font-size: 0.8rem;
+  color: #757575;
+  margin-bottom: 3px;
+}
+
+#mItems {
+  margin-top: 10px;
+  list-style: none;
+  padding-left: 0;
+}
+
+#mItems li {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+/**************************************
+  TABLA PRINCIPAL DE PEDIDOS
+**************************************/
+.table-wrap {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 0.95rem;
+}
+
+.admin-table thead {
+  background: #f5efe5;
+  color: #5a4632;
+  font-weight: bold;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 14px 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-table tr:hover {
+  background: #faf6f0;
+}
+
+/**************************************
+  CENTRAR COLUMNA ESTADO
+**************************************/
+/* ==== FIX DEFINITIVO PARA EL BADGE DE ESTADO ==== */
+
+.admin-table td.estado-cell {
+  position: relative;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0;                     /* elimina desplazamientos por padding */
+}
+
+.estado-wrap {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  width: 100%;                    /* se mantiene 100% para centrar */
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.estado-wrap .badge {
+  display: inline-flex !important;
+  justify-content: center;
+  align-items: center;
+  min-width: 90px;                /* tamaño uniforme */
+  text-align: center;
+  margin: 0 auto;                 /* centrado perfecto */
+}
+
+
+
+/**************************************
+  BADGES DE ESTADO
+**************************************/
+.admin-table .badge {
+  display: inline-flex;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 0.80rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  justify-content: center;
+  align-items: center;
+  min-width: 90px;
+}
+
+
+/* Estados */
+.admin-table .badge.pendiente   { background:#e2e3e5; color:#383d41; }
+.admin-table .badge.preparando  { background:#fff3cd; color:#856404; }
+.admin-table .badge.despachado  { background:#cce5ff; color:#004085; }
+.admin-table .badge.entregado   { background:#d4edda; color:#155724; }
+.admin-table .badge.cancelado   { background:#f8d7da; color:#721c24; }
+.admin-table .badge.sin-estado  { background:#eee;     color:#555; }
+
+/**************************************
+  BOTONES
+**************************************/
+.btn-sm {
+  padding: 6px 12px;
+  background: #e3d4c3;
+  border: 1px solid #c6b39c;
+  border-radius: 6px;
+  color: #5a4632;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: .2s;
+}
+
+.btn-sm:hover {
+  background: #d2beaa;
+}
+
+/**************************************
+  RESPONSIVE
+**************************************/
+@media (max-width: 768px) {
+  .modal-card {
+    max-width: 95%;
+    padding: 18px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

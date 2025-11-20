@@ -73,7 +73,7 @@
         </div>
       </div>
 
-      <!-- TABLA -->
+      <!-- TABLA DE PRODUCTOS -->
       <div class="table-wrap">
         <table class="admin-table" id="productsTable">
           <thead>
@@ -85,16 +85,16 @@
               <th>Precio</th>
             </tr>
           </thead>
-          <tbody><!-- JS llena aquí --></tbody>
+          <tbody><!-- JS render --></tbody>
         </table>
       </div>
 
     </main>
   </div>
 
-    <!-- ===========================
-      MODAL DETALLE PRODUCTO
-  =========================== -->
+  <!-- ===========================
+       MODAL DETALLE PRODUCTO
+  ============================ -->
   <div class="modal-producto-overlay" id="producto-modal">
     <div class="modal-producto-content">
 
@@ -107,7 +107,7 @@
       <!-- BODY -->
       <div class="modal-producto-body">
 
-        <!-- IMAGEN Y DATOS -->
+        <!-- DATOS DEL PRODUCTO -->
         <div class="modal-section">
           <h3 class="modal-section-title">Datos generales</h3>
 
@@ -142,7 +142,7 @@
         <div class="modal-section">
           <h3 class="modal-section-title">Stock por sucursal</h3>
 
-          <!-- SELECTOR DE SUCURSAL -->
+          <!-- SELECT SUCURSAL -->
           <select id="modal-filtro-sucursal" class="modal-filtro">
             <option value="todas">Todas las sucursales</option>
           </select>
@@ -150,7 +150,9 @@
           <table class="modal-table">
             <thead>
               <tr>
-                <th>Sucursal</th><th>Talla</th><th>Stock</th>
+                <th>Sucursal</th>
+                <th>Talla</th>
+                <th>Stock</th>
               </tr>
             </thead>
             <tbody id="modal-stock-sucursales"></tbody>
@@ -160,7 +162,6 @@
       </div>
     </div>
   </div>
-
 
   <!-- SCRIPTS -->
   <script type="module" src="../Public/js/productos.js"></script>
