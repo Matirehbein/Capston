@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const fetch = require('node-fetch');
-const cors = require('cors'); // <-- Asegúrate de tener esto
+const cors = require('cors'); 
 const {
   WebpayPlus,
   Options,
@@ -25,13 +25,14 @@ const tx = new WebpayPlus.Transaction(
   )
 );
 
-// --- ▼▼▼ CONFIGURACIÓN DE CORS ▼▼▼ ---
-// Opciones de CORS para permitir solo tu frontend
+// --- ▼▼▼ CONFIGURACIÓN DE CORS ACTUALIZADA ▼▼▼ ---
 const corsOptions = {
-  origin: 'http://localhost:3000', // Permite solo peticiones desde tu frontend
+  origin: 'http://localhost:3000', // Tu frontend
+  credentials: true,               // <--- ¡ESTO ES VITAL! Permite cookies/headers de auth
   optionsSuccessStatus: 200
 };
-router.use(cors(corsOptions)); // <-- APLICAR CORS A TODAS LAS RUTAS
+
+router.use(cors(corsOptions)); 
 // --- ▲▲▲ FIN CONFIGURACIÓN CORS ▲▲▲ ---
 
 
@@ -47,10 +48,10 @@ router.post('/create', async (req, res) => {
     }
 
     // 2. Convertir el ID a String para Transbank
-    const _buyOrder = String(buyOrderInt); // <--- STRING (ej: "55")
+    const _buyOrder = String(buyOrderInt); 
 
     const _sessionId = sessionId || 'USR-' + Date.now();
-    const amountInt  = Math.round(Number(amount) || 0); // <--- NÚMERO (ej: 60678)
+    const amountInt  = Math.round(Number(amount) || 0); 
 
     if (!amountInt || amountInt <= 0) {
       return res.status(400).json({ error: 'Monto inválido' });
@@ -58,14 +59,11 @@ router.post('/create', async (req, res) => {
     
     console.log(`Creando transacción Webpay: Orden=${_buyOrder}, Session=${_sessionId}, Monto=${amountInt}, ReturnURL=${RETURN_URL}`);
     
-    // --- ▼▼▼ CORRECCIÓN: Convertir amountInt a String() ▼▼▼ ---
     const response = await tx.create(_buyOrder, _sessionId, String(amountInt), RETURN_URL);
-    // --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
     
     console.log('Respuesta de Webpay create:', response);
     res.json(response);
   } catch (e) {
-    // Aquí es donde estabas viendo el error "value.trim is not a function"
     console.error('create error:', e?.response?.data || e.message || e);
     res.status(500).json({ error: 'Error creando transacción' });
   }
@@ -99,13 +97,13 @@ async function handleReturn(req, res) {
     return res.redirect(redirectUrl);
   }
 
-  let result; // Declarar result aquí
+  let result; 
   try {
     console.log('Intentando hacer commit con token_ws:', token);
-    result = await tx.commit(token); // Guardar en la variable 'result'
+    result = await tx.commit(token); 
     console.log('Resultado del commit de Transbank:', result);
 
-    // --- ▼▼▼ PASO 3: Informar a app.py (Flask) ▼▼▼ ---
+    // --- Informar a app.py (Flask) ---
     try {
         console.log(`Enviando resultado a Flask (${FLASK_BACKEND_URL}/api/registrar-pago)...`);
         const responseFlask = await fetch(`${FLASK_BACKEND_URL}/api/registrar-pago`, {
@@ -113,7 +111,7 @@ async function handleReturn(req, res) {
             headers: { 
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(result) // Enviar el objeto 'result' completo
+            body: JSON.stringify(result) 
         });
         
         const dataFlask = await responseFlask.json();
@@ -127,7 +125,6 @@ async function handleReturn(req, res) {
     } catch (dbError) {
         console.error('¡ERROR CRÍTICO! El pago fue exitoso en Transbank pero falló al guardar en app.py:', dbError.message);
     }
-    // --- ▲▲▲ FIN PASO 3 ▲▲▲ ---
 
     // Normaliza estado legible para UI
     const estado =
@@ -141,7 +138,7 @@ async function handleReturn(req, res) {
     // Construye los parámetros para la URL final
     const q = new URLSearchParams({
       estado,
-      buy_order: String(result?.buy_order ?? ''), // Sigue siendo el id_pedido
+      buy_order: String(result?.buy_order ?? ''), 
       amount: String(result?.amount ?? ''),
       authorization_code: String(result?.authorization_code ?? ''),
       payment_type_code: String(result?.payment_type_code ?? ''),
@@ -155,7 +152,6 @@ async function handleReturn(req, res) {
     return res.redirect(redirectUrl);
 
   } catch (e) {
-    // Si el commit de Transbank falla
     console.error('commit error (Transbank):', e?.response?.data || e.message || e);
     const errParams = new URLSearchParams({
       estado: 'error'

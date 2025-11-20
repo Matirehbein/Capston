@@ -2189,96 +2189,104 @@ def api_list_ofertas_public():
 # ===========================
 # RUTAS DE PEDIDOS Y PAGOS
 # ===========================  
-
-# --- ▼▼▼ /api/crear-pedido MODIFICADO ▼▼▼ ---
+# ===========================
+# RUTAS DE PEDIDOS (LA VERSIÓN CORRECTA Y ÚNICA CON ENVÍO)
+# ===========================
 @app.route('/api/crear-pedido', methods=['POST'])
-@login_required # Requiere que el usuario esté logueado
+@login_required
 def crear_pedido():
-    """
-    Paso 1: Crea un pedido en estado 'pendiente' y los detalles del pedido.
-    Recibe el carrito desde carrito.js.
-    Devuelve el nuevo id_pedido.
-    """
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "No se recibieron datos JSON"}), 400
-        
+    if not data: return jsonify({"error": "No json"}), 400
+    
+    print(f"📦 [DEBUG] Datos recibidos: {data}") 
+
     cart_items = data.get('items')
     total = data.get('total')
-    user_id = session.get('user_id') 
-    sucursal_id = data.get('sucursal_id') 
-
-    if not cart_items or not total or not user_id:
-        return jsonify({"error": "Faltan datos (items, total o usuario)"}), 400
+    user_id = session.get('user_id')
     
-    if not sucursal_id:
-        print("Advertencia: Pedido creado sin ID de sucursal.")
-        # Considera si esto debe ser un error
-        # return jsonify({"error": "Falta id_sucursal"}), 400
+    tipo_entrega = data.get('tipo_entrega')
+    costo_envio = data.get('costo_envio', 0)
+    
+    # --- MANEJO DE FECHA ---
+    fecha_entrega = data.get('fecha_entrega')
+    if not fecha_entrega or fecha_entrega.strip() == "":
+        fecha_entrega = None 
+        
+    # --- MANEJO DE BLOQUE HORARIO (SOLUCIÓN 2) ---
+    bloque_horario = data.get('bloque_horario')
+    # Si es retiro o viene vacío, forzamos un texto por defecto para evitar NULL
+    if tipo_entrega == 'retiro':
+        bloque_horario = "Retiro Estándar"
+    elif not bloque_horario or bloque_horario.strip() == "":
+        bloque_horario = "Horario por definir" # O el valor que prefieras para despacho sin horario
+
+    datos_contacto = data.get('datos_contacto') 
+
+    # --- MANEJO DE SUCURSAL ID (SOLUCIÓN 1 REFORZADA) ---
+    sucursal_id = data.get('sucursal_id')
+    
+    # Si viene vacío, intentamos asignar uno por defecto (ej: 1) o dejar NULL si es crítico
+    if not sucursal_id or str(sucursal_id).strip() == "":
+        if tipo_entrega == 'despacho':
+             # Opcional: Asignar sucursal ID 1 (Casa Matriz) si no viene geolocalización
+             print("⚠️ [WARN] No llegó sucursal_id en despacho. Asignando ID 1 por defecto.")
+             sucursal_id = 1 
+        else:
+             sucursal_id = None
+    else:
+        try:
+            sucursal_id = int(sucursal_id)
+        except:
+            sucursal_id = 1 if tipo_entrega == 'despacho' else None
+
+    # Validación final para retiro
+    if tipo_entrega == 'retiro' and not sucursal_id:
+         return jsonify({"error": "Debe seleccionar una sucursal para retiro"}), 400
 
     conn = None
-    cur = None
     try:
         conn = get_db_connection()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor) 
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-        # 1. Crear el Pedido principal
         sql_pedido = """
-            INSERT INTO pedido (id_usuario, total, estado_pedido, id_sucursal)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO pedido (
+                id_usuario, total, estado_pedido, id_sucursal, 
+                tipo_entrega, costo_envio, fecha_entrega, bloque_horario, datos_contacto
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id_pedido;
         """
-        cur.execute(sql_pedido, (user_id, total, 'pendiente', sucursal_id))
-        id_pedido_nuevo = cur.fetchone()['id_pedido'] 
         
-        print(f"Pedido {id_pedido_nuevo} creado para usuario {user_id} desde sucursal {sucursal_id}")
+        datos_contacto_json = json.dumps(datos_contacto) if datos_contacto else None
 
-        # 2. Insertar cada item del carrito en detalle_pedido
-        # --- ¡SQL MODIFICADO! ---
-        sql_detalle = """
-            INSERT INTO detalle_pedido (id_pedido, sku_producto, cantidad, precio_unitario, id_variacion)
-            VALUES (%s, %s, %s, %s, %s);
-        """
+        print(f"📝 [INSERT] Pedido: Sucursal={sucursal_id}, Horario={bloque_horario}")
+
+        cur.execute(sql_pedido, (
+            user_id, total, 'pendiente', sucursal_id,
+            tipo_entrega, costo_envio, fecha_entrega, bloque_horario, datos_contacto_json
+        ))
         
+        id_pedido_nuevo = cur.fetchone()['id_pedido']
+
+        # Insertar Detalles... (Igual que antes)
         for item in cart_items:
-            sku_from_cart = item.get('sku')
+            sku = item.get('sku')
+            cur.execute("SELECT id_variacion FROM variacion_producto WHERE sku_variacion = %s", (sku,))
+            row = cur.fetchone()
+            id_var = row['id_variacion'] if row else None
             
-            # --- ¡NUEVO! Buscar el id_variacion usando el SKU ---
-            cur.execute(
-                "SELECT id_variacion FROM variacion_producto WHERE sku_variacion = %s",
-                (sku_from_cart,)
-            )
-            variacion_row = cur.fetchone()
-            
-            id_variacion_to_insert = None
-            if variacion_row:
-                id_variacion_to_insert = variacion_row['id_variacion']
-            else:
-                # Esto es un problema de datos, pero no queremos que el pago falle por esto
-                print(f"ADVERTENCIA: No se encontró id_variacion para SKU {sku_from_cart}. Se insertará NULL.")
-                # La columna id_variacion en tu DB permite NULLs (lo arreglamos antes)
-            
-            # --- ¡INSERT MODIFICADO! ---
-            cur.execute(sql_detalle, (
-                id_pedido_nuevo,
-                sku_from_cart,
-                item.get('qty'),
-                item.get('price'),
-                id_variacion_to_insert # <-- Se añade el ID (o NULL si no se encontró)
-            ))
-        
+            cur.execute("""
+                INSERT INTO detalle_pedido (id_pedido, sku_producto, cantidad, precio_unitario, id_variacion)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (id_pedido_nuevo, sku, item.get('qty'), item.get('price'), id_var))
+
         conn.commit()
-        
         return jsonify({"id_pedido": id_pedido_nuevo}), 201
 
-    except psycopg2.Error as db_err:
-        if conn: conn.rollback()
-        print(f"Error de base de datos en /api/crear-pedido: {db_err}"); traceback.print_exc()
-        return jsonify({"error": f"Error de base de datos: {db_err.pgerror}"}), 500
     except Exception as e:
         if conn: conn.rollback()
-        print(f"Error en /api/crear-pedido: {e}"); traceback.print_exc()
-        return jsonify({"error": f"Error de servidor al crear pedido: {e}"}), 500
+        print(f"❌ [ERROR] {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
@@ -2723,74 +2731,6 @@ def get_lista_pedidos_mes():
         if cur: cur.close()
         if conn: return_db_connection(conn)
 
-
-@app.route('/api/admin/reportes/detalle_pedido/<int:id_pedido>', methods=['GET'])
-@admin_required
-def get_detalle_pedido(id_pedido):
-    """
-    Obtiene el detalle completo de un pedido para el Modal 2.
-    """
-    conn = None
-    cur = None
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        
-        # --- Query 1: Detalles del Pedido y Cliente ---
-        cur.execute("""
-            SELECT 
-                p.id_pedido, p.total, p.creado_en, p.estado_pedido,
-                pa.metodo_pago, pa.transaccion_id,
-                u.nombre_usuario, u.apellido_paterno, u.apellido_materno,
-                u.email_usuario, u.telefono, u.region, u.ciudad, u.comuna,
-                u.calle, u.numero_calle
-            FROM pedido p
-            JOIN usuario u ON p.id_usuario = u.id_usuario
-            LEFT JOIN pago pa ON p.id_pedido = pa.id_pedido AND pa.estado_pago = 'aprobado'
-            WHERE p.id_pedido = %s
-            ORDER BY pa.fecha_pago DESC
-            LIMIT 1;
-        """, (id_pedido,))
-        
-        pedido_info = cur.fetchone()
-        
-        if not pedido_info:
-            return jsonify({"error": "Pedido no encontrado"}), 404
-
-        # --- Query 2: Items del Pedido ---
-        cur.execute("""
-            SELECT 
-                dp.cantidad, 
-                dp.precio_unitario, 
-                dp.sku_producto, 
-                v.talla, 
-                v.color, 
-                pr.nombre_producto,
-                pr.imagen_url  -- <-- AÑADIDO PARA LA FOTO
-            FROM detalle_pedido dp
-            LEFT JOIN variacion_producto v ON dp.sku_producto = v.sku_variacion
-            LEFT JOIN producto pr ON v.id_producto = pr.id_producto
-            WHERE dp.id_pedido = %s;
-        """, (id_pedido,))
-        
-        items_pedido = cur.fetchall()
-        
-        # Combinar todo
-        resultado = {
-            "pedido": dict(pedido_info),
-            "items": [dict(item) for item in items_pedido]
-        }
-        
-        return jsonify(resultado)
-
-    except Exception as e:
-        print(f"Error en /api/admin/reportes/detalle_pedido/{id_pedido}: {e}"); traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if cur: cur.close()
-        if conn: return_db_connection(conn)
-
-# --- ▲▲▲ FIN NUEVAS RUTAS DE REPORTES DE PEDIDOS ▲▲▲ ---
 
 # ===========================
 # Reportes: RUTAS DE REPORTES DE CLIENTES (KPI) 
@@ -3964,128 +3904,143 @@ def get_dashboard_lista_nuevos_clientes():
 # --- NUEVA RUTA PARA REGISTRAR PAGO DE MERCADOPAGO ---
 # ===============================================
 
+
+# --- 1. RUTA PARA REGISTRAR PAGO MERCADOPAGO (CON DESCUENTO STOCK) ---
 @app.route('/api/mercadopago/registrar-pago-mp', methods=['POST'])
 def registrar_pago_mercadopago():
-    """
-    Recibe la confirmación del pago desde resultado.js
-    y actualiza la base de datos.
-    """
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "No se recibieron datos JSON"}), 400
-        
-    print(f"Recibiendo datos de pago MP: {data}")
+    print(f"Recibiendo pago MP: {data}")
+    
+    id_pedido = data.get('external_reference')
+    estado_mp = data.get('status')
+    payment_id = data.get('payment_id')
 
+    if not id_pedido or not estado_mp:
+        return jsonify({"error": "Datos incompletos"}), 400
+
+    conn = None; cur = None
     try:
-        # Datos que SÍ recibimos de la redirección de MP
-        id_pedido = data.get('external_reference')
-        estado_pago_mp = data.get('status')
-        payment_id = data.get('payment_id') # ID de la transacción en MP
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-        if not id_pedido or not estado_pago_mp:
-            return jsonify({"error": "Faltan external_reference o status"}), 400
+        # Estado DB
+        estado_db = 'aprobado' if estado_mp == 'approved' else 'rechazado'
+        estado_ped_db = 'pagado' if estado_mp == 'approved' else 'rechazado'
+
+        # Obtener monto
+        cur.execute("SELECT total FROM pedido WHERE id_pedido = %s", (id_pedido,))
+        row = cur.fetchone()
+        if not row: raise Exception("Pedido no encontrado")
+        monto = row['total']
+
+        # Insertar Pago
+        cur.execute("""
+            INSERT INTO pago (id_pedido, monto, metodo_pago, estado_pago, transaccion_id, observaciones)
+            VALUES (%s, %s, 'MercadoPago', %s, %s, %s) RETURNING id_pago
+        """, (id_pedido, monto, estado_db, payment_id, json.dumps(data)))
         
-        # Convertir id_pedido a integer
-        try:
-            id_pedido = int(id_pedido)
-        except ValueError:
-             print(f"Error: external_reference (id_pedido) no es un número válido: {id_pedido}")
-             return jsonify({"error": "ID de pedido inválido"}), 400
+        # Actualizar Pedido
+        cur.execute("UPDATE pedido SET estado_pedido = %s WHERE id_pedido = %s", (estado_ped_db, id_pedido))
 
+        # Descontar Stock
+        if estado_db == 'aprobado':
+            cur.execute("SELECT id_sucursal FROM pedido WHERE id_pedido = %s", (id_pedido,))
+            suc_row = cur.fetchone()
+            if suc_row and suc_row['id_sucursal']:
+                id_suc = suc_row['id_sucursal']
+                cur.execute("SELECT sku_producto, cantidad FROM detalle_pedido WHERE id_pedido = %s", (id_pedido,))
+                items = cur.fetchall()
+                for it in items:
+                    cur.execute("SELECT id_variacion FROM variacion_producto WHERE sku_variacion = %s", (it['sku_producto'],))
+                    var_row = cur.fetchone()
+                    if var_row:
+                        cur.execute("UPDATE inventario_sucursal SET stock = stock - %s WHERE id_variacion = %s AND id_sucursal = %s", 
+                                    (it['cantidad'], var_row['id_variacion'], id_suc))
 
-        # Traducir estado
-        estado_db = 'pendiente'
-        estado_pedido_db = 'pendiente'
-        
-        if estado_pago_mp == 'approved':
-            estado_db = 'aprobado'
-            estado_pedido_db = 'pagado'
-        elif estado_pago_mp == 'rejected':
-            estado_db = 'rechazado'
-            estado_pedido_db = 'rechazado'
-
-        metodo_db = 'MercadoPago'
-        
-        conn = None
-        cur = None
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
-            # 1. Obtener el monto total del pedido original
-            cur.execute("SELECT total FROM pedido WHERE id_pedido = %s", (id_pedido,))
-            pedido_row = cur.fetchone()
-            if not pedido_row:
-                raise Exception(f"ID de pedido {id_pedido} no encontrado en la base de datos")
-            
-            monto = pedido_row['total']
-
-            # 2. Insertar en la tabla PAGO
-            sql_pago = """
-                INSERT INTO pago (id_pedido, monto, metodo_pago, estado_pago, transaccion_id, observaciones)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id_pago;
-            """
-            cur.execute(sql_pago, (
-                id_pedido, monto, metodo_db, estado_db, payment_id,
-                json.dumps(data) # Guardamos toda la respuesta de MP
-            ))
-            id_pago_nuevo = cur.fetchone()['id_pago']
-            print(f"Pago MP {id_pago_nuevo} registrado para pedido {id_pedido} con transaccion_id {payment_id}")
-
-            # 3. Actualizar el estado del Pedido principal
-            sql_update_pedido = "UPDATE pedido SET estado_pedido = %s WHERE id_pedido = %s;"
-            cur.execute(sql_update_pedido, (estado_pedido_db, id_pedido))
-            print(f"Pedido {id_pedido} actualizado a '{estado_pedido_db}'")
-
-            # 4. Descontar Stock (SI FUE APROBADO)
-            if estado_db == 'aprobado':
-                print(f"Iniciando descuento de stock para Pedido {id_pedido}...")
-                
-                cur.execute("SELECT id_sucursal FROM pedido WHERE id_pedido = %s", (id_pedido,))
-                pedido_data = cur.fetchone()
-                id_sucursal_venta = pedido_data['id_sucursal'] if pedido_data else None
-
-                if id_sucursal_venta:
-                    cur.execute("SELECT sku_producto, cantidad FROM detalle_pedido WHERE id_pedido = %s", (id_pedido,))
-                    items_vendidos = cur.fetchall()
-                    
-                    for item in items_vendidos:
-                        item_sku = item['sku_producto']
-                        item_cantidad = item['cantidad']
-                        
-                        cur.execute("SELECT id_variacion FROM variacion_producto WHERE sku_variacion = %s", (item_sku,))
-                        variacion_data = cur.fetchone()
-                        
-                        if variacion_data:
-                            id_variacion_vendida = variacion_data['id_variacion']
-                            sql_update_stock = """
-                                UPDATE inventario_sucursal
-                                SET stock = stock - %s
-                                WHERE id_variacion = %s AND id_sucursal = %s;
-                            """
-                            cur.execute(sql_update_stock, (item_cantidad, id_variacion_vendida, id_sucursal_venta))
-                            print(f"Stock para SKU {item_sku} actualizado en sucursal {id_sucursal_venta}.")
-                        else:
-                            print(f"ADVERTENCIA: No se encontró id_variacion para SKU {item_sku}. No se descontó stock.")
-                else:
-                    print(f"ADVERTENCIA: Pedido {id_pedido} no tiene sucursal asignada. No se descontó stock.")
-            
-            conn.commit()
-            return jsonify({"success": True, "id_pago": id_pago_nuevo}), 201
-
-        except Exception as e:
-            if conn: conn.rollback()
-            print(f"Error en /api/mercadopago/registrar-pago-mp: {e}"); traceback.print_exc()
-            return jsonify({"error": f"Error de servidor al registrar pago: {e}"}), 500
-        finally:
-            if cur: cur.close()
-            if conn: return_db_connection(conn)
-
+        conn.commit()
+        return jsonify({"success": True}), 201
     except Exception as e:
-        print(f"Error parseando datos de pago MP: {e}")
-        return jsonify({"error": f"Datos de pago incompletos o malformados: {e}"}), 400
+        if conn: conn.rollback()
+        print(f"Error MP backend: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
 
+# --- 2. DETALLE PEDIDO (ADMIN) ACTUALIZADO ---
+@app.route('/api/admin/reportes/detalle_pedido/<int:id_pedido>', methods=['GET'])
+@admin_required
+def get_detalle_pedido(id_pedido):
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Query Pedido + Datos Envío (Nuevas columnas)
+        cur.execute("""
+            SELECT 
+                p.id_pedido, p.total, p.creado_en, p.estado_pedido,
+                p.tipo_entrega, p.costo_envio, p.fecha_entrega, p.bloque_horario, p.datos_contacto,
+                pa.metodo_pago, pa.transaccion_id,
+                u.nombre_usuario, u.apellido_paterno, u.email_usuario, u.telefono
+            FROM pedido p
+            JOIN usuario u ON p.id_usuario = u.id_usuario
+            LEFT JOIN pago pa ON p.id_pedido = pa.id_pedido AND pa.estado_pago = 'aprobado'
+            WHERE p.id_pedido = %s
+            ORDER BY pa.fecha_pago DESC LIMIT 1;
+        """, (id_pedido,))
+        
+        pedido_info = cur.fetchone()
+        if not pedido_info: return jsonify({"error": "Pedido no encontrado"}), 404
+
+        # Query Items
+        cur.execute("""
+            SELECT dp.cantidad, dp.precio_unitario, dp.sku_producto, v.talla, v.color, pr.nombre_producto, pr.imagen_url
+            FROM detalle_pedido dp
+            LEFT JOIN variacion_producto v ON dp.sku_producto = v.sku_variacion
+            LEFT JOIN producto pr ON v.id_producto = pr.id_producto
+            WHERE dp.id_pedido = %s;
+        """, (id_pedido,))
+        items_pedido = cur.fetchall()
+        
+        return jsonify({
+            "pedido": dict(pedido_info),
+            "items": [dict(item) for item in items_pedido]
+        })
+    except Exception as e:
+        print(f"Error detalle pedido: {e}"); traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+
+# --- 3. API CHILEXPRESS (NECESARIA PARA LOS SELECTS DE CARRITO) ---
+
+@app.route('/api/chilexpress/regiones', methods=['GET'])
+def get_regiones():
+    # URL de ejemplo de API pública o mock. Ajusta si tienes una real.
+    url = "https://testservices.wschilexpress.com/georeference/api/v1/regions"
+    try:
+        resp = requests.get(url)
+        if resp.status_code == 200:
+            return jsonify(resp.json())
+        return jsonify({"error": "Error al obtener regiones", "status": resp.status_code}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/chilexpress/comunas', methods=['GET'])
+def get_comunas():
+    region_code = request.args.get('regionCode')
+    if not region_code: return jsonify({"error": "Falta regionCode"}), 400
+    
+    url = f"https://testservices.wschilexpress.com/georeference/api/v1/coverage-areas?RegionCode={region_code}&type=0"
+    try:
+        resp = requests.get(url)
+        if resp.status_code == 200:
+            return jsonify(resp.json())
+        return jsonify({"error": "Error al obtener comunas", "status": resp.status_code}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ===========================

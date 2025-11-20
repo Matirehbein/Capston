@@ -7,7 +7,17 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3010;
 
-app.use(cors());
+// --- ▼▼▼ CORRECCIÓN CRÍTICA DE CORS ▼▼▼ ---
+// Esto permite que el frontend (localhost:3000) envíe cookies/credenciales
+// sin que el navegador bloquee la respuesta.
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'], // Permite ambos orígenes locales
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+// --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 

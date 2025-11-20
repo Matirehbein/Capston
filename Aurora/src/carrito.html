@@ -5,37 +5,75 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Aurora | Carrito</title>
   <link rel="stylesheet" href="../Public/Css/style.css" />
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+
   <style>
-    /* Estilos opcionales para el nuevo calculador de envío */
-    .shipping-calculator {
-      margin-top: 2rem;
-      border-top: 1px solid #eee;
-      padding-top: 2rem;
-      max-width: 400px; /* Limitar ancho */
+    /* --- ESTILOS SECCIÓN ENVÍO --- */
+    .shipping-section {
+        background: #fff;
+        padding: 25px;
+        margin-top: 2rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
-    .shipping-calculator h3 {
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
+    .shipping-section h3 { margin-bottom: 1.5rem; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+    
+    /* Opción Radio Buttons */
+    .shipping-options { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+    .shipping-radio { flex: 1; min-width: 250px; cursor: pointer; position: relative; }
+    .shipping-radio input { position: absolute; opacity: 0; }
+    .radio-box {
+        display: flex; align-items: center; gap: 12px;
+        padding: 15px 20px; border: 2px solid #eee; border-radius: 8px;
+        font-weight: 600; color: #555; transition: all 0.2s ease;
+        background: #fcfcfc;
     }
-    .shipping-calculator .form-group {
-      margin-bottom: 1rem;
+    .radio-box i { font-size: 1.2rem; color: #888; transition: color 0.2s; }
+    .shipping-radio input:checked + .radio-box {
+        border-color: #000; 
+        background-color: #fffbf0; 
+        color: #000;
     }
-    .shipping-calculator label {
-      display: block;
-      margin-bottom: .5rem;
-      font-weight: bold;
+    .shipping-radio input:checked + .radio-box i { color: #d4a017; }
+
+    /* Formularios */
+    .shipping-form { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ddd; animation: fadeIn 0.3s; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; color: #444; }
+    .form-control { 
+        padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; 
+        background-color: #fff; transition: border-color 0.2s;
     }
-    .shipping-calculator select,
-    .shipping-calculator input {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      box-sizing: border-box; /* Importante para que el padding no desborde */
+    .form-control:disabled { background-color: #f2f2f2; color: #999; cursor: not-allowed; }
+    .form-control:focus { border-color: #000; outline: none; }
+    .full-width { grid-column: 1 / -1; }
+
+    /* Caja de Información */
+    .info-box {
+        grid-column: 1 / -1; background: #e8f4fd; color: #0c5460;
+        padding: 15px; border-radius: 6px; font-size: 0.95rem;
+        display: flex; align-items: flex-start; gap: 12px; border-left: 4px solid #17a2b8;
     }
-    .shipping-calculator select:disabled {
-      background-color: #f4f4f4;
+
+    /* Resumen de Totales */
+    .cart-summary-box {
+        background: #fafafa; padding: 25px; margin-top: 30px;
+        border-radius: 8px; border: 1px solid #eee;
     }
+    .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.05rem; color: #555; }
+    .summary-total { 
+        display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; 
+        border-top: 2px solid #ddd; font-size: 1.4rem; font-weight: 800; color: #000; 
+    }
+    .cart-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 25px; flex-wrap: wrap; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -43,7 +81,6 @@
     <div class="container">
       <div class="header-content">
         <a href="/src/main.html" class="logo">AURORA</a>
-
         <ul class="nav-links">
           <li><a href="/src/colecciones.html">Colecciones</a></li>
           <li class="nav-item-with-megamenu">
@@ -73,40 +110,27 @@
 
         <div class="header-actions">
           <div class="branch-selector">
-          
-          <button id="branch-display-btn" class="branch-display-button" type="button">
-            📍 Buscando...
-          </button>
-          <div id="branch-list-dropdown" class="branch-dropdown-menu" style="display: none;">
-            
-            <div class="dropdown-loading">Cargando sucursales...</div>
+            <button id="branch-display-btn" class="branch-display-button" type="button">📍 Buscando...</button>
+            <div id="branch-list-dropdown" class="branch-dropdown-menu" style="display: none;">
+                <div class="dropdown-loading">Cargando sucursales...</div>
+            </div>
           </div>
-        </div>
-
-        <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
-
+          <a href="./carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
           <a href="/src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
           <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
-
           <a href="../src/perfil.html" id="perfil-menu-btn" class="icon-btn" style="display: none;" aria-label="Mi perfil">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </a>
-
           <button id="logout-btn" class="icon-btn icon-logout" aria-label="Logout" style="display: none; background: none; border: none; cursor: pointer; padding: 0; vertical-align: middle;">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
           </button>
-
           <span id="admin-menu-btn" style="display:none;">
               <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light">Panel Admin</a>
           </span>
-
         </div>
       </div>
     </div>
-  </header>
+ </header>
 
 <main class="site-main">
   <div class="container">
@@ -116,16 +140,133 @@
       <span class="step active">Carrito</span>
       <span class="step">Pago</span>
       <span class="step">Confirmación</span>
-      <p class="cart-total-final"></p>
     </div>
     
-    <div id="cart-container" data-mercadopago="http://localhost:3010/mercadopago/create_preference">
-      </div>
+    <div id="cart-container"></div>
 
-    <!-- Carrito dinámico -->
-    <div id="cart-container"
-     data-mercadopago="http://localhost:3010/api/mercadopago/create"></div>
+    <div id="shipping-container" class="shipping-section" style="display: none;">
+        <h3><i class="fas fa-truck"></i> Opciones de Entrega</h3>
+        
+        <div class="shipping-options">
+            <label class="shipping-radio">
+                <input type="radio" name="tipo_entrega" value="retiro" checked>
+                <span class="radio-box">
+                    <span>🏪</span> Retiro en Tienda (Gratis)
+                </span>
+            </label>
+            <label class="shipping-radio">
+                <input type="radio" name="tipo_entrega" value="despacho">
+                <span class="radio-box">
+                    <span>🚚</span> Despacho a Domicilio
+                </span>
+            </label>
+        </div>
 
+        <div id="form-retiro" class="shipping-form">
+            <h4>Datos para el Retiro</h4>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Sucursal de Retiro</label>
+                    <select id="retiro_sucursal" class="form-control">
+                        <option value="">Cargando sucursales...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Retiro (Disponible en 2 días)</label>
+                    <input type="text" id="retiro_fecha" class="form-control flatpickr-input" placeholder="Selecciona fecha">
+                </div>
+                <div class="form-group">
+                    <label>Nombre quien retira</label>
+                    <input type="text" id="retiro_nombre" class="form-control" placeholder="Ej: Juan Pérez">
+                </div>
+                <div class="form-group">
+                    <label>RUT quien retira</label>
+                    <input type="text" id="retiro_rut" class="form-control" placeholder="12.345.678-9">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="retiro_email" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Celular</label>
+                    <input type="tel" id="retiro_celular" class="form-control" placeholder="+569...">
+                </div>
+            </div>
+        </div>
+
+        <div id="form-despacho" class="shipping-form" style="display: none;">
+            <h4>Datos de Despacho</h4>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label>Región</label>
+                    <select id="select-region" class="form-control">
+                        <option value="">Cargando regiones...</option>
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Comuna / Ciudad</label>
+                    <input type="text" id="input-comuna" class="form-control" placeholder="Escribe tu comuna (ej: Providencia, Viña del Mar)">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>Dirección Exacta</label>
+                    <input type="text" id="despacho_direccion" class="form-control" placeholder="Calle, Número, Depto/Casa">
+                </div>
+                
+                <div class="info-box">
+                    <span style="font-size: 1.5em;">📅</span>
+                    <div>
+                        <strong>Fecha estimada de entrega:</strong> <span id="despacho_fecha_estimada">---</span><br>
+                        <small>Plazo máximo 7 días hábiles desde la compra.</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Horario de Entrega Preferente</label>
+                    <select id="despacho_bloque" class="form-control">
+                        <option value="10:00-12:00">10:00 - 12:00 hrs</option>
+                        <option value="12:00-14:00">12:00 - 14:00 hrs</option>
+                        <option value="14:00-16:00">14:00 - 16:00 hrs</option>
+                        <option value="16:00-18:00">16:00 - 18:00 hrs</option>
+                        <option value="18:00-20:00">18:00 - 20:00 hrs</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre quien recibe</label>
+                    <input type="text" id="despacho_nombre" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="despacho_email" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Celular</label>
+                    <input type="tel" id="despacho_celular" class="form-control">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="totals-container" class="cart-summary-box" style="display: none;">
+        <div class="summary-row"><span>Subtotal Productos:</span> <span id="summary-subtotal">$0</span></div>
+        <div class="summary-row"><span>Impuestos (IVA 19%):</span> <span id="summary-iva">$0</span></div>
+        <div class="summary-row" style="color: #007bff;">
+            <span>Costo de Envío:</span> <span id="summary-envio">$0</span>
+        </div>
+        <div class="summary-total">
+            <span>Total a Pagar:</span> <span id="summary-total">$0</span>
+        </div>
+        
+        <div class="cart-buttons">
+            <button class="btn-sm alt" id="btn-clear">Vaciar carrito</button>
+            <a class="btn-sm" id="btn-checkout" href="#">Pagar con Webpay</a>
+            <a class="btn-sm" id="btn-mp" href="#">Pagar con Mercado Pago</a>
+        </div>
+    </div>
+
+  </div>
 </main>
 
   <footer class="footer">
@@ -157,21 +298,20 @@ document.addEventListener("DOMContentLoaded", () => {
   } else {
     alert("❌ El pago no se completó.");
   }
-  history.replaceState({}, "", location.pathname); // limpia la URL
+  history.replaceState({}, "", location.pathname); 
 });
 </script>
 
 <script>
 (async function checkUserSessionAndSetupUI() {
   const adminBtnSpan = document.getElementById("admin-menu-btn");
-  const perfilBtnSpan = document.getElementById("perfil-menu-btn"); // ← nuevo
+  const perfilBtnSpan = document.getElementById("perfil-menu-btn"); 
   const welcomeMsg = document.getElementById("welcome-msg");
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
 
-  // Estado inicial (por defecto: no logueado)
   if (adminBtnSpan) adminBtnSpan.style.display = "none";
-  if (perfilBtnSpan) perfilBtnSpan.style.display = "none"; // ← ocultar perfil
+  if (perfilBtnSpan) perfilBtnSpan.style.display = "none";
   if (welcomeMsg) welcomeMsg.style.display = "none";
   if (loginBtn) loginBtn.style.display = "inline-block";
   if (logoutBtn) logoutBtn.style.display = "none";
@@ -182,41 +322,37 @@ document.addEventListener("DOMContentLoaded", () => {
       credentials: "include"
     });
 
-    if (!res.ok) {
-      console.error("Error al consultar sesión:", res.status);
-      return;
-    }
+    if (!res.ok) { return; }
 
     const data = await res.json();
-    console.log("session_info recibida:", data);
 
     if (data.logged_in) {
-      // --- Usuario logueado ---
       if (welcomeMsg) {
         welcomeMsg.textContent = `Hola, ${data.nombre || ''} ${data.apellido_paterno || ''}`.trim();
         welcomeMsg.style.display = "inline";
       }
       if (loginBtn) loginBtn.style.display = "none";
       if (logoutBtn) logoutBtn.style.display = "inline-block";
-      if (perfilBtnSpan) perfilBtnSpan.style.display = "inline"; // ← mostrar "Mi perfil"
+      if (perfilBtnSpan) perfilBtnSpan.style.display = "inline"; 
+      
+      // Pre-llenar formulario de despacho si existen datos
+      if(document.getElementById('despacho_nombre')) document.getElementById('despacho_nombre').value = `${data.nombre} ${data.apellido_paterno}`;
+      if(document.getElementById('despacho_email')) document.getElementById('despacho_email').value = data.email;
+      if(document.getElementById('retiro_nombre')) document.getElementById('retiro_nombre').value = `${data.nombre} ${data.apellido_paterno}`;
+      if(document.getElementById('retiro_email')) document.getElementById('retiro_email').value = data.email;
 
-      // --- Mostrar botón Admin solo si corresponde ---
       if (adminBtnSpan && (data.rol === "admin" || data.rol === "soporte")) {
         adminBtnSpan.style.display = "inline";
-        console.log("Usuario es Admin/Soporte, mostrando botón Admin.");
       }
 
     } else {
-      // --- Usuario no logueado ---
-      console.log("Usuario no logueado.");
-      if (perfilBtnSpan) perfilBtnSpan.style.display = "none"; // ← aseguramos ocultarlo
+      if (perfilBtnSpan) perfilBtnSpan.style.display = "none"; 
     }
 
   } catch (err) {
     console.error("Error verificando sesión:", err);
   }
 
-  // Listener para logout
   if (logoutBtn && !logoutBtn.dataset.listenerAttached) {
     logoutBtn.addEventListener('click', () => {
       window.location.href = 'http://localhost:5000/logout';
@@ -226,131 +362,51 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 </script>
 
-
   <script type="module" src="/Public/Js/navigation.js"></script>
   <script type="module" src="/Public/Js/geolocation.js"></script>
   <script type="module" src="/Public/Js/colores.js"></script>
+  
   <script type="module" src="../Public/js/carrito.js"></script>
-
-  <script type="module">
-    // URL de TU backend (Flask en puerto 5000)
-    const API_BACKEND = 'http://localhost:5000';
-    
-    const selectRegion = document.getElementById('select-region');
-    const selectComuna = document.getElementById('select-comuna');
-    
-    // --- 1. Cargar Regiones al iniciar ---
-    async function cargarRegiones() {
-        if (!selectRegion) return; // Si el select no existe, no hacer nada
-        try {
-            console.log("Llamando a /api/chilexpress/regiones...");
-            const response = await fetch(`${API_BACKEND}/api/chilexpress/regiones`);
-            
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Error al cargar regiones');
-            }
-            
-            const data = await response.json();
-            
-            selectRegion.innerHTML = '<option value="">Selecciona una región</option>'; // Limpiar "Cargando..."
-            
-            if (data.regions && data.regions.length > 0) {
-              data.regions.forEach(region => {
-                  const option = document.createElement('option');
-                  option.value = region.regionCode; // Guardamos el CÓDIGO
-                  option.textContent = region.regionName; // Mostramos el NOMBRE
-                  selectRegion.appendChild(option);
-              });
-            } else {
-              selectRegion.innerHTML = '<option value="">No hay regiones</option>';
-            }
-        } catch (error) {
-            console.error("Error en cargarRegiones:", error);
-            selectRegion.innerHTML = '<option value="">Error al cargar</option>';
-        }
-    }
-
-    // --- 2. Cargar Comunas cuando se cambia la Región ---
-    async function cargarComunas(regionCode) {
-        if (!selectComuna) return; // Si el select no existe, no hacer nada
-        
-        if (!regionCode) {
-            selectComuna.innerHTML = '<option value="">Selecciona una región primero</option>';
-            selectComuna.disabled = true;
-            return;
-        }
-        
-        selectComuna.innerHTML = '<option value="">Cargando comunas...</option>';
-        selectComuna.disabled = false;
-        
-        try {
-            const response = await fetch(`${API_BACKEND}/api/chilexpress/comunas?regionCode=${regionCode}`);
-            if (!response.ok) {
-              const errData = await response.json();
-              throw new Error(errData.error || 'Error al cargar comunas');
-            }
-            
-            const data = await response.json();
-            
-            selectComuna.innerHTML = '<option value="">Selecciona una comuna</option>';
-            
-            if (data.communes && data.communes.length > 0) {
-              data.communes.forEach(comuna => {
-                  const option = document.createElement('option');
-                  option.value = comuna.communeName; // Guardamos el NOMBRE
-                  option.textContent = comuna.communeName;
-                  selectComuna.appendChild(option);
-              });
-            } else {
-              selectComuna.innerHTML = '<option value="">No hay comunas</option>';
-            }
-        } catch (error) {
-            console.error("Error en cargarComunas:", error);
-            selectComuna.innerHTML = '<option value="">Error al cargar</or>';
-        }
-    }
-
-    // --- 3. Listeners ---
-    if (selectRegion) {
-      selectRegion.addEventListener('change', () => {
-          cargarComunas(selectRegion.value);
-      });
-    }
-
-    // --- 4. Iniciar Carga de Regiones ---
-    cargarRegiones();
-    
-    // --- 5. Listener para el botón Cotizar (Siguiente paso) ---
-    const btnCalcular = document.getElementById('btn-calcular-envio');
-    const resultadoEnvio = document.getElementById('envio-resultado');
-
-    if (btnCalcular) {
-      btnCalcular.addEventListener('click', () => {
-        // Esta es la lógica para el *siguiente* paso (API Cotizador)
-        const comunaSeleccionada = selectComuna.value;
-        if (!comunaSeleccionada) {
-          alert('Por favor, selecciona una región y una comuna.');
-          return;
-        }
-        
-        // Próximo paso:
-        // 1. Obtener peso y dimensiones del carrito.
-        // 2. Llamar a tu nueva ruta /api/chilexpress/cotizar
-        // 3. Mostrar el precio en 'resultadoEnvio'
-        alert(`¡El siguiente paso es cotizar para la comuna de ${comunaSeleccionada}!`);
-        resultadoEnvio.textContent = "Calculando...";
-      });
-    }
-
-  </script>
-  </body>
+  
   <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
 <script type="module">
-	import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+  import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
 
-	createChat({
-		webhookUrl: 'https://vicmoralesl.app.n8n.cloud/webhook/fd272f2c-66c0-4d7c-a04e-f239f0c90509/chat'
-	});
+  createChat({
+    webhookUrl: 'https://vicmoralesl.app.n8n.cloud/webhook/fd272f2c-66c0-4d7c-a04e-f239f0c90509/chat'
+  });
+</script>
+
+<script type="module">
+    const API_BACKEND = 'http://localhost:5000';
+    const selectRegion = document.getElementById('select-region');
+    
+    async function cargarRegiones() {
+        if (!selectRegion) return;
+        try {
+            const response = await fetch(`${API_BACKEND}/api/chilexpress/regiones`);
+            if (!response.ok) throw new Error('Error al cargar regiones');
+            const data = await response.json();
+            
+            selectRegion.innerHTML = '<option value="">Selecciona una región</option>';
+            if (data.regions) {
+                data.regions.forEach(region => {
+                    const option = document.createElement('option');
+                    option.value = region.regionName; 
+                    option.textContent = region.regionName;
+                    selectRegion.appendChild(option);
+                });
+            }
+        } catch (error) { console.error(error); }
+    }
+
+    if (selectRegion) {
+        selectRegion.addEventListener('change', () => {
+            // Disparar evento para recalcular costo
+            window.dispatchEvent(new CustomEvent('regionChanged', { detail: selectRegion.value }));
+        });
+    }
+
+    cargarRegiones();
 </script>
 </html>
