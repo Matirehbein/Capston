@@ -176,14 +176,17 @@ async function loadProductoDetalle(idProducto) {
     // Variaciones
     let varHTML = "";
     MODAL_VARIACIONES.forEach(v => {
+      const talla = v.talla && v.talla.trim() !== "" ? v.talla : "Talla estándar";
+
       varHTML += `
         <tr>
-          <td>${v.talla || "—"}</td>
+          <td>${talla}</td>
           <td>${v.color || "—"}</td>
           <td>${v.sku_variacion || "—"}</td>
         </tr>
       `;
-    });
+  });
+
     $("#modal-variaciones").innerHTML = varHTML || `<tr><td colspan="3">Sin variaciones</td></tr>`;
 
     // Llenar selector de sucursales
