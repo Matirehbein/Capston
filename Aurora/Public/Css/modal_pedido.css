@@ -180,11 +180,11 @@
 
 /* Estados */
 .admin-table .badge.pendiente   { background:#e2e3e5; color:#383d41; }
-.admin-table .badge.preparando  { background:#fff3cd; color:#856404; }
-.admin-table .badge.despachado  { background:#cce5ff; color:#004085; }
+.admin-table .badge.preparado   { background:#fff3cd; color:#856404; }   
+.admin-table .badge.enviado     { background:#cce5ff; color:#004085; }   
 .admin-table .badge.entregado   { background:#d4edda; color:#155724; }
-.admin-table .badge.cancelado   { background:#f8d7da; color:#721c24; }
-.admin-table .badge.sin-estado  { background:#eee;     color:#555; }
+.admin-table .badge.rechazado   { background:#f8d7da; color:#721c24; }
+.admin-table .badge.pendiente   { background:#e2e3e5; color:#383d41; }
 
 /**************************************
   BOTONES

@@ -27,10 +27,6 @@
         <a class="menu-link" href="../src/clientes_admin.html"><span>Clientes</span></a>
         <a class="menu-link" href="./reportes_admin.html"><span>Reportes</span></a>
 
-        <a class="menu-link icon-reportes" href="../src/main.html">
-          <span>Volver al Inicio</span>
-        </a>
-
         <div class="menu-sep"></div>
 
         <a class="menu-link" href="../src/config_admin.html"><span>Configuración</span></a>
@@ -65,10 +61,12 @@
       <div class="admin-subtop">
         <div class="filter-row">
           <button class="pill active" data-status="todos">Todos</button>
-          <button class="pill" data-status="preparando">Preparando</button>
-          <button class="pill" data-status="despachado">Despachado</button>
+          <button class="pill" data-status="pendiente">Pendiente</button>
+          <button class="pill" data-status="Pagado">Pagado</button>
+          <button class="pill" data-status="preparado">Preparando</button>
+          <button class="pill" data-status="enviado">Despachado</button>
           <button class="pill" data-status="entregado">Entregado</button>
-          <button class="pill" data-status="cancelado">Cancelado</button>
+          <button class="pill" data-status="rechazado">Cancelado</button>
         </div>
       </div>
 
@@ -76,11 +74,12 @@
       <div class="bulk-row">
         <select id="bulkStatus" class="status-select">
           <option value="">Cambiar estado…</option>
-          <option value="preparando">Preparando</option>
-          <option value="despachado">Despachado</option>
+          <option value="preparado">Preparando</option>
+          <option value="enviado">Despachado</option>
           <option value="entregado">Entregado</option>
-          <option value="cancelado">Cancelado</option>
+          <option value="rechazado">Cancelado</option>
         </select>
+
         <button id="applyBulk" class="btn-sm">Aplicar</button>
       </div>
 

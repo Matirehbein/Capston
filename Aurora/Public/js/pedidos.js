@@ -57,12 +57,11 @@ function renderOrders(pedidos) {
       <td>${new Date(p.fecha).toLocaleDateString("es-CL")}</td>
       <td class="estado-cell">
         <div class="estado-wrap">
-            <span class="badge ${p.estado ? p.estado.toLowerCase() : "sin-estado"}">
+              <span class="badge ${p.estado?.toLowerCase() || "sin-estado"}">
               ${p.estado || "Sin estado"}
             </span>
         </div>
       </td>
-
       <td>${CLP(p.total)}</td>
       <td><button class="btn-sm alt view-btn" data-id="${p.id_pedido}">Ver</button></td>
     `;
