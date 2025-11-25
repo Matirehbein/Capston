@@ -530,6 +530,7 @@ def delete_producto(id):
     
     return redirect(url_for("crud_productos"))
 
+
 @app.route("/ver_stock/<int:id_producto>")
 @login_required
 def ver_stock(id_producto):
@@ -590,7 +591,7 @@ def ver_stock(id_producto):
             # Calcular el stock TOTAL de la sucursal
             # Usar s['id_sucursal'] aquí también
             stock_total_sucursal[s['id_sucursal']] = sum(stock_tallas_sucursal.values()) + stock_base_sucursal[s['id_sucursal']]
-            # --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
+            
 
         # 5. Calcular stock total del producto
         stock_total_producto = sum(stock_total_sucursal.values())
@@ -616,7 +617,7 @@ def ver_stock(id_producto):
         if conn: return_db_connection(conn) # Devuelve al pool
 
 
-# --- ▼▼▼ AÑADE ESTA NUEVA RUTA EN app.py ▼▼▼ ---
+# --- Actualizar Stock Tallas Estándar ▼▼▼ ---
 
 @app.route("/productos/<int:id_producto>/actualizar_stock_estandar", methods=["POST"])
 @login_required
@@ -1442,6 +1443,195 @@ def view_oferta(id_oferta):
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn) # <-- USA POOL
+        
+        
+# ===========================
+# CRUD DE CUPONES DE DESCUENTO
+# ===========================
+
+@app.route('/cupones')
+@login_required
+def crud_cupones():
+    # 1. Obtener parámetros de la URL (GET)
+    filtro_codigo = request.args.get('q', '').strip()
+    filtro_estado = request.args.get('filtro_estado', '')
+    
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # 2. Construcción dinámica de la consulta
+        # La columna calculada 'es_activo' ayuda a simplificar la lógica en el template,
+        # pero para filtrar en SQL debemos usar las condiciones crudas.
+        base_query = """
+            SELECT *, 
+            (vigente_bool AND CURRENT_DATE BETWEEN fecha_inicio AND fecha_fin AND usos_hechos < usos_max) as es_activo 
+            FROM cupon 
+        """
+        
+        where_clauses = []
+        params = []
+
+        # Filtro por Código (Búsqueda parcial insensible a mayúsculas)
+        if filtro_codigo:
+            where_clauses.append("codigo_cupon ILIKE %s")
+            params.append(f"%{filtro_codigo}%")
+        
+        # Filtro por Estado
+        if filtro_estado == 'activo':
+            # Activo = Vigente Y Fecha válida Y Usos disponibles
+            where_clauses.append("(vigente_bool = TRUE AND CURRENT_DATE BETWEEN fecha_inicio AND fecha_fin AND usos_hechos < usos_max)")
+        elif filtro_estado == 'finalizado':
+            # Finalizado = Fecha fin pasó O Usos agotados
+            where_clauses.append("(fecha_fin < CURRENT_DATE OR usos_hechos >= usos_max)")
+        elif filtro_estado == 'pausado':
+            # Pausado = Vigente_bool es falso (independiente de fechas)
+            where_clauses.append("vigente_bool = FALSE")
+
+        # Combinar cláusulas WHERE
+        if where_clauses:
+            base_query += " WHERE " + " AND ".join(where_clauses)
+
+        base_query += " ORDER BY id_cupon DESC"
+        
+        print(f"Ejecutando Query Cupones: {base_query} | Params: {params}") # Debug
+
+        cur.execute(base_query, tuple(params))
+        cupones = cur.fetchall()
+        
+        # Mantener los filtros activos en la vista
+        filtros_activos = {'q': filtro_codigo, 'estado': filtro_estado}
+        
+        return render_template("cupones/crud_cupones.html", cupones=cupones, filtros_activos=filtros_activos, now=date.today())
+
+    except Exception as e:
+        print(f"Error en crud_cupones: {e}"); traceback.print_exc()
+        flash("Error al cargar cupones", "danger")
+        return redirect(url_for("index_options"))
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+        
+# ===========================
+# Agregar Cupon de Descuento
+# ===========================
+
+@app.route("/cupones/add", methods=["POST"])
+@login_required
+def add_cupon():
+    data = request.form
+    conn = None; cur = None
+    try:
+        # 1. Validaciones básicas
+        codigo = data.get("codigo_cupon").strip()
+        if len(codigo) < 6 or len(codigo) > 12:
+            flash("❌ El código debe tener entre 6 y 12 caracteres.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        # 2. Lógica de descuento: Porcentaje O Valor Fijo (mutuamente excluyentes)
+        tipo_descuento = data.get("tipo_descuento") # 'pct' o 'fijo'
+        descuento_pct = None
+        valor_fijo = None
+
+        valor_ingresado = float(data.get("descuento_valor"))
+
+        if tipo_descuento == 'pct':
+            if valor_ingresado > 100:
+                 flash("❌ El porcentaje no puede ser mayor a 100%.", "danger")
+                 return redirect(url_for("crud_cupones"))
+            descuento_pct = valor_ingresado
+        else:
+            valor_fijo = valor_ingresado
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 3. Verificar duplicados (código único)
+        cur.execute("SELECT 1 FROM cupon WHERE codigo_cupon = %s", (codigo,))
+        if cur.fetchone():
+            flash(f"❌ El código '{codigo}' ya existe.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        # 4. Insertar
+        cur.execute("""
+            INSERT INTO cupon (
+                codigo_cupon, nombre_cupon, descuento_pct_cupon, valor_fijo, 
+                min_compra, usos_max, fecha_inicio, fecha_fin, vigente_bool, usos_hechos
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, 0)
+        """, (
+            codigo, 
+            data.get("nombre_cupon"),
+            descuento_pct,
+            valor_fijo,
+            data.get("min_compra") or 0,
+            data.get("usos_max"),
+            data.get("fecha_inicio"),
+            data.get("fecha_fin")
+        ))
+        
+        conn.commit()
+        
+        
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error al crear cupón: {e}"); traceback.print_exc()
+        flash(f"❌ Error al crear cupón: {e}", "danger")
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+        
+    return redirect(url_for("crud_cupones"))
+
+# ===========================
+# Eliminar Cupon de Descuento
+# ===========================
+
+@app.route("/cupones/delete/<int:id_cupon>", methods=["POST"])
+@login_required
+def delete_cupon(id_cupon):
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM cupon WHERE id_cupon = %s", (id_cupon,))
+        conn.commit()
+        flash("✅ Cupón eliminado", "success")
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error al eliminar cupón: {e}")
+        flash("❌ Error al eliminar cupón", "danger")
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+    return redirect(url_for("crud_cupones"))
+
+# ===========================
+# Activar o Desactivar Cupon de Descuento
+# ===========================
+
+@app.route("/cupones/toggle/<int:id_cupon>", methods=["POST"])
+@login_required
+def toggle_cupon(id_cupon):
+    """Activa o desactiva un cupón manualmente (soft delete / pausa)"""
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # Invierte el valor booleano actual
+        cur.execute("UPDATE cupon SET vigente_bool = NOT vigente_bool WHERE id_cupon = %s", (id_cupon,))
+        conn.commit()
+        flash("✅ Estado del cupón actualizado", "success")
+    except Exception as e:
+        if conn: conn.rollback()
+        flash("❌ Error al actualizar estado", "danger")
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+    return redirect(url_for("crud_cupones"))
+
+
+
 
 # ===========================
 # HELPERS (CON POOL)
