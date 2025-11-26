@@ -56,10 +56,9 @@ function renderOrders(pedidos) {
       <td>${p.cliente}</td>
       <td>${new Date(p.fecha).toLocaleDateString("es-CL")}</td>
       <td class="estado-cell">
-        <div class="estado-wrap">
-              <span class="badge ${p.estado?.toLowerCase() || "sin-estado"}">
-              ${p.estado || "Sin estado"}
-            </span>
+        <span class="badge badge-${p.estado?.toLowerCase() || "sin-estado"}">
+            ${p.estado || "Sin estado"}
+          </span>
         </div>
       </td>
       <td>${CLP(p.total)}</td>
@@ -161,73 +160,100 @@ async function applyBulkStatus() {
 function bindBulkActions() {
   $("#applyBulk").addEventListener("click", applyBulkStatus);
 }
-
-// =========================================
-// ABRIR MODAL DE DETALLE
-// =========================================
 function openModal() {
-  $("#orderModal").classList.add("visible");
+    $("#order-modal").classList.add("visible");
 }
 
 function closeModal() {
-  $("#orderModal").classList.remove("visible");
+    $("#order-modal").classList.remove("visible");
 }
 
-// =========================================
-// CARGAR DETALLE DE UN PEDIDO
-// =========================================
+// ===============================
+// NUEVO LOAD DETALLE PEDIDO
+// ===============================
 async function loadOrderDetail(id) {
-  try {
-    const data = await fetchJSON(`${API_BASE}/api/admin/pedidos/${id}`);
+    try {
+        const response = await fetch(
+            `${API_BASE}/api/admin/reportes/detalle_pedido/${id}`,
+            { credentials: "include" }
+        );
 
-    const ped = data.pedido;
-    $("#modalTitle").textContent = `Pedido #${ped.id_pedido}`;
-    $("#mCliente").textContent = ped.cliente;
-    $("#mFecha").textContent = new Date(ped.fecha).toLocaleString("es-CL");
-    $("#mEstado").textContent = ped.estado;
-    $("#mTotal").textContent = CLP(ped.total);
+        if (!response.ok) throw new Error("Detalle no encontrado");
 
-    const ul = $("#mItems");
-    ul.innerHTML = "";
-    data.items.forEach((it) => {
-      ul.innerHTML += `
-        <li>
-          <strong>${it.producto}</strong>  
-          (${it.talla}, ${it.color}, SKU ${it.sku})  
-          — ${it.cantidad} × ${CLP(it.precio_unitario)}
-        </li>
-      `;
-    });
+        const data = await response.json();
+        const ped = data.pedido;
+        const items = data.items;
 
-    openModal();
-  } catch (err) {
-    alert("Error cargando pedido: " + err.message);
-  }
+        // ----- Datos Cliente -----
+        $("#modal-pedido-id").textContent = ped.id_pedido;
+        $("#modal-cliente-nombre").textContent =
+            `${ped.nombre_usuario} ${ped.apellido_paterno} ${ped.apellido_materno}`;
+        $("#modal-cliente-email").textContent = ped.email_usuario || "—";
+        $("#modal-cliente-telefono").textContent = ped.telefono || "—";
+
+        $("#modal-cliente-direccion").textContent =
+            `${ped.calle || ""} ${ped.numero_calle || ""}`;
+        $("#modal-cliente-comuna").textContent = ped.comuna || "—";
+        $("#modal-cliente-ciudad").textContent = ped.ciudad || "—";
+        $("#modal-cliente-region").textContent = ped.region || "—";
+
+        // ----- Datos Pedido -----
+        $("#modal-pedido-estado").textContent = ped.estado_pedido;
+        $("#modal-pedido-fecha").textContent =
+            new Date(ped.creado_en).toLocaleString("es-CL");
+        $("#modal-pedido-total").textContent = CLP(ped.total);
+        $("#modal-pedido-metodo").textContent = ped.metodo_pago || "—";
+
+        // ----- Items -----
+        const tbody = $("#modal-items-tbody");
+        tbody.innerHTML = "";
+
+        items.forEach(it => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><img src="${it.imagen_url || '../Public/img/placeholder.png'}" class="item-foto"></td>
+                    <td>${it.nombre_producto || 'N/A'}</td>
+                    <td>${it.sku_producto}</td>
+                    <td>${it.talla || 'Única'}</td>
+                    <td>${it.color || '—'}</td>
+                    <td>${it.cantidad}</td>
+                    <td>${CLP(it.precio_unitario)}</td>
+                </tr>
+            `;
+        });
+
+        openModal();
+
+    } catch (err) {
+        alert("Error cargando detalle: " + err.message);
+    }
 }
 
 // =========================================
 // CLICK "VER" EN FILA
 // =========================================
 function bindRowView() {
-  $("#ordersTable tbody").addEventListener("click", (e) => {
-    const btn = e.target.closest(".view-btn");
-    if (!btn) return;
-    const id = btn.dataset.id;
-    loadOrderDetail(id);
-  });
+    $("#ordersTable tbody").addEventListener("click", (e) => {
+        const btn = e.target.closest(".view-btn");
+        if (!btn) return;
+
+        const id = btn.dataset.id;
+        loadOrderDetail(id);
+    });
 }
+
 
 // =========================================
 // CERRAR MODAL
 // =========================================
 function bindModalClose() {
-  $("#closeModal").addEventListener("click", closeModal);
+    $("#order-modal-close").addEventListener("click", closeModal);
 
-  // Cerrar cliqueando fuera de la tarjeta
-  $("#orderModal").addEventListener("click", (e) => {
-    if (e.target.id === "orderModal") closeModal();
-  });
+    $("#order-modal").addEventListener("click", (e) => {
+        if (e.target.id === "order-modal") closeModal();
+    });
 }
+
 
 // =========================================
 // INIT

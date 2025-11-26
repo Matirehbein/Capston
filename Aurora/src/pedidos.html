@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Aurora | Pedidos</title>
 
-  <link rel="stylesheet" href="/Public/Css/style.css"/>
-  <link rel="stylesheet" href="/Public/Css/modal_pedido.css"/>
-
+  <link rel="stylesheet" href="../Public/Css/style.css"/>
+  <link rel="stylesheet" href="../Public/Css/modal_pedido.css">
 </head>
-
+  
 <body>
   <div class="admin-layout">
 
@@ -100,34 +99,70 @@
           <tbody></tbody>
         </table>
       </div>
+      <!-- MODAL DETALLE PEDIDO (Nuevo estilo) -->
+      <div class="modal-overlay" id="order-modal">
+          <div class="modal-content-wrapper" style="max-width: 900px;">
 
-      <!-- Modal -->
-      <div class="modal" id="orderModal">
-        <div class="modal-card">
-          <div class="modal-head">
-            <h3 id="modalTitle">Pedido #—</h3>
-            <button class="close-x" id="closeModal">×</button>
+              <div class="modal-header">
+                  <h2>Detalle del Pedido #<span id="modal-pedido-id">...</span></h2>
+                  <button class="modal-close" id="order-modal-close">&times;</button>
+              </div>
+
+              <div class="modal-body" style="overflow-y: auto;">
+
+                  <div class="pedido-detail-grid">
+
+                      <div class="pedido-detail-section">
+                          <h4>Datos del Cliente</h4>
+
+                          <p><strong>Nombre:</strong> <span id="modal-cliente-nombre">...</span></p>
+                          <p><strong>Email:</strong> <span id="modal-cliente-email">...</span></p>
+                          <p><strong>Teléfono:</strong> <span id="modal-cliente-telefono">...</span></p>
+                          <p><strong>Dirección:</strong> <span id="modal-cliente-direccion">...</span></p>
+                          <p><strong>Comuna:</strong> <span id="modal-cliente-comuna">...</span></p>
+                          <p><strong>Ciudad:</strong> <span id="modal-cliente-ciudad">...</span></p>
+                          <p><strong>Región:</strong> <span id="modal-cliente-region">...</span></p>
+                      </div>
+
+                      <div class="pedido-detail-section">
+                          <h4>Datos del Pedido</h4>
+
+                          <p><strong>Estado:</strong> <span id="modal-pedido-estado">...</span></p>
+                          <p><strong>Fecha:</strong> <span id="modal-pedido-fecha">...</span></p>
+                          <p><strong>Total:</strong> <span id="modal-pedido-total">...</span></p>
+                          <p><strong>Método Pago:</strong> <span id="modal-pedido-metodo">...</span></p>
+                      </div>
+
+                  </div>
+
+                  <div class="pedido-detail-section">
+                      <h4>Items Comprados</h4>
+
+                      <div class="table-wrap">
+                          <table class="admin-table">
+                              <thead>
+                                  <tr>
+                                      <th>Foto</th>
+                                      <th>Producto</th>
+                                      <th>SKU</th>
+                                      <th>Talla</th>
+                                      <th>Color</th>
+                                      <th>Cantidad</th>
+                                      <th>Precio Unit.</th>
+                                  </tr>
+                              </thead>
+                              <tbody id="modal-items-tbody">
+                                  <tr><td colspan="7" style="text-align:center;">Cargando…</td></tr>
+                              </tbody>
+                          </table>
+                      </div>
+                  </div>
+
+              </div>
+
           </div>
-
-          <div class="modal-body">
-            <div class="detail-grid">
-              <div><div class="muted">Cliente</div><div id="mCliente">—</div></div>
-              <div><div class="muted">Fecha</div><div id="mFecha">—</div></div>
-              <div><div class="muted">Estado</div><div id="mEstado">—</div></div>
-              <div><div class="muted">Total</div><div id="mTotal">—</div></div>
-            </div>
-
-            <hr />
-
-            <div>
-              <div class="muted">Items</div>
-              <ul id="mItems"></ul>
-            </div>
-          </div>
-        </div>
       </div>
 
-    </main>
   </div>
 
   <!-- Scripts -->

@@ -4178,40 +4178,82 @@ def get_detalle_pedido(id_pedido):
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        # Query Pedido + Datos Envío (Nuevas columnas)
+        # ---------------------------
+        # Datos del pedido + Usuario
+        # ---------------------------
         cur.execute("""
             SELECT 
-                p.id_pedido, p.total, p.creado_en, p.estado_pedido,
-                p.tipo_entrega, p.costo_envio, p.fecha_entrega, p.bloque_horario, p.datos_contacto,
-                pa.metodo_pago, pa.transaccion_id,
-                u.nombre_usuario, u.apellido_paterno, u.email_usuario, u.telefono
+                p.id_pedido,
+                p.total,
+                p.creado_en,
+                p.estado_pedido,
+                p.tipo_entrega,
+                p.costo_envio,
+                p.fecha_entrega,
+                p.bloque_horario,
+                p.datos_contacto,
+
+                pa.metodo_pago,
+                pa.transaccion_id,
+
+                -- Datos completos del cliente
+                u.nombre_usuario,
+                u.apellido_paterno,
+                u.apellido_materno,
+                u.email_usuario,
+                u.telefono,
+                u.calle,
+                u.numero_calle,
+                u.comuna,
+                u.ciudad,
+                u.region,
+
+                s.nombre_sucursal
+
             FROM pedido p
             JOIN usuario u ON p.id_usuario = u.id_usuario
+            LEFT JOIN sucursal s ON p.id_sucursal = s.id_sucursal
             LEFT JOIN pago pa ON p.id_pedido = pa.id_pedido AND pa.estado_pago = 'aprobado'
+
             WHERE p.id_pedido = %s
-            ORDER BY pa.fecha_pago DESC LIMIT 1;
+            ORDER BY pa.fecha_pago DESC NULLS LAST
+            LIMIT 1;
         """, (id_pedido,))
         
         pedido_info = cur.fetchone()
-        if not pedido_info: return jsonify({"error": "Pedido no encontrado"}), 404
+        if not pedido_info:
+            return jsonify({"error": "Pedido no encontrado"}), 404
 
-        # Query Items
+        # ---------------------------
+        # Items del pedido
+        # ---------------------------
         cur.execute("""
-            SELECT dp.cantidad, dp.precio_unitario, dp.sku_producto, v.talla, v.color, pr.nombre_producto, pr.imagen_url
+            SELECT 
+                dp.cantidad,
+                dp.precio_unitario,
+                dp.sku_producto,
+                v.talla,
+                v.color,
+                pr.nombre_producto,
+                pr.imagen_url
             FROM detalle_pedido dp
             LEFT JOIN variacion_producto v ON dp.sku_producto = v.sku_variacion
             LEFT JOIN producto pr ON v.id_producto = pr.id_producto
             WHERE dp.id_pedido = %s;
         """, (id_pedido,))
-        items_pedido = cur.fetchall()
         
+        items_pedido = cur.fetchall()
+
         return jsonify({
             "pedido": dict(pedido_info),
             "items": [dict(item) for item in items_pedido]
         })
+
     except Exception as e:
-        print(f"Error detalle pedido: {e}"); traceback.print_exc()
+        print(f"❌ Error detalle pedido: {e}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
@@ -4551,6 +4593,99 @@ def bulk_update_estado():
 
     finally:
         if conn: return_db_connection(conn)
+
+# -----------------------------------------
+# KPI: Pedidos Pendientes
+# -----------------------------------------
+@app.route("/api/admin/dashboard/kpi_pedidos_pendientes")
+@admin_required
+def kpi_pedidos_pendientes():
+    sucursal_id = request.args.get("sucursal_id", "all")
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        base_query = """
+            SELECT COUNT(*) AS pendientes
+            FROM pedido
+            WHERE estado_pedido = 'pagado'
+        """
+
+        params = ()
+
+        if sucursal_id != "all":
+            base_query += " AND id_sucursal = %s"
+            params = (sucursal_id,)
+
+        cur.execute(base_query, params)
+        result = cur.fetchone()
+
+        return jsonify({"pendientes": result["pendientes"]})
+
+    finally:
+        cur.close()
+        return_db_connection(conn)
+
+
+
+
+# -----------------------------------------
+# MODAL LISTA DE PEDIDOS PENDIENTES
+# -----------------------------------------
+@app.route("/api/admin/dashboard/lista_pedidos_pendientes")
+@admin_required
+def lista_pedidos_pendientes():
+    sucursal_id = request.args.get("sucursal_id", "all")
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        base_query = """
+            SELECT 
+                p.id_pedido,
+                p.creado_en,
+                p.estado_pedido,
+                
+                -- Nombre completo como lo espera el frontend
+                CONCAT(u.nombre_usuario, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS cliente,
+
+                s.nombre_sucursal,
+
+                (
+                    SELECT STRING_AGG(
+                        COALESCE(dp.sku_producto, 'SIN SKU'), ', '
+                    )
+                    FROM detalle_pedido dp 
+                    WHERE dp.id_pedido = p.id_pedido
+                ) AS productos_preview
+
+            FROM pedido p
+            JOIN usuario u ON u.id_usuario = p.id_usuario
+            LEFT JOIN sucursal s ON s.id_sucursal = p.id_sucursal
+
+            -- SOLO pedidos pagados pero aún NO entregados
+            WHERE p.estado_pedido IN ('pagado', 'preparado')
+        """
+
+        params = ()
+        if sucursal_id != "all":
+            base_query += " AND p.id_sucursal = %s"
+            params = (sucursal_id,)
+
+        base_query += " ORDER BY p.creado_en ASC"
+
+        cur.execute(base_query, params)
+        rows = cur.fetchall()
+
+        return jsonify([dict(r) for r in rows])
+
+    except Exception as e:
+        print("❌ ERROR lista_pedidos_pendientes:", e)
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        cur.close()
+        return_db_connection(conn)
 
 # ===========================
 # RUN (SIN CAMBIOS)

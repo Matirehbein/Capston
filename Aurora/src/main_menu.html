@@ -377,10 +377,10 @@
                 </div>
 
                 <!-- Tarjeta "Pedidos pendientes" -->
-                <div class="kpi-card" id="kpi-pedidos-pendientes-card">
+                <div class="kpi-card" id="kpi-pedidos-pendientes-card" title="Ver pedidos pendientes">
                     <h3>Pedidos pendientes</h3>
                     <p class="kpi-number"><span id="kpi-pendientes">—</span></p>
-                    <span class="kpi-trend" id="kpi-pendientes-sub">—</span>
+                    <span class="kpi-trend warn" id="kpi-pendientes-sub">—</span>
                 </div>
 
                 <!-- Tarjeta "Bajo stock" -->
@@ -464,6 +464,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- --- MODAL 2: DETALLE DE PEDIDO --- -->
     <div class="modal-overlay" id="pedidos-detail-modal">
@@ -646,6 +647,34 @@
         </div>
     </div>
     <!-- --- ▲▲▲ FIN MODAL 2 ▲▲▲ --- -->
+
+    <!-- --- MODAL: PEDIDOS PENDIENTES --- -->
+    <div class="modal-overlay" id="pendientes-list-modal">
+        <div class="modal-content-wrapper" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Pedidos Pendientes</h2>
+                <button class="modal-close" id="pendientes-list-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID Pedido</th>
+                                <th>Cliente</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendientes-list-tbody">
+                            <tr><td colspan="5" style="text-align:center;">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- El script de colores maneja la lógica del sidebar -->
     <script type="module" src="../Public/js/colores.js"></script> 
