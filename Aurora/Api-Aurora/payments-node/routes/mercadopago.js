@@ -7,8 +7,7 @@ const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
 
-// Tu URL de ngrok (¡está correcta!)
-// 👇 Quitamos el .html para evitar que el servidor haga redirecciones y pierda los datos
+// URL de ngrok 
 const FINAL_URL = 'https://unscandalously-unannexable-astrid.ngrok-free.dev/src/resultado';
 const looksUrl = u => /^https?:\/\//i.test(u);
 

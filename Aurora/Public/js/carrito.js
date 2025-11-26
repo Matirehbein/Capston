@@ -6,8 +6,6 @@ import { getActiveBranchId } from "./geolocation.js";
 
 const $ = (s) => document.querySelector(s);
 
-
-
 // Variable global para el costo de envío actual
 let costoEnvioActual = 0;
 const IVA_PERCENTAGE = 0.19;
@@ -89,7 +87,11 @@ function initShippingLogic() {
 }
 
 function toggleShippingForm() {
-    const tipo = document.querySelector('input[name="tipo_entrega"]:checked').value;
+    // Verificamos si hay algo seleccionado para evitar errores
+    const radioChecked = document.querySelector('input[name="tipo_entrega"]:checked');
+    if (!radioChecked) return;
+
+    const tipo = radioChecked.value;
     const formRetiro = $("#form-retiro");
     const formDespacho = $("#form-despacho");
 
@@ -204,7 +206,22 @@ function renderCart() {
 function updateTotalsDisplay() {
     const subtotal = totalPrice();
     const iva = calculateIVA(subtotal);
-    const totalFinal = subtotal + iva + costoEnvioActual;
+    let totalFinal = subtotal + iva + costoEnvioActual;
+
+    // --- MODIFICACIÓN: PRESERVAR DESCUENTO SI EXISTE ---
+    const discountElem = document.getElementById('summary-discount');
+    let discountAmount = 0;
+    
+    // Verificamos si hay un texto de descuento y si contiene un valor monetario
+    if (discountElem && discountElem.innerText.includes('$')) {
+        // Extraemos solo los números del texto (ej: "-$5.000" -> 5000)
+        const cleanText = discountElem.innerText.replace(/[^0-9]/g, ''); 
+        discountAmount = Number(cleanText) || 0;
+    }
+
+    // Restamos el descuento (si existe) al total final para no perderlo visualmente
+    totalFinal = totalFinal - discountAmount;
+    if (totalFinal < 0) totalFinal = 0;
 
     // Actualizar textos
     if($("#summary-subtotal")) $("#summary-subtotal").textContent = formatCLP(subtotal);
@@ -223,8 +240,19 @@ function updateTotalsDisplay() {
 
 // --- 3. MANEJO DE PAGOS (VALIDACIÓN Y ENVÍO) ---
 
-function validarDatosEnvio() {
-    const tipo = document.querySelector('input[name="tipo_entrega"]:checked')?.value;
+// --- MODIFICACIÓN: Exportamos la función para usarla en carrito.html ---
+export function validarDatosEnvio() {
+    // 1. Verificar si se seleccionó alguna opción
+    const radioChecked = document.querySelector('input[name="tipo_entrega"]:checked');
+    
+    if (!radioChecked) {
+        alert("⚠️ Por favor, selecciona una opción de entrega (Retiro o Despacho) antes de pagar.");
+        // Hacemos scroll hacia la sección de envíos para que el usuario la vea
+        document.getElementById('shipping-container')?.scrollIntoView({ behavior: 'smooth' });
+        return null;
+    }
+
+    const tipo = radioChecked.value;
     let datos = {
         tipo_entrega: tipo,
         costo_envio: costoEnvioActual,
@@ -242,7 +270,7 @@ function validarDatosEnvio() {
         const rut = $("#retiro_rut").value;
         
         if (!suc || !fecha || !nombre || !rut) {
-            alert("Por favor, completa todos los datos de retiro.");
+            alert("⚠️ Por favor, completa todos los datos de retiro.");
             return null;
         }
         
@@ -264,7 +292,7 @@ function validarDatosEnvio() {
         const nombre = $("#despacho_nombre").value;
         
         if (!region || !comuna || !dir || !nombre) {
-            alert("Por favor, completa todos los datos de despacho.");
+            alert("⚠️ Por favor, completa todos los datos de despacho.");
             return null;
         }
 
@@ -449,8 +477,10 @@ if(container) {
 
 // Listeners de Botones de Acción Globales
 $("#btn-clear")?.addEventListener("click", () => { saveCart([]); renderCart(); });
-$("#btn-checkout")?.addEventListener("click", (e) => { e.preventDefault(); handleWebpayCheckout(e.target); });
-$("#btn-mp")?.addEventListener("click", (e) => { e.preventDefault(); handleMercadoPagoCheckout(e.target); });
+
+// --- COMENTAMOS ESTAS LINEAS PARA EVITAR CONFLICTO CON EL CUPÓN EN CARRITO.HTML ---
+// $("#btn-checkout")?.addEventListener("click", (e) => { e.preventDefault(); handleWebpayCheckout(e.target); });
+// $("#btn-mp")?.addEventListener("click", (e) => { e.preventDefault(); handleMercadoPagoCheckout(e.target); });
 
 // Escuchar cambios en localStorage
 window.addEventListener("storage", renderCart);
