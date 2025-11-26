@@ -1531,10 +1531,91 @@ def add_cupon():
 
         # 2. Lógica de descuento: Porcentaje O Valor Fijo (mutuamente excluyentes)
         tipo_descuento = data.get("tipo_descuento") # 'pct' o 'fijo'
+        
+        # Inicializamos ambos como None (NULL en SQL)
         descuento_pct = None
         valor_fijo = None
 
-        valor_ingresado = float(data.get("descuento_valor"))
+        try:
+            valor_ingresado = float(data.get("descuento_valor"))
+        except (ValueError, TypeError):
+            flash("❌ El valor del descuento debe ser un número válido.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        if tipo_descuento == 'pct':
+            if valor_ingresado > 100:
+                 flash("❌ El porcentaje no puede ser mayor a 100%.", "danger")
+                 return redirect(url_for("crud_cupones"))
+            descuento_pct = valor_ingresado
+            # valor_fijo se queda en None (NULL)
+        else:
+            valor_fijo = valor_ingresado
+            # descuento_pct se queda en None (NULL)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 3. Verificar duplicados (código único)
+        cur.execute("SELECT 1 FROM cupon WHERE codigo_cupon = %s", (codigo,))
+        if cur.fetchone():
+            flash(f"❌ El código '{codigo}' ya existe.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        # 4. Insertar
+        # Se añade 'descripcion' y se elimina cualquier referencia a reglas_json
+        cur.execute("""
+            INSERT INTO cupon (
+                codigo_cupon, nombre_cupon, descripcion, descuento_pct_cupon, valor_fijo, 
+                min_compra, usos_max, fecha_inicio, fecha_fin, vigente_bool, usos_hechos
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, 0)
+        """, (
+            codigo, 
+            data.get("nombre_cupon"),
+            data.get("descripcion"), # Nuevo campo descripción (VARCHAR 200)
+            descuento_pct,
+            valor_fijo,
+            data.get("min_compra") or 0,
+            data.get("usos_max"),
+            data.get("fecha_inicio"),
+            data.get("fecha_fin")
+        ))
+        
+        conn.commit()
+        flash("✅ Cupón creado exitosamente", "success")
+        
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error al crear cupón: {e}"); traceback.print_exc()
+        flash(f"❌ Error al crear cupón: {e}", "danger")
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+        
+    return redirect(url_for("crud_cupones"))
+
+# --- EDITAR CUPÓN  ---
+@app.route("/cupones/edit/<int:id_cupon>", methods=["POST"])
+@login_required
+def edit_cupon(id_cupon):
+    data = request.form
+    conn = None; cur = None
+    try:
+        # Validaciones
+        codigo = data.get("codigo_cupon").strip()
+        if len(codigo) < 6 or len(codigo) > 12:
+            flash("❌ El código debe tener entre 6 y 12 caracteres.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        # Lógica de descuento
+        tipo_descuento = data.get("tipo_descuento")
+        descuento_pct = None
+        valor_fijo = None
+        
+        try:
+            valor_ingresado = float(data.get("descuento_valor"))
+        except (ValueError, TypeError):
+            flash("❌ Valor de descuento inválido.", "danger")
+            return redirect(url_for("crud_cupones"))
 
         if tipo_descuento == 'pct':
             if valor_ingresado > 100:
@@ -1547,41 +1628,51 @@ def add_cupon():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 3. Verificar duplicados (código único)
-        cur.execute("SELECT 1 FROM cupon WHERE codigo_cupon = %s", (codigo,))
+        # Verificar duplicados (excluyendo el cupón actual)
+        cur.execute("SELECT 1 FROM cupon WHERE codigo_cupon = %s AND id_cupon != %s", (codigo, id_cupon))
         if cur.fetchone():
-            flash(f"❌ El código '{codigo}' ya existe.", "danger")
+            flash(f"❌ El código '{codigo}' ya está en uso por otro cupón.", "danger")
             return redirect(url_for("crud_cupones"))
 
-        # 4. Insertar
+        # Update
         cur.execute("""
-            INSERT INTO cupon (
-                codigo_cupon, nombre_cupon, descuento_pct_cupon, valor_fijo, 
-                min_compra, usos_max, fecha_inicio, fecha_fin, vigente_bool, usos_hechos
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, 0)
+            UPDATE cupon SET
+                codigo_cupon = %s,
+                nombre_cupon = %s,
+                descripcion = %s,
+                descuento_pct_cupon = %s,
+                valor_fijo = %s,
+                min_compra = %s,
+                usos_max = %s,
+                fecha_inicio = %s,
+                fecha_fin = %s
+            WHERE id_cupon = %s
         """, (
-            codigo, 
+            codigo,
             data.get("nombre_cupon"),
+            data.get("descripcion"),
             descuento_pct,
             valor_fijo,
             data.get("min_compra") or 0,
             data.get("usos_max"),
             data.get("fecha_inicio"),
-            data.get("fecha_fin")
+            data.get("fecha_fin"),
+            id_cupon
         ))
         
         conn.commit()
-        
+        flash("✅ Cupón actualizado exitosamente", "success")
         
     except Exception as e:
         if conn: conn.rollback()
-        print(f"Error al crear cupón: {e}"); traceback.print_exc()
-        flash(f"❌ Error al crear cupón: {e}", "danger")
+        print(f"Error al editar cupón: {e}"); traceback.print_exc()
+        flash(f"❌ Error al editar cupón: {e}", "danger")
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
         
     return redirect(url_for("crud_cupones"))
+
 
 # ===========================
 # Eliminar Cupon de Descuento
@@ -1629,6 +1720,67 @@ def toggle_cupon(id_cupon):
         if cur: cur.close()
         if conn: return_db_connection(conn)
     return redirect(url_for("crud_cupones"))
+
+
+# ===========================
+# Validar Cupón de Descuento al momento de pagar
+# ===========================
+
+# --- ▼▼▼ NUEVA RUTA: VALIDAR CUPÓN ▼▼▼ ---
+@app.route('/api/validar-cupon', methods=['POST'])
+def validar_cupon():
+    data = request.get_json()
+    codigo = data.get('codigo', '').strip()
+    monto_total = data.get('total', 0)
+
+    if not codigo:
+        return jsonify({"valid": False, "message": "Ingresa un código."}), 400
+
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Buscar cupón por código exacto (case sensitive)
+        cur.execute("SELECT * FROM cupon WHERE codigo_cupon = %s", (codigo,))
+        cupon = cur.fetchone()
+
+        if not cupon:
+            return jsonify({"valid": False, "message": "Código inválido"}), 404
+
+        # Validaciones de lógica
+        if not cupon['vigente_bool']:
+            return jsonify({"valid": False, "message": "Este cupón está pausado o inactivo."}), 400
+        
+        hoy = date.today()
+        if not (cupon['fecha_inicio'] <= hoy <= cupon['fecha_fin']):
+            return jsonify({"valid": False, "message": "El cupón ha vencido o aún no inicia."}), 400
+            
+        if cupon['usos_hechos'] >= cupon['usos_max']:
+            return jsonify({"valid": False, "message": "Este cupón ha agotado sus usos."}), 400
+            
+        if monto_total < cupon['min_compra']:
+             # Formatear monto para mensaje
+            min_fmt = "{:,.0f}".format(cupon['min_compra']).replace(',', '.')
+            return jsonify({"valid": False, "message": f"El monto mínimo para este cupón es ${min_fmt}."}), 400
+
+        # Si pasa todo, devolver datos para calcular
+        return jsonify({
+            "valid": True,
+            "id_cupon": cupon['id_cupon'],
+            "codigo": cupon['codigo_cupon'],
+            "tipo": "pct" if cupon['descuento_pct_cupon'] else "fijo",
+            "valor": float(cupon['descuento_pct_cupon']) if cupon['descuento_pct_cupon'] else float(cupon['valor_fijo']),
+            "message": "Cupón aplicado correctamente"
+        })
+
+    except Exception as e:
+        print(f"Error validando cupón: {e}")
+        return jsonify({"valid": False, "message": "Error del servidor"}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+# --- ▲▲▲ FIN NUEVA RUTA ▲▲▲ ---
 
 
 
@@ -2379,6 +2531,7 @@ def api_list_ofertas_public():
 # ===========================
 # RUTAS DE PEDIDOS Y PAGOS
 # ===========================  
+
 # ===========================
 # RUTAS DE PEDIDOS (LA VERSIÓN CORRECTA Y ÚNICA CON ENVÍO)
 # ===========================
@@ -2565,9 +2718,16 @@ def registrar_pago():
             print(f"Iniciando descuento de stock para Pedido {id_pedido}...")
             
             # A. Obtener la sucursal de la que se vendió
-            cur.execute("SELECT id_sucursal FROM pedido WHERE id_pedido = %s", (id_pedido,))
+            cur.execute("SELECT id_sucursal, id_cupon FROM pedido WHERE id_pedido = %s", (id_pedido,))
             pedido_data = cur.fetchone()
-            id_sucursal_venta = pedido_data['id_sucursal'] if pedido_data else None
+            id_sucursal_venta = pedido_data['id_sucursal']
+            id_cupon_usado = pedido_data['id_cupon']
+            
+            
+            # --- NUEVO: DESCONTAR USO DE CUPÓN ---
+            if id_cupon_usado:
+                cur.execute("UPDATE cupon SET usos_hechos = usos_hechos + 1 WHERE id_cupon = %s", (id_cupon_usado,))
+                print(f"Cupón ID {id_cupon_usado} usado. Contador incrementado.")
 
             if id_sucursal_venta:
                 print(f"Venta desde Sucursal ID: {id_sucursal_venta}")
