@@ -81,9 +81,16 @@ async function loadOrders() {
   if (status !== "todos") url.searchParams.set("status", status);
   if (q) url.searchParams.set("q", q);
 
-  const data = await fetchJSON(url.toString());
+  let data = await fetchJSON(url.toString());
+
+  // ⛔ OCULTAR "pendiente" cuando estamos en "Todos"
+  if (status === "todos") {
+    data = data.filter(p => p.estado?.toLowerCase() !== "pendiente");
+  }
+
   renderOrders(data);
 }
+
 
 // =========================================
 // FILTROS (PILLS)

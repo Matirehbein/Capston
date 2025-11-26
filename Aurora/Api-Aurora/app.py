@@ -2386,89 +2386,101 @@ def api_list_ofertas_public():
 @login_required
 def crear_pedido():
     data = request.get_json()
-    if not data: return jsonify({"error": "No json"}), 400
-    
+    if not data:
+        return jsonify({"error": "No json"}), 400
+
     print(f"📦 [DEBUG] Datos recibidos: {data}") 
 
     cart_items = data.get('items')
     total = data.get('total')
     user_id = session.get('user_id')
-    
+    id_cupon = data.get('id_cupon') 
     tipo_entrega = data.get('tipo_entrega')
     costo_envio = data.get('costo_envio', 0)
-    
-    # --- MANEJO DE FECHA ---
+
+    # FECHA
     fecha_entrega = data.get('fecha_entrega')
     if not fecha_entrega or fecha_entrega.strip() == "":
         fecha_entrega = None 
-        
-    # --- MANEJO DE BLOQUE HORARIO (SOLUCIÓN 2) ---
+
+    # BLOQUE HORARIO
     bloque_horario = data.get('bloque_horario')
-    # Si es retiro o viene vacío, forzamos un texto por defecto para evitar NULL
     if tipo_entrega == 'retiro':
         bloque_horario = "Retiro Estándar"
     elif not bloque_horario or bloque_horario.strip() == "":
-        bloque_horario = "Horario por definir" # O el valor que prefieras para despacho sin horario
+        bloque_horario = "Horario por definir"
 
     datos_contacto = data.get('datos_contacto') 
 
-    # --- MANEJO DE SUCURSAL ID (SOLUCIÓN 1 REFORZADA) ---
+    # SUCURSAL
     sucursal_id = data.get('sucursal_id')
-    
-    # Si viene vacío, intentamos asignar uno por defecto (ej: 1) o dejar NULL si es crítico
     if not sucursal_id or str(sucursal_id).strip() == "":
         if tipo_entrega == 'despacho':
-             # Opcional: Asignar sucursal ID 1 (Casa Matriz) si no viene geolocalización
-             print("⚠️ [WARN] No llegó sucursal_id en despacho. Asignando ID 1 por defecto.")
-             sucursal_id = 1 
+            print("⚠️ [WARN] No llegó sucursal_id. Asignando 1.")
+            sucursal_id = 1
         else:
-             sucursal_id = None
+            sucursal_id = None
     else:
         try:
             sucursal_id = int(sucursal_id)
         except:
             sucursal_id = 1 if tipo_entrega == 'despacho' else None
 
-    # Validación final para retiro
     if tipo_entrega == 'retiro' and not sucursal_id:
-         return jsonify({"error": "Debe seleccionar una sucursal para retiro"}), 400
+        return jsonify({"error": "Debe seleccionar una sucursal para retiro"}), 400
 
     conn = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
+        # INSERTAR PEDIDO
         sql_pedido = """
             INSERT INTO pedido (
-                id_usuario, total, estado_pedido, id_sucursal, 
+                id_usuario, total, estado_pedido, id_sucursal, id_cupon, 
                 tipo_entrega, costo_envio, fecha_entrega, bloque_horario, datos_contacto
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id_pedido;
         """
-        
+
         datos_contacto_json = json.dumps(datos_contacto) if datos_contacto else None
 
-        print(f"📝 [INSERT] Pedido: Sucursal={sucursal_id}, Horario={bloque_horario}")
-
         cur.execute(sql_pedido, (
-            user_id, total, 'pendiente', sucursal_id,
+            user_id, total, 'pendiente', sucursal_id, id_cupon,
             tipo_entrega, costo_envio, fecha_entrega, bloque_horario, datos_contacto_json
         ))
-        
+
         id_pedido_nuevo = cur.fetchone()['id_pedido']
 
-        # Insertar Detalles... (Igual que antes)
+        # =====================================
+        # INSERTAR DETALLES — FIX APLICADO
+        # =====================================
         for item in cart_items:
-            sku = item.get('sku')
-            cur.execute("SELECT id_variacion FROM variacion_producto WHERE sku_variacion = %s", (sku,))
+            sku = item.get("sku")
+
+            # 1. Buscar variación y producto
+            cur.execute("""
+                SELECT v.id_variacion, p.id_producto
+                FROM variacion_producto v
+                JOIN producto p ON p.id_producto = v.id_producto
+                WHERE v.sku_variacion = %s
+            """, (sku,))
             row = cur.fetchone()
+
             id_var = row['id_variacion'] if row else None
-            
+
+            # Insertar detalle
             cur.execute("""
                 INSERT INTO detalle_pedido (id_pedido, sku_producto, cantidad, precio_unitario, id_variacion)
                 VALUES (%s, %s, %s, %s, %s)
-            """, (id_pedido_nuevo, sku, item.get('qty'), item.get('price'), id_var))
+            """, (
+                id_pedido_nuevo,
+                sku,
+                item.get('qty'),
+                item.get('price'),
+                id_var
+            ))
 
         conn.commit()
         return jsonify({"id_pedido": id_pedido_nuevo}), 201
@@ -2480,7 +2492,7 @@ def crear_pedido():
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
-# --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
+
 
 
 @app.route('/api/registrar-pago', methods=['POST'])
