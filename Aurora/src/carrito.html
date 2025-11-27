@@ -434,7 +434,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <script type="module">
   import { totalPrice } from '../Public/js/cart.js';
-  // CAMBIO: IMPORTAR VALIDACIÓN DESDE CARRITO.JS
+  // IMPORTAR VALIDACIÓN DESDE CARRITO.JS
   import { validarDatosEnvio } from '../Public/js/carrito.js';
   const $ = (s) => document.querySelector(s);
 
@@ -485,13 +485,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const subtotal = totalPrice();
       const iva = Math.round(subtotal * 0.19);
-      const totalProductosIVA = subtotal + iva;
+      
+      // OBTENER EL COSTO DE ENVÍO PARA LA VALIDACIÓN
+      const shippingElem = document.getElementById('summary-envio');
+      const shippingCost = shippingElem ? parseCLP(shippingElem.innerText) : 0;
+
+      // Sumamos el envío al total que vamos a validar
+      const totalParaValidar = subtotal + iva + shippingCost;
 
       try {
           const response = await fetch("http://localhost:5000/api/validar-cupon", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ codigo, total: totalProductosIVA })
+              body: JSON.stringify({ codigo, total: totalParaValidar })
           });
 
           const data = await response.json();
@@ -536,7 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const shippingElem = document.getElementById('summary-envio');
       const shippingCost = shippingElem ? parseCLP(shippingElem.innerText) : 0;
 
-      // 2. TOTAL BASE PARA DESCUENTO: (Productos + IVA + Envío) -> AHORA INCLUYE ENVÍO
+      // 2. TOTAL BASE PARA DESCUENTO: (Productos + IVA + Envío)
       const totalWithShipping = subtotal + iva + shippingCost;
 
       // 3. CALCULAR DESCUENTO
@@ -593,33 +599,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Escuchar cambios en el carrito (storage)
   window.addEventListener('storage', updateTotalsWithCoupon);
 
-  // --- NUEVO: OBSERVADOR ROBUSTO PARA CAMBIOS EN EL COSTO DE ENVÍO ---
-  // Observamos todo el contenedor del carrito para detectar re-renderizados o cambios en el envío
-  const cartContainer = document.getElementById('cart-container');
-  if (cartContainer) {
-      const observer = new MutationObserver((mutations) => {
-          let shippingChanged = false;
-          for (const mutation of mutations) {
-             // Si el nodo #summary-envio fue afectado (texto o reemplazo)
-             if (mutation.target.id === 'summary-envio' || 
-                (mutation.target.parentElement && mutation.target.parentElement.id === 'summary-envio')) {
-                 shippingChanged = true;
-             }
-          }
-          if (shippingChanged) {
-              updateTotalsWithCoupon();
-          }
-      });
-      observer.observe(cartContainer, { childList: true, characterData: true, subtree: true });
-  }
+  // --- CAMBIO: ESCUCHAR EVENTO DE CARRITO.JS PARA CALCULO EN VIVO ---
+  window.addEventListener('cartBaseTotalUpdated', () => {
+      // Ejecutar la lógica del cupón inmediatamente cuando el JS actualiza el envío/carrito
+      updateTotalsWithCoupon();
+  });
 
   // --- FUNCIONES DE PAGO USANDO EL TOTAL CALCULADO Y VALIDANDO ENVÍO ---
 
   async function handleWebpayCheckout() {
-      // CAMBIO: 1. LLAMAR A LA VALIDACIÓN ANTES DE NADA
       const datosEnvio = validarDatosEnvio();
       if (!datosEnvio) {
-          return; // Detener si no hay datos de envío o no se seleccionó opción
+          return; // Detener si no hay datos de envío
       }
 
       // Leer el total FINAL del dataset actualizado por updateTotalsWithCoupon
@@ -641,7 +632,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const currentSubtotal = totalPrice();
         const ivaCalculado = Math.round(currentSubtotal * 0.19);
-        // sucursalId ya viene dentro de datosEnvio
 
         const pedidoParaCrear = {
             subtotal: currentSubtotal,
@@ -651,7 +641,6 @@ document.addEventListener("DOMContentLoaded", () => {
             items: cartItems.map(item => ({ 
                 sku: item.sku, qty: Number(item.qty), price: Number(item.price), stock: item.stock 
             })),
-            // CAMBIO: Esparcir datos de envío validados
             tipo_entrega: datosEnvio.tipo_entrega,
             costo_envio: datosEnvio.costo_envio,
             sucursal_id: datosEnvio.sucursal_id, 
@@ -696,7 +685,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function handleMercadoPagoCheckout() {
-      // CAMBIO: 1. VALIDACIÓN TAMBIÉN AQUÍ
       const datosEnvio = validarDatosEnvio();
       if (!datosEnvio) return;
 
@@ -721,7 +709,6 @@ document.addEventListener("DOMContentLoaded", () => {
             total: amount,
             id_cupon: currentCoupon ? currentCoupon.id_cupon : null,
             items: cartItems.map(item => ({ sku: item.sku, qty: Number(item.qty), price: Number(item.price), stock: item.stock })),
-            // CAMBIO: Esparcir datos de envío validados
             tipo_entrega: datosEnvio.tipo_entrega,
             costo_envio: datosEnvio.costo_envio,
             sucursal_id: datosEnvio.sucursal_id, 

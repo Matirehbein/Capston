@@ -23,12 +23,11 @@ function getDisplayedTotal() {
   return parseCLP(txt);
 }
 
-// --- ▼▼▼ CORRECCIÓN IMPORTANTE AQUÍ ▼▼▼ ---
 async function postJSON(url, body) {
    const r = await fetch(url, {
      method: "POST",
      headers: { "Content-Type": "application/json" },
-     credentials: 'include', // <--- ESTO FALTABA: Envía la cookie de sesión a Flask
+     credentials: 'include',
      body: JSON.stringify(body)
    });
    const text = await r.text();
@@ -45,7 +44,6 @@ async function postJSON(url, body) {
    }
    try { return JSON.parse(text); } catch { return {}; }
 }
-// --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
 
 // --- 1. INICIALIZACIÓN Y LOGICA DE ENVIO ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -87,7 +85,6 @@ function initShippingLogic() {
 }
 
 function toggleShippingForm() {
-    // Verificamos si hay algo seleccionado para evitar errores
     const radioChecked = document.querySelector('input[name="tipo_entrega"]:checked');
     if (!radioChecked) return;
 
@@ -113,9 +110,7 @@ function calcularCostoEnvio(regionName) {
     if (!regionName) {
         costoEnvioActual = 0;
     } else {
-        // Normalizamos a mayúsculas para evitar errores de coincidencia
         const nombreUpper = regionName.toUpperCase();
-        
         if (nombreUpper.includes("METROPOLITANA") || nombreUpper.includes("SANTIAGO")) {
             costoEnvioActual = 5000;
         } else {
@@ -164,7 +159,6 @@ function renderCart() {
     
     const cart = getCart();
 
-    // 1. Si vacío
     if (!cart.length) {
         container.innerHTML = `<div class="cart-empty-box"><p>Tu carrito está vacío</p><a href="./productos.html" class="btn-lg">Explorar productos</a></div>`;
         if(shippingContainer) shippingContainer.style.display = 'none';
@@ -173,7 +167,6 @@ function renderCart() {
         return;
     }
 
-    // 2. Renderizar Items
     if(shippingContainer) shippingContainer.style.display = 'block';
     if(totalsContainer) totalsContainer.style.display = 'block';
 
@@ -203,51 +196,39 @@ function renderCart() {
     updateCartBadge();
 }
 
+// --- CORRECCIÓN CRÍTICA: ELIMINADA LA LECTURA DE DESCUENTO AQUÍ ---
 function updateTotalsDisplay() {
     const subtotal = totalPrice();
     const iva = calculateIVA(subtotal);
-    let totalFinal = subtotal + iva + costoEnvioActual;
+    // Calculamos solo el total base (Producto + IVA + Envío)
+    const totalBase = subtotal + iva + costoEnvioActual;
 
-    // --- MODIFICACIÓN: PRESERVAR DESCUENTO SI EXISTE ---
-    const discountElem = document.getElementById('summary-discount');
-    let discountAmount = 0;
-    
-    // Verificamos si hay un texto de descuento y si contiene un valor monetario
-    if (discountElem && discountElem.innerText.includes('$')) {
-        // Extraemos solo los números del texto (ej: "-$5.000" -> 5000)
-        const cleanText = discountElem.innerText.replace(/[^0-9]/g, ''); 
-        discountAmount = Number(cleanText) || 0;
-    }
-
-    // Restamos el descuento (si existe) al total final para no perderlo visualmente
-    totalFinal = totalFinal - discountAmount;
-    if (totalFinal < 0) totalFinal = 0;
-
-    // Actualizar textos
+    // Actualizar textos base
     if($("#summary-subtotal")) $("#summary-subtotal").textContent = formatCLP(subtotal);
     if($("#summary-iva")) $("#summary-iva").textContent = formatCLP(iva);
     if($("#summary-envio")) $("#summary-envio").textContent = formatCLP(costoEnvioActual);
-    if($("#summary-total")) $("#summary-total").textContent = formatCLP(totalFinal);
     
-    // Guardar total limpio para los botones de pago
-    if($("#totals-container")) $("#totals-container").dataset.total = totalFinal;
+    // Mostramos temporalmente el total base. 
+    // Si hay cupón, el evento de abajo hará que carrito.html lo sobrescriba en milisegundos.
+    if($("#summary-total")) $("#summary-total").textContent = formatCLP(totalBase);
+    if($("#totals-container")) $("#totals-container").dataset.total = totalBase;
     
-    // Actualizar también el dataset del contenedor principal por compatibilidad
     const container = $("#cart-container");
-    if(container) container.dataset.total = String(Math.round(totalFinal));
+    if(container) container.dataset.total = String(Math.round(totalBase));
+
+    // --- NOTIFICAR A CARRITO.HTML PARA QUE RECALCULE EL CUPÓN ---
+    // Esto soluciona el problema del $0 y el cálculo en vivo
+    window.dispatchEvent(new CustomEvent('cartBaseTotalUpdated'));
 }
 
 
 // --- 3. MANEJO DE PAGOS (VALIDACIÓN Y ENVÍO) ---
 
-// --- MODIFICACIÓN: Exportamos la función para usarla en carrito.html ---
 export function validarDatosEnvio() {
-    // 1. Verificar si se seleccionó alguna opción
     const radioChecked = document.querySelector('input[name="tipo_entrega"]:checked');
     
     if (!radioChecked) {
         alert("⚠️ Por favor, selecciona una opción de entrega (Retiro o Despacho) antes de pagar.");
-        // Hacemos scroll hacia la sección de envíos para que el usuario la vea
         document.getElementById('shipping-container')?.scrollIntoView({ behavior: 'smooth' });
         return null;
     }
@@ -263,7 +244,6 @@ export function validarDatosEnvio() {
     };
 
     if (tipo === 'retiro') {
-        // --- CASO RETIRO ---
         const suc = $("#retiro_sucursal").value;
         const fecha = $("#retiro_fecha").value;
         const nombre = $("#retiro_nombre").value;
@@ -274,9 +254,9 @@ export function validarDatosEnvio() {
             return null;
         }
         
-        datos.sucursal_id = suc; // Aquí usa la seleccionada en el dropdown
+        datos.sucursal_id = suc;
         datos.fecha_entrega = fecha;
-        datos.bloque_horario = "Retiro Estándar"; // <--- SOLUCIÓN 2: Valor por defecto frontend
+        datos.bloque_horario = "Retiro Estándar";
         datos.datos_contacto = {
             nombre, rut,
             email: $("#retiro_email").value,
@@ -285,7 +265,6 @@ export function validarDatosEnvio() {
         };
         
     } else {
-        // --- CASO DESPACHO ---
         const region = $("#select-region").value;
         const comuna = $("#input-comuna").value;
         const dir = $("#despacho_direccion").value;
@@ -296,10 +275,8 @@ export function validarDatosEnvio() {
             return null;
         }
 
-        // <--- SOLUCIÓN 1: Obtener sucursal activa por geolocalización --->
-        // Intentamos obtener la sucursal guardada en localStorage o por defecto 1
         const sucursalActiva = getActiveBranchId(); 
-        datos.sucursal_id = sucursalActiva ? sucursalActiva : 1; // Fallback a ID 1 (Casa Matriz) si falla
+        datos.sucursal_id = sucursalActiva ? sucursalActiva : 1;
         
         datos.fecha_entrega = $("#despacho_fecha_estimada").dataset.isoDate;
         datos.bloque_horario = $("#despacho_bloque").value;
@@ -319,7 +296,7 @@ export function validarDatosEnvio() {
 
 async function handleWebpayCheckout(btn) {
     const envioData = validarDatosEnvio();
-    if (!envioData) return; // Detener si validación falla
+    if (!envioData) return;
 
     const totalFinal = Number($("#totals-container").dataset.total);
     btn.setAttribute("disabled", "disabled");
@@ -330,13 +307,12 @@ async function handleWebpayCheckout(btn) {
         const cartItems = getCart();
         const subtotal = totalPrice();
         
-        // Preparar Payload para app.py
         const pedidoPayload = {
             items: cartItems,
             total: totalFinal,
             subtotal: subtotal,
             iva: calculateIVA(subtotal),
-            ...envioData // Esparcir datos de envío
+            ...envioData 
         };
 
         localStorage.setItem('ultimaCompra', JSON.stringify({
@@ -346,11 +322,9 @@ async function handleWebpayCheckout(btn) {
             items: cartItems 
         }));
 
-        // 1. Crear Pedido en Flask (Ahora envía cookies gracias a la corrección)
         const resp = await postJSON("http://localhost:5000/api/crear-pedido", pedidoPayload);
         const idPedido = resp.id_pedido;
 
-        // 2. Iniciar Webpay (Node)
         const dataWP = await postJSON("http://localhost:3010/webpay/create", {
             amount: totalFinal,
             buyOrder: idPedido,
@@ -369,7 +343,7 @@ async function handleWebpayCheckout(btn) {
 
 async function handleMercadoPagoCheckout(btn) {
     const envioData = validarDatosEnvio();
-    if (!envioData) return; // Detener si validación falla
+    if (!envioData) return;
 
     const totalFinal = Number($("#totals-container").dataset.total);
     btn.setAttribute("disabled", "disabled");
@@ -395,11 +369,9 @@ async function handleMercadoPagoCheckout(btn) {
             items: cartItems
         }));
 
-        // 1. Crear Pedido Flask
         const resp = await postJSON("http://localhost:5000/api/crear-pedido", pedidoPayload);
         const idPedido = resp.id_pedido;
 
-        // 2. Iniciar MP (Node)
         const itemsMP = cartItems.map(p => ({
             id: p.sku, 
             title: `${p.name} (Talla: ${p.variation?.talla || 'Única'})`, 
@@ -477,10 +449,6 @@ if(container) {
 
 // Listeners de Botones de Acción Globales
 $("#btn-clear")?.addEventListener("click", () => { saveCart([]); renderCart(); });
-
-// --- COMENTAMOS ESTAS LINEAS PARA EVITAR CONFLICTO CON EL CUPÓN EN CARRITO.HTML ---
-// $("#btn-checkout")?.addEventListener("click", (e) => { e.preventDefault(); handleWebpayCheckout(e.target); });
-// $("#btn-mp")?.addEventListener("click", (e) => { e.preventDefault(); handleMercadoPagoCheckout(e.target); });
 
 // Escuchar cambios en localStorage
 window.addEventListener("storage", renderCart);
