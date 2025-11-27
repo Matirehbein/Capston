@@ -4847,6 +4847,35 @@ def lista_pedidos_pendientes():
         cur.close()
         return_db_connection(conn)
 
+@app.route("/api/sucursales_publicas")
+def obtener_sucursales_publicas():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        cur.execute("""
+            SELECT 
+                id_sucursal,
+                nombre_sucursal,
+                direccion_sucursal,
+                comuna_sucursal,
+                region_sucursal,
+                telefono_sucursal,
+                latitud_sucursal,
+                longitud_sucursal,
+                horario_json
+            FROM sucursal
+            WHERE latitud_sucursal IS NOT NULL
+            AND longitud_sucursal IS NOT NULL;
+        """)
+
+        rows = cur.fetchall()
+        return jsonify([dict(r) for r in rows])
+
+    finally:
+        cur.close()
+        return_db_connection(conn)
+
 # ===========================
 # RUN (SIN CAMBIOS)
 # ===========================
