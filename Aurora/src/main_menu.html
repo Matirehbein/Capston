@@ -613,8 +613,131 @@
 <!-- 1. Librería Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- 2. Tu JS del panel -->
-<script src="../Public/js/panel_grafico.js"></script>
+    <div class="modal-overlay" id="clientes-kpi-modal" style="z-index: 9999;">
+        <div class="modal-content-wrapper" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            
+            <div class="modal-header">
+                <h2>Nuevos Clientes Registrados</h2>
+                <button class="modal-close" id="clientes-kpi-close-btn">&times;</button>
+            </div>
+
+            <div class="modal-body" style="flex: 1; overflow-y: auto;">
+                
+                <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; gap: 10px;">
+                    <label for="clientes-kpi-filter" style="font-weight: 600; color: #555;">Filtrar por:</label>
+                    <select id="clientes-kpi-filter" class="form-select" style="width: auto; min-width: 150px;">
+                        <option value="hoy">Hoy </option>
+                        <option value="semana">Esta Semana (Desde lunes)</option>
+                        <option value="mes" selected>Este Mes (Desde el primero de cada mes)</option>
+                    </select>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre Completo</th>
+                                <th>Email</th>
+                                <th>Fecha Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientes-kpi-tbody">
+                            <tr><td colspan="4" style="text-align: center; padding: 20px;">Seleccione un filtro para ver datos.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- LÓGICA ESPECÍFICA PARA EL MODAL DE NUEVOS CLIENTES ---
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // 1. Referencias a elementos
+            const cardClientes = document.getElementById('kpi-nuevos-clientes-card');
+            const modalClientes = document.getElementById('clientes-kpi-modal');
+            const btnCerrar = document.getElementById('clientes-kpi-close-btn');
+            const filtroSelect = document.getElementById('clientes-kpi-filter');
+            const tbody = document.getElementById('clientes-kpi-tbody');
+            const apiBase = 'http://localhost:5000'; // Ajusta si tu puerto es diferente
+
+            // 2. Abrir Modal al hacer click en la card
+            if(cardClientes) {
+                cardClientes.addEventListener('click', () => {
+                    modalClientes.classList.add('visible');
+                    cargarClientesFiltrados(); // Carga inicial (por defecto 'mes')
+                });
+            }
+
+            // 3. Cerrar Modal
+            if(btnCerrar) {
+                btnCerrar.addEventListener('click', () => {
+                    modalClientes.classList.remove('visible');
+                });
+            }
+            
+            // Cerrar al hacer click fuera
+            window.addEventListener('click', (e) => {
+                if (e.target === modalClientes) {
+                    modalClientes.classList.remove('visible');
+                }
+            });
+
+            // 4. Listener del Filtro
+            if(filtroSelect) {
+                filtroSelect.addEventListener('change', cargarClientesFiltrados);
+            }
+
+            // 5. Función para cargar datos desde la API
+            async function cargarClientesFiltrados() {
+                const periodo = filtroSelect.value;
+                const sucursalId = document.getElementById('admin-sucursal-selector')?.value || 'all';
+                
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Cargando datos...</td></tr>';
+
+                try {
+                    // Llamada al endpoint existente (reutilizamos lógica o creamos uno nuevo si es necesario)
+                    // Asumimos que existe /api/admin/reportes/lista_nuevos_clientes que acepta ?periodo=...
+                    const response = await fetch(`${apiBase}/api/admin/reportes/lista_nuevos_clientes?periodo=${periodo}&sucursal_id=${sucursalId}`, {
+                        credentials: 'include'
+                    });
+
+                    if (!response.ok) throw new Error("Error al cargar clientes");
+
+                    const clientes = await response.json();
+
+                    if (clientes.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No se encontraron registros nuevos en este periodo.</td></tr>';
+                        return;
+                    }
+
+                    let html = '';
+                    clientes.forEach(c => {
+                        const fechaFmt = new Date(c.creado_en).toLocaleString('es-CL');
+                        const nombre = `${c.nombre_usuario || ''} ${c.apellido_paterno || ''}`.trim();
+                        
+                        html += `
+                            <tr>
+                                <td>#${c.id_usuario}</td>
+                                <td style="font-weight: 600;">${nombre}</td>
+                                <td>${c.email_usuario}</td>
+                                <td>${fechaFmt}</td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+
+                } catch (error) {
+                    console.error(error);
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red; padding: 20px;">Error: ${error.message}</td></tr>`;
+                }
+            }
+        });
+    </script>
+
     <script type="module" src="../Public/js/colores.js"></script> 
     <script type="module" src="../Public/js/dashboard.js?v=1.2"></script>
 </body>

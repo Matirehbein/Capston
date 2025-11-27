@@ -195,7 +195,7 @@
                 </div>
                 <div class="form-group">
                     <label>RUT quien retira</label>
-                    <input type="text" id="retiro_rut" class="form-control" placeholder="12.345.678-9">
+                    <input type="text" id="retiro_rut" class="form-control" placeholder="12.345.678-9" maxlength="12" oninput="this.value = this.value.replace(/[^0-9kK\.-]/g, '');">
                 </div>
                 <div class="form-group">
                     <label>Email</label>
@@ -203,7 +203,7 @@
                 </div>
                 <div class="form-group">
                     <label>Celular</label>
-                    <input type="tel" id="retiro_celular" class="form-control" placeholder="+569...">
+                    <input type="tel" id="retiro_celular" class="form-control" placeholder="9XXXXXXXX" maxlength="9" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                 </div>
             </div>
         </div>
@@ -257,7 +257,7 @@
                 </div>
                 <div class="form-group">
                     <label>Celular</label>
-                    <input type="tel" id="despacho_celular" class="form-control">
+                    <input type="tel" id="despacho_celular" class="form-control" placeholder="9XXXXXXXX" maxlength="9" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                 </div>
             </div>
         </div>
@@ -767,4 +767,5 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnMp) btnMp.addEventListener('click', (e) => { e.preventDefault(); handleMercadoPagoCheckout(); });
 
 </script>
+</body>
 </html>

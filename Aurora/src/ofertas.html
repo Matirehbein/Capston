@@ -4,89 +4,179 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Aurora | Ofertas</title>
+  
   <link rel="stylesheet" href="../Public/Css/style.css">
+  
+  <style>
+    /* --- 1. CORRECCIÓN DE COLOR DEL HEADER (Igual que en main.html) --- */
+    header, .header-content {
+        background-color: #1B1613 !important; /* Café Espresso */
+        color: #ffffff !important;
+    }
+    /* Enlaces blancos */
+    .nav-links a { color: #ffffff !important; font-weight: 500; }
+    .nav-links a:hover { color: #C7A45B !important; } /* Dorado al pasar mouse */
+    .logo { color: #C7A45B !important; }
+    .branch-display-button { color: #fff !important; }
+    /* Iconos blancos */
+    .header-actions .icon-btn { filter: brightness(0) invert(1); }
+    .header-actions .icon-btn:hover { opacity: 0.8; }
+
+
+    /* --- 2. ESTILOS DEL BANNER EN MOVIMIENTO --- */
+    .scrolling-banner-wrap {
+        width: 100%;
+        background-color: #C7A45B; /* Color Primario (Dorado/Mostaza) */
+        color: #fff;
+        overflow: hidden; /* Oculta lo que se sale de la pantalla */
+        padding: 12px 0;
+        white-space: nowrap; /* Evita saltos de línea */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        position: relative;
+        z-index: 10;
+    }
+
+    .scrolling-banner-track {
+        display: flex;
+        width: max-content; /* El ancho se ajusta al contenido */
+        /* Animación: Nombre, Duración, curva, infinito */
+        animation: scroll-left 25s linear infinite; 
+    }
+
+    /* El contenido individual del banner */
+    .banner-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 0 60px; /* Espacio entre repeticiones */
+        font-size: 1.1rem;
+    }
+
+    .banner-item strong { text-transform: uppercase; letter-spacing: 1px; }
+    
+    /* Botón dentro del banner */
+    .btn-banner {
+        background-color: #fff;
+        color: #C7A45B;
+        padding: 6px 18px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 0.9rem;
+        transition: transform 0.2s;
+    }
+    .btn-banner:hover { transform: scale(1.05); color: #1B1613; }
+
+    /* La animación que mueve todo a la izquierda */
+    @keyframes scroll-left {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); } 
+        /* Movemos -50% porque duplicamos el contenido visualmente para que el loop sea perfecto */
+    }
+
+    /* Pausar animación al pasar el mouse (Opcional, por si el usuario quiere clickear) */
+    .scrolling-banner-wrap:hover .scrolling-banner-track {
+        animation-play-state: paused;
+    }
+  </style>
 </head>
+
 <body>
     <header>
-  <div class="container">
-    <div class="header-content">
-      <a href="/src/main.html" class="logo">AURORA</a>
+    <div class="container">
+      <div class="header-content">
+        <a href="/src/main.html" class="logo">AURORA</a>
 
-      <ul class="nav-links">
-        <li><a href="/src/colecciones.html">Colecciones</a></li>
-        <li class="nav-item-with-megamenu">
-          <a href="/src/productos.html">Productos</a>
-          <div class="mega-menu">
-            <div class="mega-menu-content container">
-              <h4>Categorías</h4>
-              <ul class="mega-menu-list">
-                <li><a href="/src/productos.html#categoria=Abrigos">Abrigos</a></li>
-                <li><a href="/src/productos.html#categoria=Accesorios">Accesorios</a></li>
-                <li><a href="/src/productos.html#categoria=Calzado">Calzado</a></li>
-                <li><a href="/src/productos.html#categoria=Chaquetas">Chaquetas</a></li>
-                <li><a href="/src/productos.html#categoria=Joyas">Joyas</a></li>
-                <li><a href="/src/productos.html#categoria=Pantalones">Pantalones</a></li>
-                <li><a href="/src/productos.html#categoria=Parkas">Parkas</a></li>
-                <li><a href="/src/productos.html#categoria=Polerones">Polerones</a></li>
-                <li><a href="/src/productos.html#categoria=Poleras">Poleras</a></li>
-                <li><a href="/src/productos.html#categoria=Ropa interior">Ropa interior</a></li>
-                <li><a href="/src/productos.html#categoria=Top">Top</a></li>
-                <li><a href="/src/productos.html#categoria=Traje de baño">Traje de baño</a></li>
-              </ul>
+        <ul class="nav-links">
+          <li><a href="/src/colecciones.html">Colecciones</a></li>
+          <li class="nav-item-with-megamenu">
+            <a href="/src/productos.html">Productos</a>
+            <div class="mega-menu">
+              <div class="mega-menu-content container">
+                <h4>Categorías</h4>
+                <ul class="mega-menu-list">
+                  <li><a href="/src/productos.html#categoria=Abrigos" style="color:#333 !important;">Abrigos</a></li>
+                  <li><a href="/src/productos.html#categoria=Accesorios" style="color:#333 !important;">Accesorios</a></li>
+                  <li><a href="/src/productos.html#categoria=Calzado" style="color:#333 !important;">Calzado</a></li>
+                  <li><a href="/src/productos.html#categoria=Chaquetas" style="color:#333 !important;">Chaquetas</a></li>
+                  <li><a href="/src/productos.html#categoria=Joyas" style="color:#333 !important;">Joyas</a></li>
+                  <li><a href="/src/productos.html#categoria=Pantalones" style="color:#333 !important;">Pantalones</a></li>
+                  <li><a href="/src/productos.html#categoria=Parkas" style="color:#333 !important;">Parkas</a></li>
+                  <li><a href="/src/productos.html#categoria=Polerones" style="color:#333 !important;">Polerones</a></li>
+                  <li><a href="/src/productos.html#categoria=Poleras" style="color:#333 !important;">Poleras</a></li>
+                  <li><a href="/src/productos.html#categoria=Ropa interior" style="color:#333 !important;">Ropa interior</a></li>
+                  <li><a href="/src/productos.html#categoria=Top" style="color:#333 !important;">Top</a></li>
+                  <li><a href="/src/productos.html#categoria=Traje de baño" style="color:#333 !important;">Traje de baño</a></li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          <li><a href="/src/ofertas.html">Ofertas</a></li>
+        </ul>
+
+        <div class="header-actions">
+          <div class="branch-selector">
+            <button id="branch-display-btn" class="branch-display-button" type="button">
+              📍 Buscando...
+            </button>
+            <div id="branch-list-dropdown" class="branch-dropdown-menu" style="display: none;">
+              <div class="dropdown-loading" style="color:#333;">Cargando sucursales...</div>
             </div>
           </div>
-        </li>
-        <li><a href="/src/ofertas.html">Ofertas</a></li>
-      </ul>
 
-      <div class="header-actions">
-        <div class="branch-selector">
-          <button id="branch-display-btn" class="branch-display-button" type="button">
-            📍 Buscando...
+          <a href="/src/carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
+          <a href="/src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
+          <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold; color:#fff;"></span>
+
+          <a href="/src/perfil.html" id="perfil-menu-btn" class="icon-btn" style="display: none;" aria-label="Mi perfil">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </a>
+
+          <button id="logout-btn" class="icon-btn icon-logout" aria-label="Logout" style="display: none; background: none; border: none; cursor: pointer; padding: 0; vertical-align: middle;">
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
           </button>
-          <div id="branch-list-dropdown" class="branch-dropdown-menu" style="display: none;">
-            <div class="dropdown-loading">Cargando sucursales...</div>
-          </div>
+
+          <span id="admin-menu-btn" style="display:none;">
+             <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light" style="background:rgba(255,255,255,0.2); padding:5px 10px; border:none; color:#fff; text-decoration:none; border-radius:4px; font-size:0.8rem;">Panel Admin</a>
+          </span>
+
         </div>
-
-        <a href="/src/carrito.html" class="icon-btn icon-cart" aria-label="Carrito"></a>
-
-        <a href="/src/login.html" id="login-btn" class="icon-btn icon-login" aria-label="Login"></a>
-
-        <span id="welcome-msg" style="display:none; margin-left:10px; font-weight:bold;"></span>
-
-        <a href="/src/perfil.html" id="perfil-menu-btn" class="icon-btn" style="display: none;" aria-label="Mi perfil">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-        </a>
-
-        <button id="logout-btn" class="icon-btn icon-logout" aria-label="Logout" style="display: none; background: none; border: none; cursor: pointer; padding: 0; vertical-align: middle;">
-           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-        </button>
-
-        <span id="admin-menu-btn" style="display:none;">
-           <a href="/src/main_menu.html" class="btn btn-sm btn-outline-light">Panel Admin</a>
-        </span>
-
       </div>
     </div>
-  </div>
-</header>
+  </header>
 
   <main>
-    <!-- Banner -->
-    <section class="container">
-      <div class="deal-banner">
-        <strong>Mid Season Sale</strong>
-        <span>hasta 40% dcto</span>
-        <a href="#lista" class="btn">Comprar ahora</a>
-      </div>
-    </section>
+    
+    <div class="scrolling-banner-wrap">
+        <div class="scrolling-banner-track">
+            <div class="banner-item">
+                <strong>Mid Season Sale</strong> <span>hasta 40% dcto</span> 
+                <a href="#lista" class="btn-banner">Comprar ahora</a>
+            </div>
+            <div class="banner-item">
+                <strong>Envíos Gratis</strong> <span>por compras sobre $50.000</span> 
+            </div>
+            <div class="banner-item">
+                <strong>Mid Season Sale</strong> <span>hasta 40% dcto</span> 
+                <a href="#lista" class="btn-banner">Comprar ahora</a>
+            </div>
+            <div class="banner-item">
+                <strong>Envíos Gratis</strong> <span>por compras sobre $50.000</span> 
+            </div>
+            <div class="banner-item">
+                <strong>Mid Season Sale</strong> <span>hasta 40% dcto</span> 
+                <a href="#lista" class="btn-banner">Comprar ahora</a>
+            </div>
+             <div class="banner-item">
+                <strong>Envíos Gratis</strong> <span>por compras sobre $50.000</span> 
+            </div>
+        </div>
+    </div>
 
-    <!-- Lista de ofertas -->
-    <section id="lista" class="container">
+    <section id="lista" class="container" style="margin-top: 40px;">
       <div class="section-title">
         <h2>Ofertas de la semana</h2>
         <p>Stock limitado · precios finales</p>
@@ -96,7 +186,6 @@
     </section>
   </main>
 
-  <!-- Footer -->
   <footer class="footer">
     <div class="container">
       <nav class="footer-top">
@@ -124,20 +213,17 @@
   <script type="module" src="../Public/Js/geolocation.js"></script>
   <script type="module" src="/Public/Js/navigation.js"></script> 
 
-  <script type="module" src="/Public/Js/colores.js"></script> 
-
-  <!-- Script para el botón de admin según el tipo de sesión -->
-<script>
+  <script>
 (async function checkUserSessionAndSetupUI() {
   const adminBtnSpan = document.getElementById("admin-menu-btn");
-  const perfilBtnSpan = document.getElementById("perfil-menu-btn"); // ← nuevo
+  const perfilBtnSpan = document.getElementById("perfil-menu-btn"); 
   const welcomeMsg = document.getElementById("welcome-msg");
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
 
   // Estado inicial (por defecto: no logueado)
   if (adminBtnSpan) adminBtnSpan.style.display = "none";
-  if (perfilBtnSpan) perfilBtnSpan.style.display = "none"; // ← ocultar perfil
+  if (perfilBtnSpan) perfilBtnSpan.style.display = "none"; 
   if (welcomeMsg) welcomeMsg.style.display = "none";
   if (loginBtn) loginBtn.style.display = "inline-block";
   if (logoutBtn) logoutBtn.style.display = "none";
@@ -164,7 +250,7 @@
       }
       if (loginBtn) loginBtn.style.display = "none";
       if (logoutBtn) logoutBtn.style.display = "inline-block";
-      if (perfilBtnSpan) perfilBtnSpan.style.display = "inline"; // ← mostrar "Mi perfil"
+      if (perfilBtnSpan) perfilBtnSpan.style.display = "inline"; 
 
       // --- Mostrar botón Admin solo si corresponde ---
       if (adminBtnSpan && (data.rol === "admin" || data.rol === "soporte")) {
@@ -175,7 +261,7 @@
     } else {
       // --- Usuario no logueado ---
       console.log("Usuario no logueado.");
-      if (perfilBtnSpan) perfilBtnSpan.style.display = "none"; // ← aseguramos ocultarlo
+      if (perfilBtnSpan) perfilBtnSpan.style.display = "none"; 
     }
 
   } catch (err) {
@@ -191,10 +277,6 @@
   }
 })();
 </script>
-
-
-  <script type="module" src="/Public/Js/navigation.js"></script>
-  <script type="module" src="/Public/Js/geolocation.js"></script>
 
 </body>
 </html>
