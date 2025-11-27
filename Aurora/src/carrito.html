@@ -396,6 +396,7 @@ document.addEventListener("DOMContentLoaded", () => {
   <script type="module" src="/Public/Js/colores.js"></script>
   
   <script type="module" src="../Public/js/carrito.js"></script>
+  <script type="module" src="../Public/js/carrito.js?v=9999"></script>
   
 
 
@@ -732,7 +733,7 @@ document.addEventListener("DOMContentLoaded", () => {
         compraGuardada.id = id_pedido_nuevo;
         localStorage.setItem('ultimaCompra', JSON.stringify(compraGuardada));
 
-        const mpUrl = "http://localhost:3010/mercadopago/create_preference";
+        const mpUrl = "http://localhost:3010/api/mercadopago/create";
         const itemsForMp = [{
             id: "TOTAL",
             title: "Compra en Aurora" + (currentCoupon ? ` (Desc: ${currentCoupon.codigo})` : ""),
