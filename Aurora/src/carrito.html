@@ -22,7 +22,6 @@
     }
     .shipping-section h3 { margin-bottom: 1.5rem; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
     
-    /* Opción Radio Buttons */
     .shipping-options { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
     .shipping-radio { flex: 1; min-width: 250px; cursor: pointer; position: relative; }
     .shipping-radio input { position: absolute; opacity: 0; }
@@ -40,7 +39,6 @@
     }
     .shipping-radio input:checked + .radio-box i { color: #d4a017; }
 
-    /* Formularios */
     .shipping-form { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ddd; animation: fadeIn 0.3s; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .form-group { display: flex; flex-direction: column; }
@@ -53,14 +51,12 @@
     .form-control:focus { border-color: #000; outline: none; }
     .full-width { grid-column: 1 / -1; }
 
-    /* Caja de Información */
     .info-box {
         grid-column: 1 / -1; background: #e8f4fd; color: #0c5460;
         padding: 15px; border-radius: 6px; font-size: 0.95rem;
         display: flex; align-items: flex-start; gap: 12px; border-left: 4px solid #17a2b8;
     }
 
-    /* Resumen de Totales */
     .cart-summary-box {
         background: #fafafa; padding: 25px; margin-top: 30px;
         border-radius: 8px; border: 1px solid #eee;
@@ -71,6 +67,23 @@
         border-top: 2px solid #ddd; font-size: 1.4rem; font-weight: 800; color: #000; 
     }
     .cart-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 25px; flex-wrap: wrap; }
+
+    /* Estilos Cupón */
+    .coupon-container {
+        margin: 15px 0;
+        padding: 15px 0;
+        border-top: 1px dashed #ddd;
+        border-bottom: 1px dashed #ddd;
+    }
+    .coupon-input-group { display: flex; gap: 10px; }
+    #coupon-msg { font-size: 0.85rem; margin-top: 5px; min-height: 20px; font-weight: 500; }
+    .btn-coupon {
+        background-color: #333; color: white; border: none; padding: 0 15px;
+        border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s;
+    }
+    .btn-coupon:hover { background-color: #000; }
+    .btn-coupon.remove { background-color: #dc3545; }
+    .btn-coupon.remove:hover { background-color: #bb2d3b; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
@@ -148,21 +161,22 @@
         <h3><i class="fas fa-truck"></i> Opciones de Entrega</h3>
         
         <div class="shipping-options">
-            <label class="shipping-radio">
-                <input type="radio" name="tipo_entrega" value="retiro" checked>
-                <span class="radio-box">
-                    <span>🏪</span> Retiro en Tienda (Gratis)
-                </span>
-            </label>
-            <label class="shipping-radio">
-                <input type="radio" name="tipo_entrega" value="despacho">
-                <span class="radio-box">
-                    <span>🚚</span> Despacho a Domicilio
-                </span>
-            </label>
+          <label class="shipping-radio">
+            <input type="radio" name="tipo_entrega" value="retiro"> 
+            <span class="radio-box">
+              <span>🏪</span> Retiro en Tienda (Gratis)
+            </span>
+          </label>
+
+          <label class="shipping-radio">
+            <input type="radio" name="tipo_entrega" value="despacho">
+            <span class="radio-box">
+              <span>🚚</span> Despacho a Domicilio
+            </span>
+          </label>
         </div>
 
-        <div id="form-retiro" class="shipping-form">
+        <div id="form-retiro" class="shipping-form" style="display: none;">
             <h4>Datos para el Retiro</h4>
             <div class="form-grid">
                 <div class="form-group">
@@ -255,14 +269,29 @@
         <div class="summary-row" style="color: #007bff;">
             <span>Costo de Envío:</span> <span id="summary-envio">$0</span>
         </div>
+
+        <div class="coupon-container">
+            <label for="coupon-code" style="font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 5px;">¿Tienes un cupón de descuento?</label>
+            <div class="coupon-input-group">
+                <input type="text" id="coupon-code" class="form-control" placeholder="Ingresa tu código" style="text-transform: uppercase;">
+                <button id="btn-apply-coupon" class="btn-coupon" type="button">Aplicar</button>
+                <button id="btn-remove-coupon" class="btn-coupon remove" type="button" style="display: none;">Quitar</button>
+            </div>
+            <div id="coupon-msg"></div>
+        </div>
+
+        <div class="summary-row" id="row-discount" style="display: none; color: #28a745; font-weight: bold;">
+            <span>Descuento:</span> <span id="summary-discount">-$0</span>
+        </div>
+
         <div class="summary-total">
             <span>Total a Pagar:</span> <span id="summary-total">$0</span>
         </div>
         
         <div class="cart-buttons">
             <button class="btn-sm alt" id="btn-clear">Vaciar carrito</button>
-            <a class="btn-sm" id="btn-checkout" href="#">Pagar con Webpay</a>
-            <a class="btn-sm" id="btn-mp" href="#">Pagar con Mercado Pago</a>
+            <button class="btn-sm" id="btn-checkout" type="button">Pagar con Webpay</button>
+            <button class="btn-sm" id="btn-mp" type="button">Pagar con Mercado Pago</button>
         </div>
     </div>
 
@@ -408,5 +437,353 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     cargarRegiones();
+</script>
+
+<script type="module">
+  import { totalPrice } from '../Public/js/cart.js';
+  // CAMBIO: IMPORTAR VALIDACIÓN DESDE CARRITO.JS
+  import { validarDatosEnvio } from '../Public/js/carrito.js';
+  const $ = (s) => document.querySelector(s);
+
+  // Variables de estado local para el cupón
+  let currentCoupon = null;
+
+  function parseCLP(str) {
+      // Elimina todo lo que no sea números o signo menos, y convierte a número
+      return Number(String(str).replace(/[^0-9-]/g, '')) || 0;
+  }
+
+  function formatCLP(val) {
+      return "$" + Math.round(val).toLocaleString("es-CL");
+  }
+
+  async function postJSON(url, body, options = {}) {
+      const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          ...options
+      });
+      const text = await r.text();
+      if (!r.ok) {
+          try {
+              const errJson = JSON.parse(text);
+              throw new Error(errJson.message || errJson.error || `HTTP ${r.status}`);
+          } catch (e) {
+              throw new Error(text.includes("<!doctype") ? "Error servidor" : text);
+          }
+      }
+      return JSON.parse(text);
+  }
+
+  async function applyCoupon() {
+      const input = $('#coupon-code');
+      const msg = $('#coupon-msg');
+      const codigo = input.value.trim();
+      
+      msg.textContent = "";
+      msg.className = "";
+
+      if (!codigo) {
+          msg.textContent = "Ingresa un código.";
+          msg.style.color = "red";
+          return;
+      }
+
+      const subtotal = totalPrice();
+      const iva = Math.round(subtotal * 0.19);
+      const totalProductosIVA = subtotal + iva;
+
+      try {
+          const response = await fetch("http://localhost:5000/api/validar-cupon", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ codigo, total: totalProductosIVA })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.valid) {
+              currentCoupon = data;
+              msg.textContent = data.message || "¡Cupón aplicado!";
+              msg.style.color = "green";
+              updateTotalsWithCoupon();
+              
+              $('#btn-apply-coupon').style.display = 'none';
+              $('#btn-remove-coupon').style.display = 'inline-block';
+              $('#coupon-code').disabled = true;
+          } else {
+              throw new Error(data.message || "Cupón inválido");
+          }
+      } catch (error) {
+          msg.textContent = error.message;
+          msg.style.color = "red";
+          currentCoupon = null;
+          updateTotalsWithCoupon();
+      }
+  }
+
+  function removeCoupon() {
+      currentCoupon = null;
+      const input = $('#coupon-code');
+      input.value = "";
+      input.disabled = false;
+      $('#btn-apply-coupon').style.display = 'inline-block';
+      $('#btn-remove-coupon').style.display = 'none';
+      $('#coupon-msg').textContent = "";
+      updateTotalsWithCoupon();
+  }
+
+  // --- FUNCIÓN DE CÁLCULO DINÁMICO CORREGIDA ---
+  function updateTotalsWithCoupon() {
+      const subtotal = totalPrice();
+      const iva = Math.round(subtotal * 0.19);
+      
+      // 1. OBTENER COSTO DE ENVÍO ACTUAL DESDE EL DOM
+      const shippingElem = document.getElementById('summary-envio');
+      const shippingCost = shippingElem ? parseCLP(shippingElem.innerText) : 0;
+
+      // 2. TOTAL BASE PARA DESCUENTO: (Productos + IVA + Envío) -> AHORA INCLUYE ENVÍO
+      const totalWithShipping = subtotal + iva + shippingCost;
+
+      // 3. CALCULAR DESCUENTO
+      let discountAmount = 0;
+      if (currentCoupon) {
+          if (currentCoupon.tipo === 'pct') {
+              // Aplicar porcentaje al total con envío
+              discountAmount = Math.round(totalWithShipping * (currentCoupon.valor / 100));
+          } else {
+              discountAmount = Math.round(currentCoupon.valor);
+          }
+          // Evitar descuento mayor al total
+          if (discountAmount > totalWithShipping) discountAmount = totalWithShipping;
+      }
+
+      // 4. TOTAL FINAL
+      const finalTotal = totalWithShipping - discountAmount;
+
+      // 5. ACTUALIZAR UI
+      if ($('#summary-subtotal')) $('#summary-subtotal').textContent = formatCLP(subtotal);
+      if ($('#summary-iva')) $('#summary-iva').textContent = formatCLP(iva);
+      
+      const rowDiscount = $('#row-discount');
+      if (rowDiscount) {
+          if (currentCoupon) {
+              rowDiscount.style.display = 'flex';
+              
+              // --- MOSTRAR TEXTO DE PORCENTAJE ---
+              let discountText = `-${formatCLP(discountAmount)}`;
+              if (currentCoupon.tipo === 'pct') {
+                  discountText = `${Math.round(currentCoupon.valor)}% OFF | -${formatCLP(discountAmount)}`;
+              }
+              $('#summary-discount').textContent = discountText;
+          } else {
+              rowDiscount.style.display = 'none';
+          }
+      }
+      
+      if ($('#summary-total')) $('#summary-total').textContent = formatCLP(finalTotal);
+      
+      // Actualizar dataset para que Webpay/MP lean el total correcto
+      const cartContainer = $('#cart-container');
+      if (cartContainer) cartContainer.dataset.total = Math.round(finalTotal); 
+      if ($('#totals-container')) $('#totals-container').dataset.total = Math.round(finalTotal);
+  }
+
+  // Listeners
+  const btnApply = document.getElementById('btn-apply-coupon');
+  if (btnApply) btnApply.addEventListener('click', applyCoupon);
+
+  const btnRemove = document.getElementById('btn-remove-coupon');
+  if (btnRemove) btnRemove.addEventListener('click', removeCoupon);
+
+  // Escuchar cambios en el carrito (storage)
+  window.addEventListener('storage', updateTotalsWithCoupon);
+
+  // --- NUEVO: OBSERVADOR ROBUSTO PARA CAMBIOS EN EL COSTO DE ENVÍO ---
+  // Observamos todo el contenedor del carrito para detectar re-renderizados o cambios en el envío
+  const cartContainer = document.getElementById('cart-container');
+  if (cartContainer) {
+      const observer = new MutationObserver((mutations) => {
+          let shippingChanged = false;
+          for (const mutation of mutations) {
+             // Si el nodo #summary-envio fue afectado (texto o reemplazo)
+             if (mutation.target.id === 'summary-envio' || 
+                (mutation.target.parentElement && mutation.target.parentElement.id === 'summary-envio')) {
+                 shippingChanged = true;
+             }
+          }
+          if (shippingChanged) {
+              updateTotalsWithCoupon();
+          }
+      });
+      observer.observe(cartContainer, { childList: true, characterData: true, subtree: true });
+  }
+
+  // --- FUNCIONES DE PAGO USANDO EL TOTAL CALCULADO Y VALIDANDO ENVÍO ---
+
+  async function handleWebpayCheckout() {
+      // CAMBIO: 1. LLAMAR A LA VALIDACIÓN ANTES DE NADA
+      const datosEnvio = validarDatosEnvio();
+      if (!datosEnvio) {
+          return; // Detener si no hay datos de envío o no se seleccionó opción
+      }
+
+      // Leer el total FINAL del dataset actualizado por updateTotalsWithCoupon
+      const cartContainer = $('#cart-container');
+      const amount = cartContainer && cartContainer.dataset.total ? Number(cartContainer.dataset.total) : 0;
+      
+      if (!amount || amount <= 0) {
+        alert("El total a pagar es inválido."); return;
+      }
+
+      const btn = $('#btn-checkout');
+      btn.disabled = true;
+      const oldText = btn.textContent;
+      btn.textContent = "Procesando...";
+
+      try {
+        const cartItems = (await import('../Public/js/cart.js')).getCart();
+        if (!cartItems.length) throw new Error("Carrito vacío");
+
+        const currentSubtotal = totalPrice();
+        const ivaCalculado = Math.round(currentSubtotal * 0.19);
+        // sucursalId ya viene dentro de datosEnvio
+
+        const pedidoParaCrear = {
+            subtotal: currentSubtotal,
+            iva: ivaCalculado,
+            total: amount, // Total final con descuento
+            id_cupon: currentCoupon ? currentCoupon.id_cupon : null,
+            items: cartItems.map(item => ({ 
+                sku: item.sku, qty: Number(item.qty), price: Number(item.price), stock: item.stock 
+            })),
+            // CAMBIO: Esparcir datos de envío validados
+            tipo_entrega: datosEnvio.tipo_entrega,
+            costo_envio: datosEnvio.costo_envio,
+            sucursal_id: datosEnvio.sucursal_id, 
+            fecha_entrega: datosEnvio.fecha_entrega,
+            bloque_horario: datosEnvio.bloque_horario,
+            datos_contacto: datosEnvio.datos_contacto
+        };
+
+        localStorage.setItem('ultimaCompra', JSON.stringify({
+            id: "PENDIENTE-" + Date.now(),
+            fecha: new Date().toLocaleString('es-CL'),
+            ...pedidoParaCrear,
+            descuento_aplicado: currentCoupon,
+            items: cartItems.map(item => ({ 
+                sku: item.sku, title: item.name, qty: Number(item.qty), price: Number(item.price), image: item.image, variation: item.variation 
+            }))
+        }));
+
+        const respPedido = await postJSON("http://localhost:5000/api/crear-pedido", pedidoParaCrear, { credentials: "include" });
+        const id_pedido_nuevo = respPedido.id_pedido;
+        
+        const compraGuardada = JSON.parse(localStorage.getItem('ultimaCompra'));
+        compraGuardada.id = id_pedido_nuevo;
+        localStorage.setItem('ultimaCompra', JSON.stringify(compraGuardada));
+
+        const sessionIdWebpay = "USR-" + Date.now();
+        const data = await postJSON("http://localhost:3010/webpay/create", {
+            amount: amount, 
+            buyOrder: id_pedido_nuevo, 
+            sessionId: sessionIdWebpay
+        });
+
+        if (!data?.token || !data?.url) throw new Error("Error respuesta Webpay");
+        window.location.href = `${data.url}?token_ws=${data.token}`;
+
+      } catch (error) {
+        console.error(error);
+        alert(`Error: ${error.message}`);
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+  }
+
+  async function handleMercadoPagoCheckout() {
+      // CAMBIO: 1. VALIDACIÓN TAMBIÉN AQUÍ
+      const datosEnvio = validarDatosEnvio();
+      if (!datosEnvio) return;
+
+      const cartContainer = $('#cart-container');
+      const amount = cartContainer && cartContainer.dataset.total ? Number(cartContainer.dataset.total) : 0;
+      
+      if (!amount || amount <= 0) { alert("Error total."); return; }
+
+      const btn = $('#btn-mp');
+      btn.disabled = true;
+      const oldText = btn.textContent;
+      btn.textContent = "Procesando...";
+
+      try {
+        const cartItems = (await import('../Public/js/cart.js')).getCart();
+        const subtotal = totalPrice();
+        const ivaCalculado = Math.round(subtotal * 0.19);
+
+        const pedidoParaCrear = {
+            subtotal: subtotal,
+            iva: ivaCalculado,
+            total: amount,
+            id_cupon: currentCoupon ? currentCoupon.id_cupon : null,
+            items: cartItems.map(item => ({ sku: item.sku, qty: Number(item.qty), price: Number(item.price), stock: item.stock })),
+            // CAMBIO: Esparcir datos de envío validados
+            tipo_entrega: datosEnvio.tipo_entrega,
+            costo_envio: datosEnvio.costo_envio,
+            sucursal_id: datosEnvio.sucursal_id, 
+            fecha_entrega: datosEnvio.fecha_entrega,
+            bloque_horario: datosEnvio.bloque_horario,
+            datos_contacto: datosEnvio.datos_contacto
+        };
+
+        localStorage.setItem('ultimaCompra', JSON.stringify({
+            id: "PENDIENTE-MP-" + Date.now(),
+            fecha: new Date().toLocaleString('es-CL'),
+            ...pedidoParaCrear,
+            descuento_aplicado: currentCoupon,
+            items: cartItems.map(item => ({ sku: item.sku, title: item.name, qty: Number(item.qty), price: Number(item.price), image: item.image, variation: item.variation }))
+        }));
+
+        const respPedido = await postJSON("http://localhost:5000/api/crear-pedido", pedidoParaCrear, { credentials: "include" });
+        const id_pedido_nuevo = respPedido.id_pedido;
+
+        const compraGuardada = JSON.parse(localStorage.getItem('ultimaCompra'));
+        compraGuardada.id = id_pedido_nuevo;
+        localStorage.setItem('ultimaCompra', JSON.stringify(compraGuardada));
+
+        const mpUrl = "http://localhost:3010/mercadopago/create_preference";
+        const itemsForMp = [{
+            id: "TOTAL",
+            title: "Compra en Aurora" + (currentCoupon ? ` (Desc: ${currentCoupon.codigo})` : ""),
+            unit_price: amount,
+            quantity: 1,
+            currency_id: "CLP"
+        }];
+
+        const mpData = await postJSON(mpUrl, { 
+            items: itemsForMp, 
+            amount: amount,
+            external_reference: id_pedido_nuevo
+        });
+
+        const next = mpData.init_point || mpData.sandbox_init_point;
+        if (!next) throw new Error("Respuesta inválida MP");
+        window.location.href = next;
+
+      } catch(e) {
+        console.error(e);
+        alert("Error: " + e.message);
+        btn.disabled = false;
+        btn.textContent = "Pagar con Mercado Pago";
+    }
+}
+
+  const btnCheckout = document.getElementById('btn-checkout');
+  if (btnCheckout) btnCheckout.addEventListener('click', (e) => { e.preventDefault(); handleWebpayCheckout(); });
+
+  const btnMp = document.getElementById('btn-mp');
+  if (btnMp) btnMp.addEventListener('click', (e) => { e.preventDefault(); handleMercadoPagoCheckout(); });
+
 </script>
 </html>

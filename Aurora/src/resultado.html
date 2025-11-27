@@ -255,7 +255,7 @@
             div.innerHTML = `
                 <img src="${item.image || ''}" class="thumb" onerror="this.style.display='none'">
                 <div class="details">
-                    <div class="name">${item.title}</div>
+                    <div class="name">${item.name || item.nombre_producto || item.title || "Producto"}</div>
                     <div class="meta">${detalles}</div>
                     <div class="meta">Cant: ${item.qty}</div>
                 </div>

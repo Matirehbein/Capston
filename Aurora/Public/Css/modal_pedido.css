@@ -1,0 +1,517 @@
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: none;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 40px;
+  overflow-y: auto;
+  z-index: 9999;
+}
+
+.modal.visible {
+  display: flex;
+}
+
+/**************************************
+  CONTENEDOR DEL MODAL
+**************************************/
+.modal-card {
+  background: var(--card-bg, #fff);
+  color: var(--text, #111);
+  width: 90%;
+  max-width: 600px;
+  border-radius: 14px;
+  padding: 25px 30px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .35);
+  animation: fadeInUp .25s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/**************************************
+  HEADER DEL MODAL
+**************************************/
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.modal-head h3 {
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.close-x {
+  font-size: 1.7rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text, #000);
+  transition: .2s;
+}
+
+.close-x:hover {
+  color: var(--accent, #c6a67e);
+}
+
+/**************************************
+  BODY DEL MODAL
+**************************************/
+.modal-body {
+  font-size: 0.95rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+  margin-bottom: 10px;
+}
+
+.detail-grid .muted {
+  font-size: 0.8rem;
+  color: #757575;
+  margin-bottom: 3px;
+}
+
+#mItems {
+  margin-top: 10px;
+  list-style: none;
+  padding-left: 0;
+}
+
+#mItems li {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+/**************************************
+  TABLA PRINCIPAL DE PEDIDOS
+**************************************/
+.table-wrap {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 0.95rem;
+}
+
+.admin-table thead {
+  background: #f5efe5;
+  color: #5a4632;
+  font-weight: bold;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 14px 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-table tr:hover {
+  background: #faf6f0;
+}
+
+/**************************************
+  CENTRAR COLUMNA ESTADO
+**************************************/
+/* ==== FIX DEFINITIVO PARA EL BADGE DE ESTADO ==== */
+
+.admin-table td.estado-cell {
+  position: relative;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0;                     /* elimina desplazamientos por padding */
+}
+
+.estado-wrap {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  width: 100%;                    /* se mantiene 100% para centrar */
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.estado-wrap .badge {
+  display: inline-flex !important;
+  justify-content: center;
+  align-items: center;
+  min-width: 90px;                /* tamaño uniforme */
+  text-align: center;
+  margin: 0 auto;                 /* centrado perfecto */
+}
+
+
+
+/**************************************
+  BADGES DE ESTADO
+**************************************/
+.admin-table .badge {
+  display: inline-flex;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 0.80rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  justify-content: center;
+  align-items: center;
+  min-width: 90px;
+}
+
+
+/* Estados */
+.admin-table .badge.pendiente   { background:#e2e3e5; color:#383d41; }
+.admin-table .badge.preparado   { background:#fff3cd; color:#856404; }   
+.admin-table .badge.enviado     { background:#cce5ff; color:#004085; }   
+.admin-table .badge.entregado   { background:#d4edda; color:#155724; }
+.admin-table .badge.rechazado   { background:#f8d7da; color:#721c24; }
+.admin-table .badge.pendiente   { background:#e2e3e5; color:#383d41; }
+
+/**************************************
+  BOTONES
+**************************************/
+.btn-sm {
+  padding: 6px 12px;
+  background: #e3d4c3;
+  border: 1px solid #c6b39c;
+  border-radius: 6px;
+  color: #5a4632;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: .2s;
+}
+
+.btn-sm:hover {
+  background: #d2beaa;
+}
+
+/**************************************
+  RESPONSIVE
+**************************************/
+@media (max-width: 768px) {
+  .modal-card {
+    max-width: 95%;
+    padding: 18px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+        .admin-main {
+            width: 100%;
+        }
+        /* Estilos para Tarjetas KPI */
+        .kpi-card {
+            background-color: var(--card-bg, #fff);
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .kpi-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-color-muted, #555);
+            margin-bottom: 8px;
+        }
+        .kpi-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text-color, #111);
+            margin-bottom: 5px;
+            line-height: 1.1;
+        }
+        .kpi-sub {
+            font-size: 0.9rem;
+            color: var(--text-color-muted, #777);
+        }
+        .kpi-trend { font-weight: 600; }
+        .kpi-trend.positive { color: #198754; }
+        .kpi-trend.negative { color: #dc3545; }
+        .kpi-trend.neutral { color: #6c757d; }
+        .kpi-trend.warn { color: #ffc107; } /* Para bajo stock */
+
+        /* Tarjetas KPI cliqueables */
+        #kpi-ventas-hoy-card,
+        #kpi-pedidos-pendientes-card,
+        #kpi-bajo-stock-card,
+        #kpi-nuevos-clientes-card {
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #kpi-ventas-hoy-card:hover,
+        #kpi-pedidos-pendientes-card:hover,
+        #kpi-bajo-stock-card:hover,
+        #kpi-nuevos-clientes-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        /* --- ▼▼▼ ESTILOS PARA EL FILTRO DE SUCURSAL ▼▼▼ --- */
+        .topbar-title-group {
+            display: flex;
+            align-items: center;
+            gap: 20px; 
+            flex-grow: 1; /* Para que ocupe espacio */
+        }
+        .topbar-title-group h1 {
+            margin-bottom: 0; /* Alinea el H1 con el select */
+        }
+
+        #admin-sucursal-selector {
+            font-size: 0.9rem;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color, #ddd);
+            background-color: var(--card-bg, #fff);
+            color: var(--text-color, #333);
+            font-weight: 500;
+            max-width: 250px; /* Límite de ancho */
+        }
+        
+        [data-theme="noir"] #admin-sucursal-selector,
+        [data-theme="ocean"] #admin-sucursal-selector {
+            background-color: var(--card-bg, #2a2a2e);
+            color: var(--text-color, #f1f1f1);
+            border-color: var(--border-color, #444);
+        }
+        /* --- ▲▲▲ FIN ESTILOS FILTRO ▲▲▲ --- */
+
+
+        /* Estilos para Modales (Overlay) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 1040; /* Nivel base para modales */
+        }
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content-wrapper {
+            background-color: var(--card-bg, #fff);
+            color: var(--text-color, #333);
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 900px;
+            height: 90vh;
+            max-height: 700px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.visible .modal-content-wrapper {
+            transform: scale(1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color, #eee);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.5rem; }
+        .modal-close {
+            font-size: 2rem; font-weight: 300; line-height: 1;
+            background: none; border: none; color: var(--text-color, #333);
+            cursor: pointer; opacity: 0.7;
+        }
+        .modal-close:hover { opacity: 1; }
+        .modal-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        
+        /* --- ▼▼▼ Z-INDEXES CORREGIDOS ▼▼▼ --- */
+        #sales-chart-modal,
+        #stock-categoria-modal,
+        #clientes-list-modal { /* Modales Nivel 1 */
+             z-index: 1050; 
+        }
+        
+        #stock-producto-modal,
+        #clientes-detail-modal { /* Modales Nivel 2 */
+             z-index: 1060; 
+        }
+
+        #pedidos-detail-modal { /* Modal Nivel 3 (el más alto) */
+             z-index: 1070; 
+        }
+        /* --- ▲▲▲ FIN Z-INDEXES ▲▲▲ --- */
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+        
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .list-header h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        /* Estilos para la tabla y foto */
+        .table-wrap { overflow-y: auto; }
+        .admin-table { 
+            width: 100%; 
+            border-collapse: collapse;
+        }
+        .admin-table th, .admin-table td {
+            padding: 0.75rem;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color, #eee);
+        }
+        .admin-table th {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-color-muted, #555);
+            text-align: left;
+        }
+        .admin-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        [data-theme="noir"] .admin-table th {
+             color: var(--text-color-muted, #aaa);
+        }
+
+        .item-foto {
+            width: 45px;
+            height: 45px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--border-color, #eee);
+        }
+        [data-theme="noir"] .item-foto {
+            border-color: #444;
+        }
+
+        .sale-detail-link,
+        .stock-categoria-link,
+        .cliente-detail-link { /* <-- AÑADIDO */
+            color: var(--primary-color, #0d6efd);
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .sale-detail-link:hover,
+        .stock-categoria-link:hover,
+        .cliente-detail-link:hover { /* <-- AÑADIDO */
+             text-decoration: underline; 
+        }
+        
+        /* Grid de detalle en Modal 2 */
+        .pedido-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .pedido-detail-section h4 {
+            font-size: 1.1rem;
+            color: var(--primary-color, #0d6efd);
+            border-bottom: 1px solid var(--border-color, #eee);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .pedido-detail-section p { margin: 0.5rem 0; font-size: 0.9rem; }
+        .pedido-detail-section p strong {
+            display: inline-block;
+            min-width: 100px;
+            color: var(--text-color-muted, #6c757d);
+        }
+
+        /* Estilos para select y form-control (Bootstrap-like) */
+        .form-select {
+            display: block;
+            width: 100%;
+            padding: .375rem 2.25rem .375rem .75rem;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--text-color, #212529);
+            background-color: var(--card-bg, #fff);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right .75rem center;
+            background-size: 16px 12px;
+            border: 1px solid var(--border-color, #ced4da);
+            border-radius: .375rem;
+            appearance: none;
+        }
+        [data-theme="noir"] .form-select {
+            color: var(--text-color, #f1f1f1);
+            background-color: var(--sidebar-bg, #3a3a3f);
+            border-color: #555;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f1f1f1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+        }
+
+        /* --- ▼▼▼ NUEVOS ESTILOS PARA STOCK Y CLIENTES ▼▼▼ --- */
+        .text-danger { color: #dc3545 !important; }
+        .text-warning { color: #ffc107 !important; }
+        .text-success { color: #198754 !important; }
+        .fw-bold { font-weight: 700 !important; }
+
+        .modal-back-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color, #0d6efd);
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0;
+        }
+        .modal-back-btn:hover {
+            text-decoration: underline;
+        }
+        
+        [data-theme="noir"] .sale-detail-link,
+        [data-theme="noir"] .cliente-detail-link,
+        [data-theme="noir"] .modal-back-btn,
+        [data-theme="noir"] .stock-categoria-link { 
+            color: #58a6ff;
+        }
+

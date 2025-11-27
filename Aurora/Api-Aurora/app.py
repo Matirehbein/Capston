@@ -530,6 +530,7 @@ def delete_producto(id):
     
     return redirect(url_for("crud_productos"))
 
+
 @app.route("/ver_stock/<int:id_producto>")
 @login_required
 def ver_stock(id_producto):
@@ -590,7 +591,7 @@ def ver_stock(id_producto):
             # Calcular el stock TOTAL de la sucursal
             # Usar s['id_sucursal'] aquí también
             stock_total_sucursal[s['id_sucursal']] = sum(stock_tallas_sucursal.values()) + stock_base_sucursal[s['id_sucursal']]
-            # --- ▲▲▲ FIN CORRECCIÓN ▲▲▲ ---
+            
 
         # 5. Calcular stock total del producto
         stock_total_producto = sum(stock_total_sucursal.values())
@@ -616,7 +617,7 @@ def ver_stock(id_producto):
         if conn: return_db_connection(conn) # Devuelve al pool
 
 
-# --- ▼▼▼ AÑADE ESTA NUEVA RUTA EN app.py ▼▼▼ ---
+# --- Actualizar Stock Tallas Estándar ▼▼▼ ---
 
 @app.route("/productos/<int:id_producto>/actualizar_stock_estandar", methods=["POST"])
 @login_required
@@ -1442,6 +1443,347 @@ def view_oferta(id_oferta):
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn) # <-- USA POOL
+        
+        
+# ===========================
+# CRUD DE CUPONES DE DESCUENTO
+# ===========================
+
+@app.route('/cupones')
+@login_required
+def crud_cupones():
+    # 1. Obtener parámetros de la URL (GET)
+    filtro_codigo = request.args.get('q', '').strip()
+    filtro_estado = request.args.get('filtro_estado', '')
+    
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # 2. Construcción dinámica de la consulta
+        # La columna calculada 'es_activo' ayuda a simplificar la lógica en el template,
+        # pero para filtrar en SQL debemos usar las condiciones crudas.
+        base_query = """
+            SELECT *, 
+            (vigente_bool AND CURRENT_DATE BETWEEN fecha_inicio AND fecha_fin AND usos_hechos < usos_max) as es_activo 
+            FROM cupon 
+        """
+        
+        where_clauses = []
+        params = []
+
+        # Filtro por Código (Búsqueda parcial insensible a mayúsculas)
+        if filtro_codigo:
+            where_clauses.append("codigo_cupon ILIKE %s")
+            params.append(f"%{filtro_codigo}%")
+        
+        # Filtro por Estado
+        if filtro_estado == 'activo':
+            # Activo = Vigente Y Fecha válida Y Usos disponibles
+            where_clauses.append("(vigente_bool = TRUE AND CURRENT_DATE BETWEEN fecha_inicio AND fecha_fin AND usos_hechos < usos_max)")
+        elif filtro_estado == 'finalizado':
+            # Finalizado = Fecha fin pasó O Usos agotados
+            where_clauses.append("(fecha_fin < CURRENT_DATE OR usos_hechos >= usos_max)")
+        elif filtro_estado == 'pausado':
+            # Pausado = Vigente_bool es falso (independiente de fechas)
+            where_clauses.append("vigente_bool = FALSE")
+
+        # Combinar cláusulas WHERE
+        if where_clauses:
+            base_query += " WHERE " + " AND ".join(where_clauses)
+
+        base_query += " ORDER BY id_cupon DESC"
+        
+        print(f"Ejecutando Query Cupones: {base_query} | Params: {params}") # Debug
+
+        cur.execute(base_query, tuple(params))
+        cupones = cur.fetchall()
+        
+        # Mantener los filtros activos en la vista
+        filtros_activos = {'q': filtro_codigo, 'estado': filtro_estado}
+        
+        return render_template("cupones/crud_cupones.html", cupones=cupones, filtros_activos=filtros_activos, now=date.today())
+
+    except Exception as e:
+        print(f"Error en crud_cupones: {e}"); traceback.print_exc()
+        flash("Error al cargar cupones", "danger")
+        return redirect(url_for("index_options"))
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+        
+# ===========================
+# Agregar Cupon de Descuento
+# ===========================
+
+@app.route("/cupones/add", methods=["POST"])
+@login_required
+def add_cupon():
+    data = request.form
+    conn = None; cur = None
+    try:
+        # 1. Validaciones básicas
+        codigo = data.get("codigo_cupon").strip()
+        if len(codigo) < 6 or len(codigo) > 12:
+            flash("❌ El código debe tener entre 6 y 12 caracteres.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        # 2. Lógica de descuento: Porcentaje O Valor Fijo (mutuamente excluyentes)
+        tipo_descuento = data.get("tipo_descuento") # 'pct' o 'fijo'
+        
+        # Inicializamos ambos como None (NULL en SQL)
+        descuento_pct = None
+        valor_fijo = None
+
+        try:
+            valor_ingresado = float(data.get("descuento_valor"))
+        except (ValueError, TypeError):
+            flash("❌ El valor del descuento debe ser un número válido.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        if tipo_descuento == 'pct':
+            if valor_ingresado > 100:
+                 flash("❌ El porcentaje no puede ser mayor a 100%.", "danger")
+                 return redirect(url_for("crud_cupones"))
+            descuento_pct = valor_ingresado
+            # valor_fijo se queda en None (NULL)
+        else:
+            valor_fijo = valor_ingresado
+            # descuento_pct se queda en None (NULL)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 3. Verificar duplicados (código único)
+        cur.execute("SELECT 1 FROM cupon WHERE codigo_cupon = %s", (codigo,))
+        if cur.fetchone():
+            flash(f"❌ El código '{codigo}' ya existe.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        # 4. Insertar
+        # Se añade 'descripcion' y se elimina cualquier referencia a reglas_json
+        cur.execute("""
+            INSERT INTO cupon (
+                codigo_cupon, nombre_cupon, descripcion, descuento_pct_cupon, valor_fijo, 
+                min_compra, usos_max, fecha_inicio, fecha_fin, vigente_bool, usos_hechos
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, 0)
+        """, (
+            codigo, 
+            data.get("nombre_cupon"),
+            data.get("descripcion"), # Nuevo campo descripción (VARCHAR 200)
+            descuento_pct,
+            valor_fijo,
+            data.get("min_compra") or 0,
+            data.get("usos_max"),
+            data.get("fecha_inicio"),
+            data.get("fecha_fin")
+        ))
+        
+        conn.commit()
+        flash("✅ Cupón creado exitosamente", "success")
+        
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error al crear cupón: {e}"); traceback.print_exc()
+        flash(f"❌ Error al crear cupón: {e}", "danger")
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+        
+    return redirect(url_for("crud_cupones"))
+
+# --- EDITAR CUPÓN  ---
+@app.route("/cupones/edit/<int:id_cupon>", methods=["POST"])
+@login_required
+def edit_cupon(id_cupon):
+    data = request.form
+    conn = None; cur = None
+    try:
+        # Validaciones
+        codigo = data.get("codigo_cupon").strip()
+        if len(codigo) < 6 or len(codigo) > 12:
+            flash("❌ El código debe tener entre 6 y 12 caracteres.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        # Lógica de descuento
+        tipo_descuento = data.get("tipo_descuento")
+        descuento_pct = None
+        valor_fijo = None
+        
+        try:
+            valor_ingresado = float(data.get("descuento_valor"))
+        except (ValueError, TypeError):
+            flash("❌ Valor de descuento inválido.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        if tipo_descuento == 'pct':
+            if valor_ingresado > 100:
+                 flash("❌ El porcentaje no puede ser mayor a 100%.", "danger")
+                 return redirect(url_for("crud_cupones"))
+            descuento_pct = valor_ingresado
+        else:
+            valor_fijo = valor_ingresado
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verificar duplicados (excluyendo el cupón actual)
+        cur.execute("SELECT 1 FROM cupon WHERE codigo_cupon = %s AND id_cupon != %s", (codigo, id_cupon))
+        if cur.fetchone():
+            flash(f"❌ El código '{codigo}' ya está en uso por otro cupón.", "danger")
+            return redirect(url_for("crud_cupones"))
+
+        # Update
+        cur.execute("""
+            UPDATE cupon SET
+                codigo_cupon = %s,
+                nombre_cupon = %s,
+                descripcion = %s,
+                descuento_pct_cupon = %s,
+                valor_fijo = %s,
+                min_compra = %s,
+                usos_max = %s,
+                fecha_inicio = %s,
+                fecha_fin = %s
+            WHERE id_cupon = %s
+        """, (
+            codigo,
+            data.get("nombre_cupon"),
+            data.get("descripcion"),
+            descuento_pct,
+            valor_fijo,
+            data.get("min_compra") or 0,
+            data.get("usos_max"),
+            data.get("fecha_inicio"),
+            data.get("fecha_fin"),
+            id_cupon
+        ))
+        
+        conn.commit()
+        flash("✅ Cupón actualizado exitosamente", "success")
+        
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error al editar cupón: {e}"); traceback.print_exc()
+        flash(f"❌ Error al editar cupón: {e}", "danger")
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+        
+    return redirect(url_for("crud_cupones"))
+
+
+# ===========================
+# Eliminar Cupon de Descuento
+# ===========================
+
+@app.route("/cupones/delete/<int:id_cupon>", methods=["POST"])
+@login_required
+def delete_cupon(id_cupon):
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM cupon WHERE id_cupon = %s", (id_cupon,))
+        conn.commit()
+        flash("✅ Cupón eliminado", "success")
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error al eliminar cupón: {e}")
+        flash("❌ Error al eliminar cupón", "danger")
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+    return redirect(url_for("crud_cupones"))
+
+# ===========================
+# Activar o Desactivar Cupon de Descuento
+# ===========================
+
+@app.route("/cupones/toggle/<int:id_cupon>", methods=["POST"])
+@login_required
+def toggle_cupon(id_cupon):
+    """Activa o desactiva un cupón manualmente (soft delete / pausa)"""
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # Invierte el valor booleano actual
+        cur.execute("UPDATE cupon SET vigente_bool = NOT vigente_bool WHERE id_cupon = %s", (id_cupon,))
+        conn.commit()
+        flash("✅ Estado del cupón actualizado", "success")
+    except Exception as e:
+        if conn: conn.rollback()
+        flash("❌ Error al actualizar estado", "danger")
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+    return redirect(url_for("crud_cupones"))
+
+
+# ===========================
+# Validar Cupón de Descuento al momento de pagar
+# ===========================
+
+# --- ▼▼▼ NUEVA RUTA: VALIDAR CUPÓN ▼▼▼ ---
+@app.route('/api/validar-cupon', methods=['POST'])
+def validar_cupon():
+    data = request.get_json()
+    codigo = data.get('codigo', '').strip()
+    monto_total = data.get('total', 0)
+
+    if not codigo:
+        return jsonify({"valid": False, "message": "Ingresa un código."}), 400
+
+    conn = None; cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Buscar cupón por código exacto (case sensitive)
+        cur.execute("SELECT * FROM cupon WHERE codigo_cupon = %s", (codigo,))
+        cupon = cur.fetchone()
+
+        if not cupon:
+            return jsonify({"valid": False, "message": "Código inválido"}), 404
+
+        # Validaciones de lógica
+        if not cupon['vigente_bool']:
+            return jsonify({"valid": False, "message": "Este cupón está pausado o inactivo."}), 400
+        
+        hoy = date.today()
+        if not (cupon['fecha_inicio'] <= hoy <= cupon['fecha_fin']):
+            return jsonify({"valid": False, "message": "El cupón ha vencido o aún no inicia."}), 400
+            
+        if cupon['usos_hechos'] >= cupon['usos_max']:
+            return jsonify({"valid": False, "message": "Este cupón ha agotado sus usos."}), 400
+            
+        if monto_total < cupon['min_compra']:
+             # Formatear monto para mensaje
+            min_fmt = "{:,.0f}".format(cupon['min_compra']).replace(',', '.')
+            return jsonify({"valid": False, "message": f"El monto mínimo para este cupón es ${min_fmt}."}), 400
+
+        # Si pasa todo, devolver datos para calcular
+        return jsonify({
+            "valid": True,
+            "id_cupon": cupon['id_cupon'],
+            "codigo": cupon['codigo_cupon'],
+            "tipo": "pct" if cupon['descuento_pct_cupon'] else "fijo",
+            "valor": float(cupon['descuento_pct_cupon']) if cupon['descuento_pct_cupon'] else float(cupon['valor_fijo']),
+            "message": "Cupón aplicado correctamente"
+        })
+
+    except Exception as e:
+        print(f"Error validando cupón: {e}")
+        return jsonify({"valid": False, "message": "Error del servidor"}), 500
+    finally:
+        if cur: cur.close()
+        if conn: return_db_connection(conn)
+# --- ▲▲▲ FIN NUEVA RUTA ▲▲▲ ---
+
+
+
 
 # ===========================
 # HELPERS (CON POOL)
@@ -2189,6 +2531,7 @@ def api_list_ofertas_public():
 # ===========================
 # RUTAS DE PEDIDOS Y PAGOS
 # ===========================  
+
 # ===========================
 # RUTAS DE PEDIDOS (LA VERSIÓN CORRECTA Y ÚNICA CON ENVÍO)
 # ===========================
@@ -2196,89 +2539,101 @@ def api_list_ofertas_public():
 @login_required
 def crear_pedido():
     data = request.get_json()
-    if not data: return jsonify({"error": "No json"}), 400
-    
+    if not data:
+        return jsonify({"error": "No json"}), 400
+
     print(f"📦 [DEBUG] Datos recibidos: {data}") 
 
     cart_items = data.get('items')
     total = data.get('total')
     user_id = session.get('user_id')
-    
+    id_cupon = data.get('id_cupon') 
     tipo_entrega = data.get('tipo_entrega')
     costo_envio = data.get('costo_envio', 0)
-    
-    # --- MANEJO DE FECHA ---
+
+    # FECHA
     fecha_entrega = data.get('fecha_entrega')
     if not fecha_entrega or fecha_entrega.strip() == "":
         fecha_entrega = None 
-        
-    # --- MANEJO DE BLOQUE HORARIO (SOLUCIÓN 2) ---
+
+    # BLOQUE HORARIO
     bloque_horario = data.get('bloque_horario')
-    # Si es retiro o viene vacío, forzamos un texto por defecto para evitar NULL
     if tipo_entrega == 'retiro':
         bloque_horario = "Retiro Estándar"
     elif not bloque_horario or bloque_horario.strip() == "":
-        bloque_horario = "Horario por definir" # O el valor que prefieras para despacho sin horario
+        bloque_horario = "Horario por definir"
 
     datos_contacto = data.get('datos_contacto') 
 
-    # --- MANEJO DE SUCURSAL ID (SOLUCIÓN 1 REFORZADA) ---
+    # SUCURSAL
     sucursal_id = data.get('sucursal_id')
-    
-    # Si viene vacío, intentamos asignar uno por defecto (ej: 1) o dejar NULL si es crítico
     if not sucursal_id or str(sucursal_id).strip() == "":
         if tipo_entrega == 'despacho':
-             # Opcional: Asignar sucursal ID 1 (Casa Matriz) si no viene geolocalización
-             print("⚠️ [WARN] No llegó sucursal_id en despacho. Asignando ID 1 por defecto.")
-             sucursal_id = 1 
+            print("⚠️ [WARN] No llegó sucursal_id. Asignando 1.")
+            sucursal_id = 1
         else:
-             sucursal_id = None
+            sucursal_id = None
     else:
         try:
             sucursal_id = int(sucursal_id)
         except:
             sucursal_id = 1 if tipo_entrega == 'despacho' else None
 
-    # Validación final para retiro
     if tipo_entrega == 'retiro' and not sucursal_id:
-         return jsonify({"error": "Debe seleccionar una sucursal para retiro"}), 400
+        return jsonify({"error": "Debe seleccionar una sucursal para retiro"}), 400
 
     conn = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
+        # INSERTAR PEDIDO
         sql_pedido = """
             INSERT INTO pedido (
-                id_usuario, total, estado_pedido, id_sucursal, 
+                id_usuario, total, estado_pedido, id_sucursal, id_cupon, 
                 tipo_entrega, costo_envio, fecha_entrega, bloque_horario, datos_contacto
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id_pedido;
         """
-        
+
         datos_contacto_json = json.dumps(datos_contacto) if datos_contacto else None
 
-        print(f"📝 [INSERT] Pedido: Sucursal={sucursal_id}, Horario={bloque_horario}")
-
         cur.execute(sql_pedido, (
-            user_id, total, 'pendiente', sucursal_id,
+            user_id, total, 'pendiente', sucursal_id, id_cupon,
             tipo_entrega, costo_envio, fecha_entrega, bloque_horario, datos_contacto_json
         ))
-        
+
         id_pedido_nuevo = cur.fetchone()['id_pedido']
 
-        # Insertar Detalles... (Igual que antes)
+        # =====================================
+        # INSERTAR DETALLES — FIX APLICADO
+        # =====================================
         for item in cart_items:
-            sku = item.get('sku')
-            cur.execute("SELECT id_variacion FROM variacion_producto WHERE sku_variacion = %s", (sku,))
+            sku = item.get("sku")
+
+            # 1. Buscar variación y producto
+            cur.execute("""
+                SELECT v.id_variacion, p.id_producto
+                FROM variacion_producto v
+                JOIN producto p ON p.id_producto = v.id_producto
+                WHERE v.sku_variacion = %s
+            """, (sku,))
             row = cur.fetchone()
+
             id_var = row['id_variacion'] if row else None
-            
+
+            # Insertar detalle
             cur.execute("""
                 INSERT INTO detalle_pedido (id_pedido, sku_producto, cantidad, precio_unitario, id_variacion)
                 VALUES (%s, %s, %s, %s, %s)
-            """, (id_pedido_nuevo, sku, item.get('qty'), item.get('price'), id_var))
+            """, (
+                id_pedido_nuevo,
+                sku,
+                item.get('qty'),
+                item.get('price'),
+                id_var
+            ))
 
         conn.commit()
         return jsonify({"id_pedido": id_pedido_nuevo}), 201
@@ -2290,7 +2645,7 @@ def crear_pedido():
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
-# --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
+
 
 
 @app.route('/api/registrar-pago', methods=['POST'])
@@ -2363,9 +2718,16 @@ def registrar_pago():
             print(f"Iniciando descuento de stock para Pedido {id_pedido}...")
             
             # A. Obtener la sucursal de la que se vendió
-            cur.execute("SELECT id_sucursal FROM pedido WHERE id_pedido = %s", (id_pedido,))
+            cur.execute("SELECT id_sucursal, id_cupon FROM pedido WHERE id_pedido = %s", (id_pedido,))
             pedido_data = cur.fetchone()
-            id_sucursal_venta = pedido_data['id_sucursal'] if pedido_data else None
+            id_sucursal_venta = pedido_data['id_sucursal']
+            id_cupon_usado = pedido_data['id_cupon']
+            
+            
+            # --- NUEVO: DESCONTAR USO DE CUPÓN ---
+            if id_cupon_usado:
+                cur.execute("UPDATE cupon SET usos_hechos = usos_hechos + 1 WHERE id_cupon = %s", (id_cupon_usado,))
+                print(f"Cupón ID {id_cupon_usado} usado. Contador incrementado.")
 
             if id_sucursal_venta:
                 print(f"Venta desde Sucursal ID: {id_sucursal_venta}")
@@ -3976,40 +4338,82 @@ def get_detalle_pedido(id_pedido):
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        # Query Pedido + Datos Envío (Nuevas columnas)
+        # ---------------------------
+        # Datos del pedido + Usuario
+        # ---------------------------
         cur.execute("""
             SELECT 
-                p.id_pedido, p.total, p.creado_en, p.estado_pedido,
-                p.tipo_entrega, p.costo_envio, p.fecha_entrega, p.bloque_horario, p.datos_contacto,
-                pa.metodo_pago, pa.transaccion_id,
-                u.nombre_usuario, u.apellido_paterno, u.email_usuario, u.telefono
+                p.id_pedido,
+                p.total,
+                p.creado_en,
+                p.estado_pedido,
+                p.tipo_entrega,
+                p.costo_envio,
+                p.fecha_entrega,
+                p.bloque_horario,
+                p.datos_contacto,
+
+                pa.metodo_pago,
+                pa.transaccion_id,
+
+                -- Datos completos del cliente
+                u.nombre_usuario,
+                u.apellido_paterno,
+                u.apellido_materno,
+                u.email_usuario,
+                u.telefono,
+                u.calle,
+                u.numero_calle,
+                u.comuna,
+                u.ciudad,
+                u.region,
+
+                s.nombre_sucursal
+
             FROM pedido p
             JOIN usuario u ON p.id_usuario = u.id_usuario
+            LEFT JOIN sucursal s ON p.id_sucursal = s.id_sucursal
             LEFT JOIN pago pa ON p.id_pedido = pa.id_pedido AND pa.estado_pago = 'aprobado'
+
             WHERE p.id_pedido = %s
-            ORDER BY pa.fecha_pago DESC LIMIT 1;
+            ORDER BY pa.fecha_pago DESC NULLS LAST
+            LIMIT 1;
         """, (id_pedido,))
         
         pedido_info = cur.fetchone()
-        if not pedido_info: return jsonify({"error": "Pedido no encontrado"}), 404
+        if not pedido_info:
+            return jsonify({"error": "Pedido no encontrado"}), 404
 
-        # Query Items
+        # ---------------------------
+        # Items del pedido
+        # ---------------------------
         cur.execute("""
-            SELECT dp.cantidad, dp.precio_unitario, dp.sku_producto, v.talla, v.color, pr.nombre_producto, pr.imagen_url
+            SELECT 
+                dp.cantidad,
+                dp.precio_unitario,
+                dp.sku_producto,
+                v.talla,
+                v.color,
+                pr.nombre_producto,
+                pr.imagen_url
             FROM detalle_pedido dp
             LEFT JOIN variacion_producto v ON dp.sku_producto = v.sku_variacion
             LEFT JOIN producto pr ON v.id_producto = pr.id_producto
             WHERE dp.id_pedido = %s;
         """, (id_pedido,))
-        items_pedido = cur.fetchall()
         
+        items_pedido = cur.fetchall()
+
         return jsonify({
             "pedido": dict(pedido_info),
             "items": [dict(item) for item in items_pedido]
         })
+
     except Exception as e:
-        print(f"Error detalle pedido: {e}"); traceback.print_exc()
+        print(f"❌ Error detalle pedido: {e}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
@@ -4195,6 +4599,253 @@ def admin_detalle_producto(id_producto):
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
+
+@app.route("/api/admin/pedidos", methods=["GET"])
+def admin_list_pedidos():
+    try:
+        status = request.args.get("status")
+        q = request.args.get("q", "")
+
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        query = """
+            SELECT 
+                p.id_pedido,
+                CONCAT(u.nombre_usuario, ' ', u.apellido_paterno) AS cliente,
+                p.creado_en AS fecha,
+                COALESCE(p.estado_pedido, 'pendiente') AS estado,
+                p.total
+            FROM pedido p
+            JOIN usuario u ON u.id_usuario = p.id_usuario
+            WHERE 1=1
+        """
+
+        params = []
+
+        # Filtro por estado (si no es "todos")
+        if status and status != "todos":
+            query += " AND LOWER(p.estado_pedido) = LOWER(%s)"
+            params.append(status)
+
+        # Filtro búsqueda por cliente o id_pedido
+        if q:
+            query += " AND (CAST(p.id_pedido AS TEXT) ILIKE %s OR u.nombre_usuario ILIKE %s)"
+            params.extend([f"%{q}%", f"%{q}%"])
+
+        query += " ORDER BY p.creado_en DESC"
+
+        cur.execute(query, params)
+        pedidos = [dict(row) for row in cur.fetchall()]
+
+        return jsonify(pedidos)
+
+    except Exception as e:
+        print("❌ Error:", e)
+        return jsonify({"error": "Error obteniendo pedidos"}), 500
+
+    finally:
+        if conn: return_db_connection(conn)
+
+
+@app.route("/api/admin/pedidos/<int:id_pedido>", methods=["GET"])
+def admin_detalle_pedido(id_pedido):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # ----------------------------------------
+        # PEDIDO GENERAL
+        # ----------------------------------------
+        cur.execute("""
+            SELECT 
+                p.id_pedido,
+                p.creado_en,
+                p.estado_pedido,
+                p.total,
+                u.nombre_usuario,
+                u.apellido_paterno
+            FROM pedido p
+            JOIN usuario u ON u.id_usuario = p.id_usuario
+            WHERE p.id_pedido = %s
+        """, (id_pedido,))
+
+        ped = cur.fetchone()
+        if not ped:
+            return jsonify({"error": "Pedido no encontrado"}), 404
+
+        pedido = {
+            "id_pedido": ped["id_pedido"],
+            "cliente": f"{ped['nombre_usuario']} {ped['apellido_paterno']}",
+            "fecha": ped["creado_en"],
+            "estado": ped["estado_pedido"],
+            "total": float(ped["total"]),
+        }
+
+        # ----------------------------------------
+        # ITEMS DEL PEDIDO
+        # ----------------------------------------
+        cur.execute("""
+            SELECT 
+                dp.cantidad,
+                dp.precio_unitario,
+                v.talla,
+                v.color,
+                v.sku_variacion,
+                pr.nombre_producto
+            FROM detalle_pedido dp
+            JOIN variacion_producto v ON v.id_variacion = dp.id_variacion
+            JOIN producto pr ON pr.id_producto = v.id_producto
+            WHERE dp.id_pedido = %s
+        """, (id_pedido,))
+
+        items = []
+        for row in cur.fetchall():
+            items.append({
+                "producto": row["nombre_producto"],
+                "talla": row["talla"],
+                "color": row["color"],
+                "sku": row["sku_variacion"],
+                "cantidad": row["cantidad"],
+                "precio_unitario": float(row["precio_unitario"]),
+            })
+
+        return jsonify({
+            "pedido": pedido,
+            "items": items
+        })
+
+    except Exception as e:
+        print("❌ Error obteniendo detalle:", e)
+        traceback.print_exc()
+        return jsonify({"error": "Error al obtener detalle del pedido"}), 500
+
+    finally:
+        if conn: return_db_connection(conn)
+
+@app.route("/api/admin/pedidos/bulk_estado", methods=["PUT"])
+def bulk_update_estado():
+    try:
+        data = request.get_json()
+        ids = data.get("ids", [])
+        estado = data.get("estado")
+
+        if not ids or not estado:
+            return jsonify({"error": "Datos inválidos"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        query = """
+            UPDATE pedido 
+            SET estado_pedido = %s
+            WHERE id_pedido = ANY(%s)
+        """
+        cur.execute(query, (estado, ids))
+
+        conn.commit()
+
+        return jsonify({"ok": True})
+
+    except Exception as e:
+        print("❌ Error bulk:", e)
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if conn: return_db_connection(conn)
+
+# -----------------------------------------
+# KPI: Pedidos Pendientes
+# -----------------------------------------
+@app.route("/api/admin/dashboard/kpi_pedidos_pendientes")
+@admin_required
+def kpi_pedidos_pendientes():
+    sucursal_id = request.args.get("sucursal_id", "all")
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        base_query = """
+            SELECT COUNT(*) AS pendientes
+            FROM pedido
+            WHERE estado_pedido = 'pagado'
+        """
+
+        params = ()
+
+        if sucursal_id != "all":
+            base_query += " AND id_sucursal = %s"
+            params = (sucursal_id,)
+
+        cur.execute(base_query, params)
+        result = cur.fetchone()
+
+        return jsonify({"pendientes": result["pendientes"]})
+
+    finally:
+        cur.close()
+        return_db_connection(conn)
+
+
+
+
+# -----------------------------------------
+# MODAL LISTA DE PEDIDOS PENDIENTES
+# -----------------------------------------
+@app.route("/api/admin/dashboard/lista_pedidos_pendientes")
+@admin_required
+def lista_pedidos_pendientes():
+    sucursal_id = request.args.get("sucursal_id", "all")
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        base_query = """
+            SELECT 
+                p.id_pedido,
+                p.creado_en,
+                p.estado_pedido,
+                
+                -- Nombre completo como lo espera el frontend
+                CONCAT(u.nombre_usuario, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS cliente,
+
+                s.nombre_sucursal,
+
+                (
+                    SELECT STRING_AGG(
+                        COALESCE(dp.sku_producto, 'SIN SKU'), ', '
+                    )
+                    FROM detalle_pedido dp 
+                    WHERE dp.id_pedido = p.id_pedido
+                ) AS productos_preview
+
+            FROM pedido p
+            JOIN usuario u ON u.id_usuario = p.id_usuario
+            LEFT JOIN sucursal s ON s.id_sucursal = p.id_sucursal
+
+            -- SOLO pedidos pagados pero aún NO entregados
+            WHERE p.estado_pedido IN ('pagado', 'preparado')
+        """
+
+        params = ()
+        if sucursal_id != "all":
+            base_query += " AND p.id_sucursal = %s"
+            params = (sucursal_id,)
+
+        base_query += " ORDER BY p.creado_en ASC"
+
+        cur.execute(base_query, params)
+        rows = cur.fetchall()
+
+        return jsonify([dict(r) for r in rows])
+
+    except Exception as e:
+        print("❌ ERROR lista_pedidos_pendientes:", e)
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        cur.close()
+        return_db_connection(conn)
 
 # ===========================
 # RUN (SIN CAMBIOS)

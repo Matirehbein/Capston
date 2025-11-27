@@ -58,6 +58,12 @@ const clientesDetailModal = $("#clientes-detail-modal");
 const clientesDetailCloseBtn = $("#clientes-detail-close-btn");
 const clientesDetailBackBtn = $("#clientes-detail-back-btn");
 const clientePedidosTbody = $("#cliente-pedidos-tbody");
+
+// --- ▼▼▼ Selectores para Pedidos Pendientes ▼▼▼ ---
+const kpiPedidosPendientesCard = $("#kpi-pedidos-pendientes-card");
+const kpiPedidosPendientesMonto = $("#kpi-pendientes");              
+const kpiPedidosPendientesTrend = $("#kpi-pendientes-sub");          
+
 // --- ▲▲▲ FIN NUEVOS Selectores ▲▲▲ ---
 
 // Variable global para el gráfico
@@ -125,7 +131,8 @@ async function cargarSucursales() {
 function loadAllKPIs(sucursalId = 'all') {
     loadKPIVentasHoy(sucursalId);
     loadKPIBajoStock(sucursalId);
-    loadKPINuevosClientes(sucursalId); // <-- NUEVO
+    loadKPINuevosClientes(sucursalId); 
+    loadKPIPedidosPendientes(sucursalId); 
     // ... aquí irían las llamadas a loadKPIPedidosPendientes(sucursalId)
 }
 
@@ -642,3 +649,103 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- ▲▲▲ FIN NUEVOS Listeners ▲▲▲ ---
 });
+
+async function loadKPIPedidosPendientes(sucursalId = 'all') {
+    const kpiNum = $("#kpi-pendientes");
+    const kpiSub = $("#kpi-pendientes-sub");
+
+    if (!kpiNum || !kpiSub) return;
+
+    kpiNum.textContent = "...";
+    kpiSub.textContent = "...";
+
+    try {
+        const response = await fetch(`${API_BACKEND}/api/admin/dashboard/kpi_pedidos_pendientes?sucursal_id=${sucursalId}`, { credentials: "include" });
+
+        if (!response.ok) throw new Error("Error cargando KPI pedidos");
+
+        const data = await response.json();
+
+        // ✔ USAR LA KEY CORRECTA
+        const value = data.pendientes ?? 0;
+
+        kpiNum.textContent = value;
+        kpiSub.textContent = `${value} pedidos esperando acción`;
+
+        kpiSub.className = "kpi-trend warn";
+
+    } catch (e) {
+        console.error("Error KPI pendientes:", e);
+        kpiNum.textContent = "Error";
+        kpiSub.textContent = "N/A";
+    }
+}
+
+async function loadPedidosPendientesList(sucursalId = 'all') {
+    const tbody = $("#pendientes-list-tbody");
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="5">Cargando...</td></tr>`;
+
+    try {
+        const response = await fetch(`${API_BACKEND}/api/admin/dashboard/lista_pedidos_pendientes?sucursal_id=${sucursalId}`, {
+            credentials: "include"
+        });
+
+        if (!response.ok) throw new Error("Error cargando lista pendientes");
+
+        const pedidos = await response.json();
+
+        if (pedidos.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5">No hay pedidos pendientes.</td></tr>`;
+            return;
+        }
+
+        let html = "";
+        pedidos.forEach(p => {
+            html += `
+                <tr>
+                    <td>#${p.id_pedido}</td>
+                    <td>${p.cliente || "N/A"}</td>
+                    <td>${formatFecha(p.creado_en, true)}</td>
+                    <td>${p.estado_pedido}</td>
+                    <td><a href="#" class="sale-detail-link" data-id-pedido="${p.id_pedido}">Ver detalle</a></td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+
+    } catch (e) {
+        console.error("Error lista pendientes:", e);
+        tbody.innerHTML = `<tr><td colspan="5" style="color:red;">Error al cargar</td></tr>`;
+    }
+}
+// --- Abrir Modal de Pedidos Pendientes ---
+kpiPedidosPendientesCard?.addEventListener("click", () => {
+    const sucursalId = adminSucursalSelector?.value || "all";
+    $("#pendientes-list-modal").classList.add("visible");
+    loadPedidosPendientesList(sucursalId);
+});
+
+// --- Cerrar Modal ---
+$("#pendientes-list-close-btn")?.addEventListener("click", () => {
+    $("#pendientes-list-modal").classList.remove("visible");
+});
+
+// Cerrar al hacer click fuera
+$("#pendientes-list-modal")?.addEventListener("click", (e) => {
+    if (e.target === $("#pendientes-list-modal")) {
+        $("#pendientes-list-modal").classList.remove("visible");
+    }
+});
+
+// Click en "Ver detalle"
+$("#pendientes-list-tbody")?.addEventListener("click", (e) => {
+    const link = e.target.closest(".sale-detail-link");
+    if (link) {
+        e.preventDefault();
+        openPedidosDetailModal(link.dataset.idPedido);
+    }
+});
+
