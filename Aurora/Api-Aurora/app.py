@@ -5170,6 +5170,108 @@ def obtener_sucursales_publicas():
         return_db_connection(conn)
 
 # ===========================
+# API Dashboard: Crecimiento Ventas / Pedidos / Clientes
+# ===========================
+@app.route("/api/dashboard/crecimiento")
+@login_required  # solo panel con sesión
+def api_dashboard_crecimiento():
+    rango = request.args.get("range", "daily")  # daily / weekly / monthly
+
+    # 🔹 Usamos tus columnas reales:
+    # pedido: creado_en (timestamp), total (numeric), estado_pedido
+    # usuario: creado_en (timestamp)
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # --- Config por rango ---
+        if rango == "daily":
+            group_ped = "DATE(p.creado_en)"
+            where_ped = "p.creado_en >= CURRENT_DATE - INTERVAL '6 days'"
+            label_ped = "to_char(DATE(p.creado_en), 'DD Mon')"
+
+            group_cli = "DATE(u.creado_en)"
+            where_cli = "u.creado_en >= CURRENT_DATE - INTERVAL '6 days'"
+            label_cli = "to_char(DATE(u.creado_en), 'DD Mon')"
+
+        elif rango == "weekly":
+            group_ped = "date_trunc('week', p.creado_en)"
+            where_ped = "p.creado_en >= CURRENT_DATE - INTERVAL '28 days'"
+            label_ped = "to_char(date_trunc('week', p.creado_en), '\"Sem\" IW')"
+
+            group_cli = "date_trunc('week', u.creado_en)"
+            where_cli = "u.creado_en >= CURRENT_DATE - INTERVAL '28 days'"
+            label_cli = "to_char(date_trunc('week', u.creado_en), '\"Sem\" IW')"
+
+        else:  # monthly
+            group_ped = "date_trunc('month', p.creado_en)"
+            where_ped = "p.creado_en >= CURRENT_DATE - INTERVAL '6 months'"
+            label_ped = "to_char(date_trunc('month', p.creado_en), 'Mon YYYY')"
+
+            group_cli = "date_trunc('month', u.creado_en)"
+            where_cli = "u.creado_en >= CURRENT_DATE - INTERVAL '6 months'"
+            label_cli = "to_char(date_trunc('month', u.creado_en), 'Mon YYYY')"
+
+        # 📊 Ventas + pedidos
+        # Ventas: SUM(total) solo de pedidos pagados/entregados
+        cur.execute(f"""
+            SELECT
+                {group_ped} AS g,
+                {label_ped} AS label,
+                COALESCE(SUM(p.total), 0) AS ventas,
+                COUNT(*) AS pedidos
+            FROM pedido p
+            WHERE
+                {where_ped}
+                AND p.estado_pedido IN ('pagado', 'entregado')
+            GROUP BY g, label
+            ORDER BY g;
+        """)
+        rows_p = cur.fetchall()
+
+        # 👥 Clientes registrados
+        cur.execute(f"""
+            SELECT
+                {group_cli} AS g,
+                {label_cli} AS label,
+                COUNT(*) AS clientes
+            FROM usuario u
+            WHERE {where_cli}
+            GROUP BY g, label
+            ORDER BY g;
+        """)
+        rows_c = cur.fetchall()
+
+        # --- Combinar por label ---
+        labels = [row["label"] for row in rows_p]
+        ventas = [float(row["ventas"]) for row in rows_p]
+        pedidos = [int(row["pedidos"]) for row in rows_p]
+
+        # Clientes: map label -> cantidad
+        clientes_dict = {row["label"]: int(row["clientes"]) for row in rows_c}
+        clientes = [clientes_dict.get(label, 0) for label in labels]
+
+        return jsonify({
+            "labels": labels,
+            "ventas": ventas,
+            "pedidos": pedidos,
+            "clientes": clientes
+        })
+
+    except Exception as e:
+        print(f"❌ Error en /api/dashboard/crecimiento: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Error al obtener datos de crecimiento"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            return_db_connection(conn)
+
+
+# ===========================
 # RUN (SIN CAMBIOS)
 # ===========================
 if __name__ == "__main__":
