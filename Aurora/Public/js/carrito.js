@@ -391,7 +391,7 @@ async function handleMercadoPagoCheckout(btn) {
             });
         }
 
-        const respMP = await postJSON("http://localhost:3000/api/mercadopago/create", {
+        const respMP = await postJSON("http://localhost:3010/api/mercadopago/create", {
             items: itemsMP,
             external_reference: idPedido
         });
