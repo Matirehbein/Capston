@@ -18,6 +18,26 @@
     .strength-text { font-size: 0.85em; margin-top: 3px; }
     .server-error { padding: 10px; background-color: #fce4e4; border: 1px solid #fcc; color: #d32f2f; border-radius: 4px; margin-bottom: 15px; font-size: 0.9em; text-align: center; }
     
+    /* Estilos Modal Recuperación */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
+        opacity: 0; visibility: hidden; transition: all 0.3s; z-index: 1000;
+    }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal-content {
+        background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px;
+        text-align: center; position: relative;
+    }
+    .modal-close {
+        position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; color: #aaa;
+    }
+    .forgot-link {
+        display: block; text-align: right; margin-bottom: 15px; font-size: 0.9em;
+        color: #555; text-decoration: none; cursor: pointer;
+    }
+    .forgot-link:hover { text-decoration: underline; color: #000; }
+
     /* --- ▼▼▼ NUEVO: Estilo para mensajes de ÉXITO ▼▼▼ --- */
     .server-success {
       padding: 10px; 
@@ -87,6 +107,10 @@
             <i class="fas fa-lock input-icon"></i>
             <input type="password" name="password" placeholder="Contraseña" required>
         </div>
+
+        <!-- LINK RECUPERAR -->
+        <a class="forgot-link" onclick="openRecoveryModal()">¿Olvidaste tu contraseña? Recuperar</a>
+
       <button type="submit">Entrar</button>
     </form>
 
@@ -197,6 +221,7 @@
 
         <button type="submit" name="registrar" class="grid-span-2">Terminar Registro de Cuenta</button>
 
+
       </div> 
     </form>
 
@@ -205,7 +230,24 @@
     </div>
   </div>
 
-
+  <!-- MODAL DE RECUPERACIÓN -->
+  <div id="recoveryModal" class="modal-overlay">
+      <div class="modal-content">
+          <span class="modal-close" onclick="closeRecoveryModal()">&times;</span>
+          <h3>Recuperar Contraseña</h3>
+          <p style="margin: 15px 0; color: #666;">Ingresa tu correo para recibir un enlace de recuperación.</p>
+          
+          <div class="input-group">
+              <i class="fas fa-envelope input-icon"></i>
+              <input type="email" id="recovery-email" placeholder="Tu correo real" style="width: 100%;">
+          </div>
+          <div id="recovery-msg" style="font-size: 0.9em; margin-bottom: 15px; min-height: 20px;"></div>
+          
+          <button onclick="sendRecoveryEmail()" style="width: 100%; padding: 10px; background: #333; color: white; border: none; border-radius: 5px; cursor: pointer;">
+              Enviar correo
+          </button>
+      </div>
+  </div>
 
 <script>
 // ==========================
@@ -534,6 +576,61 @@ telefonoInput.addEventListener("blur", async () => {
         console.error("Error al verificar teléfono asíncrono:", err);
     }
 });
+</script>
+
+<script>
+  // --- JS para el Modal de Recuperación ---
+    const modal = document.getElementById('recoveryModal');
+    const recoveryEmail = document.getElementById('recovery-email');
+    const recoveryMsg = document.getElementById('recovery-msg');
+
+    function openRecoveryModal() {
+        modal.classList.add('active');
+        recoveryEmail.value = '';
+        recoveryMsg.textContent = '';
+    }
+
+    function closeRecoveryModal() {
+        modal.classList.remove('active');
+    }
+
+    async function sendRecoveryEmail() {
+        const email = recoveryEmail.value;
+        if(!email) {
+            recoveryMsg.style.color = 'red';
+            recoveryMsg.textContent = 'Por favor ingresa un correo.';
+            return;
+        }
+
+        const btn = document.querySelector('#recoveryModal button');
+        const oldText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+
+        try {
+            const res = await fetch('http://localhost:5000/api/forgot-password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email})
+            });
+            const data = await res.json();
+
+            if(res.ok) {
+                recoveryMsg.style.color = 'green';
+                recoveryMsg.textContent = data.message;
+                setTimeout(() => closeRecoveryModal(), 3000);
+            } else {
+                recoveryMsg.style.color = 'red';
+                recoveryMsg.textContent = data.error || 'Error al enviar.';
+            }
+        } catch (e) {
+            recoveryMsg.style.color = 'red';
+            recoveryMsg.textContent = 'Error de conexión.';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = oldText;
+        }
+    }
 
 </script>
 

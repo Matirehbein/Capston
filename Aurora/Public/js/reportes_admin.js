@@ -207,30 +207,89 @@ async function loadSalesChartData(sucursalId = 'all') {
 function renderSalesChart(type = 'bar') {
     const ctx = document.getElementById('salesChartModalCanvas')?.getContext('2d');
     if (!ctx || !currentChartData) return;
+    
     currentChartType = type;
     $all('.chart-type-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.type === type));
+    
     if (salesChart) salesChart.destroy();
+    
     let specificConfig = {};
     const datasets = JSON.parse(JSON.stringify(currentChartData.datasets));
-    if (type === 'line') specificConfig = { type: 'line', data: { ...currentChartData, datasets: datasets.map(ds => ({...ds, fill: false})) } };
-    else if (type === 'radar') specificConfig = { type: 'radar', data: { ...currentChartData, datasets: datasets.map(ds => ({...ds, fill: true})) } };
-    else if (type === 'bar-stacked') specificConfig = { type: 'bar', data: { ...currentChartData, datasets }, options: { scales: { x: { stacked: true }, y: { stacked: true } } } };
-    else if (type === 'line-filled') specificConfig = { type: 'line', data: { ...currentChartData, datasets: datasets.map(ds => ({...ds, fill: true})) } };
-    else specificConfig = { type: 'bar', data: { ...currentChartData, datasets } };
+
+    // Configuración común del eje Y para reutilizar (Aquí definimos los 100M)
+    const commonYScale = {
+        beginAtZero: true,
+        max: 100000000, // <--- 100 Millones FIJO
+        ticks: {
+            callback: (val) => val === 0 ? '0' : `${val/1000000}M`
+        }
+    };
+
+    if (type === 'line') {
+        specificConfig = { 
+            type: 'line', 
+            data: { ...currentChartData, datasets: datasets.map(ds => ({...ds, fill: false})) } 
+        };
+    } else if (type === 'radar') {
+        // Radar no usa escalas X/Y tradicionales, usa 'r'
+        specificConfig = { 
+            type: 'radar', 
+            data: { ...currentChartData, datasets: datasets.map(ds => ({...ds, fill: true})) },
+            options: { 
+                scales: { 
+                    r: { // Escala radial
+                        beginAtZero: true, 
+                        max: 100000000, // <--- 100M para Radar también
+                        ticks: { callback: (val) => `${val/1000000}M` }
+                    } 
+                } 
+            } 
+        };
+    } else if (type === 'bar-stacked') {
+        // AQUÍ ESTABA EL PROBLEMA: Necesitamos fusionar 'stacked: true' con el límite de 100M
+        specificConfig = { 
+            type: 'bar', 
+            data: { ...currentChartData, datasets }, 
+            options: { 
+                scales: { 
+                    x: { stacked: true }, 
+                    y: { 
+                        stacked: true, 
+                        ...commonYScale // <--- Importante: Aplicar la escala de 100M aquí también
+                    } 
+                } 
+            } 
+        };
+    } else if (type === 'line-filled') {
+        specificConfig = { 
+            type: 'line', 
+            data: { ...currentChartData, datasets: datasets.map(ds => ({...ds, fill: true})) } 
+        };
+    } else {
+        // Bar normal
+        specificConfig = { type: 'bar', data: { ...currentChartData, datasets } };
+    }
+
+    // Configuración Base
     const baseConfig = {
         options: {
-            responsive: true, maintainAspectRatio: false,
+            responsive: true, 
+            maintainAspectRatio: false,
             plugins: {
                 title: { display: true, text: 'Ventas Mensuales (Año Actual vs. Año Pasado)', font: { size: 16 } },
                 tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label || ''}: ${formatCLP(ctx.parsed.y)}` } }
             },
             scales: {
-                y: { beginAtZero: true, max: 10000000, ticks: { stepSize: 1000000, callback: (val) => val === 0 ? '0' : `${val/1000000}M` } }
-            }, ...specificConfig.options
+                // Aplicamos la escala común si NO es radar y si NO fue definida ya en specificConfig (como en stacked)
+                y: specificConfig.options?.scales?.y || commonYScale 
+            }, 
+            ...specificConfig.options
         }
     };
+
     salesChart = new Chart(ctx, { type: specificConfig.type, data: specificConfig.data, options: baseConfig.options });
 }
+
 function openSalesChartModal() {
     $('#sales-chart-modal')?.classList.add('visible');
     const sucursalId = $("#admin-sucursal-selector")?.value || 'all';

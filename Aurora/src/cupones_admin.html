@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Aurora | Gestión de Cupones</title>
+    
+    <link rel="stylesheet" href="/Public/Css/style.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* =========================================
+           ESTILOS IDÉNTICOS A PRODUCTOS_ADMIN.HTML
+           ========================================= */
+
+        /* Variables del tema (Copiadas de Productos) */
+        :root {
+            --sidebar-width: 260px;
+            --header-height: 60px;
+            --primary-gold: #d4a017;
+            --bg-dark: #1a1a1a;
+            --bg-header: #2c241b; /* Café oscuro */
+            --bg-light: #f8f9fa;
+            --text-muted: #aaa;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Layout Flex */
+        .admin-layout {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* Sidebar Oscura */
+        .admin-sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-dark);
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .brand {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            color: #e8d5b5;
+        }
+        .brand-dot {
+            width: 8px; height: 8px; background: #e8d5b5;
+            border-radius: 50%; margin-right: 10px;
+        }
+
+        .menu { flex: 1; padding: 20px 0; }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: 0.2s;
+            font-size: 0.95rem;
+            gap: 10px;
+        }
+        .menu-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        
+        .menu-link.active {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border-left: 3px solid var(--primary-gold);
+        }
+        
+        .menu-link svg { width: 20px; height: 20px; fill: currentColor; opacity: 0.7; }
+        .menu-link.active svg { fill: var(--primary-gold); opacity: 1; }
+        
+        .menu-sep { height: 1px; background: #333; margin: 10px 20px; }
+
+        /* Main Content */
+        .admin-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: var(--bg-light);
+        }
+
+        /* Topbar Oscura (Igual a Productos) */
+        .admin-topbar {
+            height: var(--header-height);
+            background-color: var(--bg-header);
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .admin-topbar h1 { font-size: 1.1rem; margin: 0; color: #e8d5b5; }
+
+        .admin-actions { display: flex; align-items: center; gap: 15px; }
+        .admin-user { font-size: 0.9rem; opacity: 0.8; display: flex; align-items: center; gap: 5px; }
+        .user-dot { width: 8px; height: 8px; background: #28a745; border-radius: 50%; }
+
+        /* Subtop (Filtros) - Igual a Productos */
+        .admin-subtop {
+            padding: 20px 25px 10px 25px;
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between; /* Para separar filtros del select de sucursal */
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .filter-row { 
+            display: flex; 
+            gap: 10px; 
+            flex-wrap: nowrap;
+        }
+        
+        .pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            background: #fff;
+            color: #555;
+            cursor: pointer;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+        .pill:hover, .pill.active {
+            background-color: #e8d5b5;
+            color: #2c241b;
+            border-color: #d4a017;
+            font-weight: 600;
+        }
+
+        /* Select estilo "Productos" */
+        .simple-select {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        /* Scroll Area para contenido extra (KPIs + Tabla) */
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* KPIs (Adaptados visualmente para encajar con el tema) */
+        .kpi-section {
+            padding: 20px 25px 0 25px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-left: 4px solid #e8d5b5; /* Dorado suave */
+        }
+        .kpi-title { font-size: 0.85rem; color: #777; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .kpi-val { font-size: 1.8rem; font-weight: 700; color: #333; margin-top: 5px; display: block; }
+
+        /* Chart Section */
+        .chart-section {
+            padding: 20px 25px;
+        }
+        .chart-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #eee;
+            height: 250px;
+        }
+
+        /* Tabla (Idéntica a Productos) */
+        .table-wrap {
+            padding: 0 25px 25px 25px;
+        }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .admin-table th {
+            background-color: #fcf8f3; /* Beige suave de Productos */
+            text-align: left;
+            padding: 12px 15px;
+            border-bottom: 2px solid #eee;
+            color: #5a4a3a;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .admin-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+        .admin-table tbody tr:hover { background-color: #f9f9f9; }
+
+        /* Badges */
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-activo { background: #d4edda; color: #155724; }
+        .status-finalizado { background: #f8d7da; color: #721c24; }
+        .status-pausado { background: #fff3cd; color: #856404; }
+
+        .btn-action {
+            padding: 5px 10px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: #333;
+            text-decoration: none;
+            margin-right: 5px;
+        }
+        .btn-action:hover { background: #eee; }
+
+        /* Modal (Estilo Productos) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none; justify-content: center; align-items: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: #fff;
+            width: 800px; max-width: 90%; max-height: 85vh;
+            border-radius: 8px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.3rem; color: #333; }
+        .modal-close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #777; }
+        
+        .modal-body { padding: 20px; overflow-y: auto; }
+        
+        .modal-section-title {
+            color: var(--primary-gold);
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin-top: 0; margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+    </style>
+</head>
+
+<body>
+  <div class="admin-layout">
+
+    <aside class="admin-sidebar" id="adminSidebar">
+        <div class="brand"><span class="brand-dot"></span><span>AURORA</span></div>
+        <nav class="menu">
+            <a class="menu-link" href="./main_menu.html"><span>Panel</span></a>
+            <a class="menu-link" href="./pedidos.html"><span>Pedidos</span></a>
+            <a class="menu-link" href="./productos_admin.html"><span>Productos</span></a>
+            <a class="menu-link" href="./clientes_admin.html"><span>Clientes</span></a>
+            <a class="menu-link" href="./reportes_admin.html"><span>Reportes</span></a>
+            <a class="menu-link active" href="./cupones_admin.html"><span>Códigos de Descuento</span></a>
+            
+            <div class="menu-sep"></div>
+            
+            <a class="menu-link" href="./config_admin.html">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58z"/></svg>
+                <span>Configuración</span>
+            </a>
+            <a class="menu-link" href="/src/login.html">
+                <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
+                <span>Salir</span>
+            </a>
+            <a class="menu-link" href="http://localhost:5000/">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
+                <span>CRUD</span>
+            </a>
+            <a class="menu-link icon-reportes" href="../src/main.html">
+                <span>Volver al Inicio</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="admin-main">
+
+      <header class="admin-topbar">
+        <button class="sidebar-toggle" id="sidebarToggle" style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; margin-right:15px;">☰</button>
+        <h1>Cupones de Descuento</h1>
+
+        <div class="admin-actions" style="display: flex; align-items: center; gap: 15px;">
+          <div class="admin-user" style="display: flex; align-items: center; gap: 5px; font-size: 0.9rem;">
+            <span class="user-dot"></span><span>Admin</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-subtop">
+        <div class="filter-row">
+            <button class="pill active" onclick="filtrarEstado('todos', this)">Todos</button>
+            <button class="pill" onclick="filtrarEstado('activo', this)">Activos</button>
+            <button class="pill" onclick="filtrarEstado('finalizado', this)">Finalizados</button>
+            <button class="pill" onclick="filtrarEstado('pausado', this)">Pausados</button>
+        </div>
+        
+        <select id="sucursalFilter" class="simple-select" onchange="actualizarDashboard()">
+             <option value="all">Todas las Sucursales</option>
+        </select>
+      </div>
+
+      <div class="content-scroll">
+        
+        <div class="kpi-section">
+            <div class="kpi-card">
+                <span class="kpi-title">Cupones Totales</span>
+                <span class="kpi-val" id="kpiTotal">0</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Total Canjes</span>
+                <span class="kpi-val" id="kpiCanjes">0</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Tasa Efectividad</span>
+                <span class="kpi-val" id="kpiTasa">0%</span>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-box">
+                <canvas id="cuponesChart"></canvas>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Código</th>
+                        <th>Nombre / Regla</th>
+                        <th>Descuento</th>
+                        <th>Uso</th>
+                        <th>Vigencia</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaCuponesBody">
+                    <tr><td colspan="8" style="text-align: center; padding: 20px;">Cargando datos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalUso">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitulo">Detalle de Uso</h2>
+            <button class="modal-close-btn" onclick="cerrarModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+            <div style="margin-bottom: 20px;">
+                <h3 class="modal-section-title">Filtros</h3>
+                <p style="margin: 0 0 10px 0; color: #555;">Filtrar historial por sucursal:</p>
+                <select id="modalSucursalFilter" class="simple-select" style="width: 100%;">
+                    <option value="all">Todas las sucursales</option>
+                </select>
+            </div>
+
+            <h3 class="modal-section-title">Historial</h3>
+            <table class="admin-table" style="border: 1px solid #eee;">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Sucursal</th>
+                        <th>Pedido</th>
+                        <th>Monto</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaUsoBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+  </div>
+
+  <script type="module" src="../Public/js/colores.js"></script>
+
+  <script>
+    // --- LÓGICA JAVASCRIPT ---
+    
+    // Mock Data
+    const sucursalesData = [
+        { id: 1, nombre: "Aurora Centro" },
+        { id: 2, nombre: "Aurora Norte" },
+        { id: 3, nombre: "Web Online" }
+    ];
+
+    const cuponesData = [
+        { id: 6, codigo: "HOLAAUR", nombre: "Promo Usuarios Nuevos", desc: "Compras > $10.000", tipo: "pct", valor: 50, usos: 15, max: 100, inicio: "2025-11-26", fin: "2025-12-27", estado: "activo" },
+        { id: 5, codigo: "AURORA25", nombre: "Descuento Primavera", desc: "Solo usuarios nuevos", tipo: "pct", valor: 20, usos: 45, max: 100, inicio: "2025-11-27", fin: "2025-12-27", estado: "activo" },
+        { id: 3, codigo: "HOLAMUNDO", nombre: "Flash Sale", desc: "Todo tienda", tipo: "fijo", valor: 5000, usos: 100, max: 100, inicio: "2025-11-01", fin: "2025-11-25", estado: "finalizado" },
+        { id: 2, codigo: "VERANO25", nombre: "Adelanto Verano", desc: "Trajes de baño", tipo: "pct", valor: 10, usos: 2, max: 50, inicio: "2025-12-01", fin: "2026-01-01", estado: "pausado" }
+    ];
+
+    const historialUsoData = [
+        { cupon_id: 6, fecha: "26-11-2025 14:30", cliente: "Tomas Figueroa", sucursal_id: 1, pedido_id: 228, total: 271470 },
+        { cupon_id: 6, fecha: "26-11-2025 15:00", cliente: "Vicente Morales", sucursal_id: 1, pedido_id: 229, total: 15000 },
+        { cupon_id: 5, fecha: "26-11-2025 10:15", cliente: "Matias Hernandez", sucursal_id: 2, pedido_id: 203, total: 47594 },
+        { cupon_id: 3, fecha: "20-11-2025 09:00", cliente: "Ana Perez", sucursal_id: 3, pedido_id: 180, total: 50000 },
+        { cupon_id: 5, fecha: "26-11-2025 11:20", cliente: "Juan Soto", sucursal_id: 1, pedido_id: 206, total: 41638 }
+    ];
+
+    let chartInstance = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            cargarSucursales();
+            renderTabla(cuponesData);
+            actualizarKPIs(cuponesData);
+            renderChart(cuponesData);
+        } catch (error) {
+            console.error("Error en script:", error);
+        }
+    });
+
+    function cargarSucursales() {
+        const select = document.getElementById('sucursalFilter');
+        const modalSelect = document.getElementById('modalSucursalFilter');
+        
+        sucursalesData.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.nombre;
+            select.appendChild(opt);
+
+            const opt2 = opt.cloneNode(true);
+            modalSelect.appendChild(opt2);
+        });
+    }
+
+    function renderTabla(data) {
+        const tbody = document.getElementById('tablaCuponesBody');
+        tbody.innerHTML = '';
+
+        if(data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">No se encontraron cupones.</td></tr>';
+            return;
+        }
+
+        data.forEach(c => {
+            const valorFmt = c.tipo === 'pct' ? `${c.valor}%` : `$${c.valor.toLocaleString()}`;
+            const pctUso = Math.round((c.usos / c.max) * 100);
+            
+            const progressBar = `
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="flex:1; height:6px; background:#eee; border-radius:3px; overflow:hidden;">
+                        <div style="width:${pctUso}%; background:#d4a017; height:100%;"></div>
+                    </div>
+                    <span style="font-size:0.8rem; color:#777;">${c.usos}/${c.max}</span>
+                </div>
+            `;
+
+            const row = `
+                <tr>
+                    <td>#${c.id}</td>
+                    <td style="font-weight:bold; color:#333;">${c.codigo}</td>
+                    <td>
+                        <div style="font-weight:600; color:#333;">${c.nombre}</div>
+                        <div style="font-size:0.85rem; color:#777;">${c.desc}</div>
+                    </td>
+                    <td style="color:#d4a017; font-weight:bold;">${valorFmt} OFF</td>
+                    <td style="min-width:120px;">${progressBar}</td>
+                    <td style="font-size:0.85rem;">
+                        ${c.inicio} <br> ${c.fin}
+                    </td>
+                    <td><span class="status-badge status-${c.estado}">${c.estado.toUpperCase()}</span></td>
+                    <td>
+                        <button class="btn-action" onclick="verUso(${c.id})">Ver Uso</button>
+                        <a href="http://localhost:5000/cupones" target="_blank" class="btn-action">Editar</a>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function actualizarKPIs(data) {
+        document.getElementById('kpiTotal').innerText = data.length;
+        
+        const totalUsos = data.reduce((acc, curr) => acc + curr.usos, 0);
+        document.getElementById('kpiCanjes').innerText = totalUsos;
+
+        const totalMax = data.reduce((acc, curr) => acc + curr.max, 0);
+        const tasa = totalMax > 0 ? ((totalUsos / totalMax) * 100).toFixed(1) : 0;
+        document.getElementById('kpiTasa').innerText = tasa + "%";
+    }
+
+    function renderChart(data) {
+        const ctx = document.getElementById('cuponesChart').getContext('2d');
+        const labels = data.map(c => c.codigo);
+        const dataUsos = data.map(c => c.usos);
+
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Cantidad de Usos',
+                    data: dataUsos,
+                    backgroundColor: 'rgba(212, 160, 23, 0.6)',
+                    borderColor: 'rgba(212, 160, 23, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: 'Rendimiento de Cupones (Usos)' }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Se expone al objeto window para que el HTML pueda llamar la funcion
+    window.filtrarEstado = function(estado, btn) {
+        document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        if (estado === 'todos') {
+            renderTabla(cuponesData);
+        } else {
+            const filtrados = cuponesData.filter(c => c.estado === estado);
+            renderTabla(filtrados);
+        }
+    }
+
+    window.actualizarDashboard = function() {
+        const sucursalId = document.getElementById('sucursalFilter').value;
+        if (sucursalId === 'all') {
+            renderChart(cuponesData);
+        } else {
+            const dataFiltrada = cuponesData.map(c => {
+                const usosEnSucursal = historialUsoData.filter(h => h.cupon_id === c.id && h.sucursal_id == sucursalId).length;
+                return { ...c, usos: usosEnSucursal };
+            });
+            renderChart(dataFiltrada);
+        }
+    }
+
+    // --- MODAL ---
+    window.verUso = function(cuponId) {
+        const cupon = cuponesData.find(c => c.id === cuponId);
+        document.getElementById('modalTitulo').innerText = `Uso del Cupón: ${cupon.codigo}`;
+        
+        const tbody = document.getElementById('tablaUsoBody');
+        tbody.innerHTML = '';
+
+        const usos = historialUsoData.filter(h => h.cupon_id === cuponId);
+
+        if (usos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No registra usos aún.</td></tr>';
+        } else {
+            usos.forEach(u => {
+                const suc = sucursalesData.find(s => s.id === u.sucursal_id)?.nombre || 'Desconocida';
+                const row = `
+                    <tr>
+                        <td>${u.fecha}</td>
+                        <td><b>${u.cliente}</b></td>
+                        <td>${suc}</td>
+                        <td style="color:#d4a017; font-weight:bold;">#${u.pedido_id}</td>
+                        <td>$${u.total.toLocaleString()}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        document.getElementById('modalUso').style.display = 'flex';
+    }
+
+    window.cerrarModal = function() {
+        document.getElementById('modalUso').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('modalUso');
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+  </script>
+</body>
+</html>

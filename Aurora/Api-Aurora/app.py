@@ -106,7 +106,7 @@ def get_db_connection():
             port=app.config['PG_PORT']
         )
 
-# --- ▼▼▼ 4. AÑADIR FUNCIÓN return_db_connection() ▼▼▼ ---
+# ---  AÑADIR FUNCIÓN return_db_connection()  ---
 def return_db_connection(conn):
     """
     Devuelve una conexión al pool.
@@ -115,7 +115,7 @@ def return_db_connection(conn):
         db_pool.putconn(conn)
     else:
         conn.close() # Cierra la conexión de emergencia
-# --- ▲▲▲ FIN FUNCIÓN AÑADIDA ▲▲▲ ---
+# ---  FIN FUNCIÓN AÑADIDA  ---
 
 # Decoradores (SIN CAMBIOS)
 def login_required(fn):
@@ -1917,7 +1917,7 @@ def login():
              return redirect(url_for("login") + "?error=user_not_found&tab=login&src=login")
 
     return redirect(FRONTEND_MAIN_URL)
-# --- ▲▲▲ FIN MODIFICACIÓN ▲▲▲ ---
+
 
 # ===========================
 # RUTAS Registro (CON POOL)
@@ -2023,7 +2023,7 @@ def register():
 
 
 
-# --- ▼▼▼ NUEVA RUTA DE VERIFICACIÓN de email al correo del usuario (REAL) ▼▼▼ ---
+# --- NUEVA RUTA DE VERIFICACIÓN de email al correo del usuario (REAL)  ---
 @app.route("/verify-email/<token>")
 def verify_email(token):
     try:
@@ -2061,7 +2061,6 @@ def verify_email(token):
         if cur: cur.close()
         if conn: return_db_connection(conn)
 # --- ▲▲▲ FIN NUEVA RUTA ▲▲▲ ---
-
 
 
 # ===========================
@@ -2103,6 +2102,129 @@ def check_telefono():
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn) # <-- USA POOL
+        
+        
+# ===========================
+# RECUPERACIÓN DE CONTRASEÑA
+# ===========================
+
+from email.header import Header
+import unicodedata # Para limpiar tildes del email
+
+# Asegúrate de tener: import unicodedata
+
+@app.route('/api/forgot-password', methods=['POST'])
+def forgot_password():
+    raw_email = request.json.get('email')
+    if not raw_email:
+        return jsonify({"error": "Ingresa tu correo electrónico."}), 400
+
+    # 1. Limpieza de email (Mantenemos esto)
+    email = ''.join(c for c in unicodedata.normalize('NFD', raw_email) if unicodedata.category(c) != 'Mn')
+    
+    print(f"DEBUG - Enviando a: {email}") 
+
+    user = get_user_by_email(email)
+    if not user:
+        return jsonify({"success": True, "message": "Si el correo existe, recibirás un enlace."})
+
+    try:
+        token = s.dumps(email, salt='password-reset')
+        link = url_for('reset_password_page', token=token, _external=True)
+
+        # 2. DEFINICIÓN EN MODO SEGURO (SOLO ASCII)
+        asunto_seguro = "Recuperacion de Contrasena Aurora"
+        remitente_nombre = "Aurora Soporte" 
+
+        msg = Message(
+            subject=asunto_seguro, 
+            recipients=[email],
+            sender=(remitente_nombre, app.config['MAIL_USERNAME'])
+        )
+
+        # --- SOLUCIÓN DEL ERROR CRÍTICO ---
+        # Forzamos un ID seguro para que Python NO use el nombre de tu PC (que tiene tildes)
+        msg.msgId = make_msgid(domain='aurora.local')
+        # ----------------------------------
+
+        # 3. El cuerpo SI puede tener acentos
+        msg.charset = 'utf-8' 
+        
+        msg.html = render_template("email/reset_password.html", link=link, nombre=user['nombre_usuario'])
+        msg.body = f"Hola {user['nombre_usuario']},\n\nPara recuperar tu clave ingresa aqui: {link}"
+
+        mail.send(msg)
+        
+        return jsonify({"success": True, "message": "Correo enviado. Revisa tu bandeja de entrada."})
+
+    except Exception as e:
+        print(f"Error CRITICO: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Error al enviar el correo."}), 500
+    
+    
+# ==========================================
+# ESTA ES LA FUNCIÓN QUE TE FALTA EN APP.PY
+# ==========================================
+@app.route('/reset-password/<token>', methods=['GET'])
+def reset_password_page(token):
+    try:
+        # Verificamos el token (salt debe coincidir con el que usaste al generar)
+        email = s.loads(token, salt='password-reset', max_age=900) # 15 min validez
+        return render_template("usuarios/reset_password.html", token=token, email=email)
+    except SignatureExpired:
+        return "<h1>El enlace ha expirado.</h1><p>Por favor solicita uno nuevo.</p>"
+    except BadTimeSignature:
+        return "<h1>Enlace inválido.</h1>"
+
+# ==========================================
+# 3. Procesar cambio de contraseña (POST) 
+# (ESTA ES LA QUE TE FALTABA PARA SOLUCIONAR EL ERROR 404)
+# ==========================================
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password_action():
+    data = request.get_json()
+    token = data.get('token')
+    new_password = data.get('password')
+
+    if not token or not new_password:
+        return jsonify({"error": "Faltan datos."}), 400
+
+    try:
+        # 1. Verificar token nuevamente para obtener el email
+        email = s.loads(token, salt='password-reset', max_age=900)
+        
+        # 2. Validar seguridad de la contraseña (Opcional: usa tu función validar_password si la tienes importada)
+        # ok, msg = validar_password(new_password)
+        # if not ok: return jsonify({"error": msg}), 400
+
+        # 3. Encriptar nueva contraseña
+        hashed_password = generate_password_hash(new_password)
+        
+        # 4. Actualizar en Base de Datos
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verificamos que el usuario exista
+        cur.execute("SELECT id_usuario FROM usuario WHERE email_usuario = %s", (email,))
+        if not cur.fetchone():
+             return jsonify({"error": "Usuario no encontrado."}), 404
+
+        # Actualizamos la contraseña
+        cur.execute("UPDATE usuario SET password = %s WHERE email_usuario = %s", (hashed_password, email))
+        conn.commit()
+        
+        return jsonify({"success": True, "message": "Contraseña actualizada."})
+
+    except SignatureExpired:
+        return jsonify({"error": "El enlace ha expirado. Solicita uno nuevo."}), 400
+    except (BadTimeSignature, Exception) as e:
+        print(f"Error reset password: {e}")
+        return jsonify({"error": "Enlace inválido o error del servidor."}), 400
+    finally:
+        if 'cur' in locals() and cur: cur.close()
+        if 'conn' in locals() and conn: return_db_connection(conn)
 
 @app.route("/logout")
 def logout():
