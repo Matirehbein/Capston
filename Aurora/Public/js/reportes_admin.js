@@ -592,10 +592,11 @@ async function handleReportGeneration(e) {
  * Carga la tabla de "Pedidos Recientes" en el dashboard.
  */
 async function loadPedidosRecientes(sucursalId = 'all', limit = 10) {
-    const tbody = $("#pedidos-recientes-tbody");
+    const tbody = document.getElementById("pedidos-recientes-tbody");
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="9" class="no-data">Cargando...</td></tr>`; // Colspan 9
+    // Ajustamos el colspan a 7 porque son 7 encabezados
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">Cargando...</td></tr>`;
 
     try {
         const response = await fetch(`${API_BACKEND}/api/admin/reportes/pedidos_recientes?sucursal_id=${sucursalId}&limit=${limit}`, {
@@ -610,57 +611,31 @@ async function loadPedidosRecientes(sucursalId = 'all', limit = 10) {
         const pedidos = await response.json();
 
         if (pedidos.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" class="no-data">No se encontraron pedidos.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No se encontraron pedidos recientes.</td></tr>`;
             return;
         }
 
         let html = '';
+        
         pedidos.forEach(pedido => {
-            const nombreCompleto = `${pedido.cliente_nombre || ''}`.trim();
+            const nombreCompleto = `${pedido.cliente_nombre || 'Cliente'}`.trim();
             
-            // --- Lógica para Estado de Pago (CORREGIDA) ---
-            let pagoEstado = pedido.estado_pago;
-            let pagoClass = 'bg-secondary'; // Default gris
-
-            if (pagoEstado === 'aprobado') {
-                pagoClass = 'bg-success';
-            } else if (pagoEstado === 'rechazado') {
-                pagoClass = 'bg-danger';
-            } else {
-                // Si es null, undefined, o cualquier otra cosa
-                pagoEstado = 'Pendiente'; 
-                pagoClass = 'bg-warning';
-            }
-            // --- Fin Lógica Estado Pago ---
-
-            // --- Lógica para Estado de Pedido (Envío) ---
-            let pedidoEstado = pedido.estado_pedido || 'N/A';
-            let pedidoClass = 'bg-secondary'; // Default
-            if (pedidoEstado === 'pagado') {
-                pedidoEstado = 'Por despachar';
-                pedidoClass = 'bg-info';
-            } else if (pedidoEstado === 'enviado') {
-                pedidoClass = 'bg-primary';
-            } else if (pedidoEstado === 'entregado') {
-                pedidoClass = 'bg-success';
-            } else if (pedidoEstado === 'pendiente') { // Pendiente de pago
-                pedidoEstado = 'Pendiente Pago';
-                pedidoClass = 'bg-warning';
-            } else if (pedidoEstado === 'rechazado') {
-                pedidoClass = 'bg-danger';
-            }
-            
+            // Generamos SOLO las 7 columnas que pide tu HTML
             html += `
                 <tr>
                     <td>#${pedido.id_pedido}</td>
-                    <td>${nombreCompleto || 'N/A'}</td>
+                    
+                    <td><span style="font-weight:600;">${nombreCompleto}</span></td>
+                    
                     <td>${pedido.email || 'N/A'}</td>
+                    
                     <td>${pedido.telefono || 'N/A'}</td>
+                    
                     <td>${formatFecha(pedido.creado_en)}</td>
-                    <td><span class="badge ${pagoClass}">${pagoEstado}</span></td>
-                    <td><span class="badge ${pedidoClass}">${pedidoEstado}</span></td>
-                    <td>${formatCLP(pedido.total)}</td>
-                    <td>
+                    
+                    <td style="font-weight: bold; text-align: right;">${formatCLP(pedido.total)}</td>
+                    
+                    <td style="text-align: center;">
                         <button class="admin-btn-sm" data-id-pedido="${pedido.id_pedido}">
                             Ver detalle
                         </button>
@@ -668,11 +643,12 @@ async function loadPedidosRecientes(sucursalId = 'all', limit = 10) {
                 </tr>
             `;
         });
+        
         tbody.innerHTML = html;
 
     } catch (error) {
         console.error("Error cargando pedidos recientes:", error);
-        tbody.innerHTML = `<tr><td colspan="9" class="no-data" style="color: red;">${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">Error: ${error.message}</td></tr>`;
     }
 }
 
@@ -710,7 +686,6 @@ function closeRecentOrderDetailModal() {
  */
 async function loadRecentOrderDetailData(id_pedido) {
     try {
-        // Usamos el endpoint de detalle de pedido existente, que ya trae los items.
         const response = await fetch(`${API_BACKEND}/api/admin/reportes/detalle_pedido/${id_pedido}`, { credentials: "include" });
         if (!response.ok) throw new Error("Error del servidor");
         
@@ -718,10 +693,10 @@ async function loadRecentOrderDetailData(id_pedido) {
         const pedido = data.pedido;
         const items = data.items;
 
+        // --- 1. DATOS DEL CLIENTE ---
         const nombreCompleto = `${pedido.nombre_usuario || ''} ${pedido.apellido_paterno || ''} ${pedido.apellido_materno || ''}`.trim();
         const direccionCompleta = `${pedido.calle || ''} ${pedido.numero_calle || ''}`.trim() || 'No especificada';
 
-        // Poblar datos del cliente
         $('#recent-detalle-cliente-nombre').textContent = nombreCompleto;
         $('#recent-detalle-cliente-email').textContent = pedido.email_usuario || 'N/A';
         $('#recent-detalle-cliente-telefono').textContent = pedido.telefono || 'N/A';
@@ -730,25 +705,58 @@ async function loadRecentOrderDetailData(id_pedido) {
         $('#recent-detalle-cliente-ciudad').textContent = pedido.ciudad || 'N/A';
         $('#recent-detalle-cliente-region').textContent = pedido.region || 'N/A';
 
-        // Poblar datos del pedido
+        // --- 2. DATOS DEL PEDIDO ---
         $('#recent-detalle-pedido-id').textContent = pedido.id_pedido;
         $('#recent-detalle-pedido-id-2').textContent = pedido.id_pedido;
         $('#recent-detalle-pedido-fecha').textContent = formatFecha(pedido.creado_en);
         $('#recent-detalle-pedido-total').textContent = formatCLP(pedido.total);
-        $('#recent-detalle-pedido-metodo').textContent = pedido.metodo_pago || 'N/A';
+
+        // --- Lógica Método de Pago ---
+        let metodo = pedido.metodo_pago;
+        if (!metodo || metodo === 'null') {
+            // Si no hay método, y el estado es pendiente, asumimos que falta pagar
+            metodo = 'No registrado'; 
+        } else {
+            // Capitalizar primera letra (ej: "webpay" -> "Webpay")
+            metodo = metodo.charAt(0).toUpperCase() + metodo.slice(1);
+        }
+        $('#recent-detalle-pedido-metodo').textContent = metodo;
         
-        // --- Lógica de Estado de Pago y Pedido (CORREGIDA) ---
-        const estadoPago = pedido.metodo_pago ? (pedido.estado_pedido === 'rechazado' ? 'Rechazado' : 'Aprobado') : 'Pendiente';
+        // --- Lógica Estado de Pago (Igual a la tabla) ---
+        let estadoPago = pedido.estado_pago || 'Pendiente';
+        const pStatus = String(estadoPago).toLowerCase();
+
+        if (pStatus === 'approved' || pStatus === 'aprobado' || pStatus === 'pagado') {
+            estadoPago = 'Aprobado';
+        } else if (pStatus === 'rechazado' || pStatus === 'cancelado') {
+            estadoPago = 'Rechazado';
+        } else {
+            estadoPago = 'Pendiente';
+        }
         $('#recent-detalle-pedido-estado').textContent = estadoPago;
 
-        let estadoPedido = pedido.estado_pedido;
-        if (estadoPedido === 'pagado') {
+        // --- Lógica Estado del Pedido (Igual a la tabla) ---
+        let estadoPedido = pedido.estado_pedido || 'Pendiente';
+        const eStatus = String(estadoPedido).toLowerCase();
+
+        if (eStatus === 'pagado') {
             estadoPedido = 'Por despachar';
+        } else if (eStatus === 'preparado' || eStatus === 'preparando') {
+            estadoPedido = 'Preparando';
+        } else if (eStatus === 'enviado' || eStatus === 'despachado') {
+            estadoPedido = 'Enviado';
+        } else if (eStatus === 'entregado') {
+            estadoPedido = 'Entregado';
+        } else if (eStatus === 'rechazado' || eStatus === 'cancelado') {
+            estadoPedido = 'Cancelado';
+        } else {
+            // Capitalizar si es otro estado (ej: "pendiente" -> "Pendiente")
+            estadoPedido = estadoPedido.charAt(0).toUpperCase() + estadoPedido.slice(1);
         }
         $('#recent-detalle-envio-estado').textContent = estadoPedido;
 
 
-        // Poblar items
+        // --- 3. ITEMS COMPRADOS ---
         const itemsTbody = $('#recent-detalle-items-tbody');
         let itemsHtml = '';
         if (items.length > 0) {
@@ -765,7 +773,7 @@ async function loadRecentOrderDetailData(id_pedido) {
                     </tr>`;
             });
         } else {
-            itemsHtml = '<tr><td colspan="7" class="no-data">No se encontraron items para este pedido.</td></tr>'; // Colspan 7
+            itemsHtml = '<tr><td colspan="7" class="no-data">No se encontraron items para este pedido.</td></tr>';
         }
         itemsTbody.innerHTML = itemsHtml;
 

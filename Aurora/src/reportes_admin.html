@@ -6,11 +6,12 @@
     <title>Aurora | Reportes</title>
 
     <link rel="stylesheet" href="../Public/Css/style.css" />
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* =========================================
-           ESTILOS UNIFICADOS (Diseño Productos/Cupones)
+           ESTILOS ESPECÍFICOS DE REPORTES
            ========================================= */
 
         :root {
@@ -18,7 +19,7 @@
             --header-height: 60px;
             --primary-gold: #d4a017;
             --bg-dark: #1a1a1a;
-            --bg-header: #2c241b; /* Café oscuro */
+            --bg-header: #2c241b;
             --bg-light: #f8f9fa;
             --text-muted: #aaa;
         }
@@ -95,7 +96,7 @@
         
         .sidebar-toggle { background: none; border: none; color: #e8d5b5; font-size: 1.5rem; cursor: pointer; margin-right: 15px; }
 
-        /* Select en Topbar (Estilo oscuro para que se vea bien en el header) */
+        /* Select en Topbar */
         #admin-sucursal-selector {
             padding: 6px 12px; border-radius: 4px; border: 1px solid #444;
             background-color: rgba(255,255,255,0.1); color: #fff; font-size: 0.85rem; outline: none;
@@ -139,7 +140,7 @@
         #kpi-pedidos-card { border-left-color: #ffc107; }
         #kpi-clientes-card { border-left-color: #0d6efd; }
         
-        /* Action Card (Generar Informe) */
+        /* Action Card */
         .kpi-card.action-card {
             border-left-color: var(--primary-gold);
             align-items: flex-start;
@@ -164,7 +165,6 @@
         .section-head { display: flex; justify-content: space-between; align-items: center; }
         .section-head-title { margin: 0; font-size: 1.1rem; color: #555; font-weight: 700; }
 
-        /* Select para límite en tabla */
         #pedidos-limit-selector {
             padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd;
             color: #555; font-size: 0.9rem;
@@ -175,24 +175,43 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee;
             overflow: auto;
         }
-        .admin-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        .admin-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        
         .admin-table th {
             background-color: #fcf8f3; /* Beige suave */
             text-align: left; padding: 15px;
             border-bottom: 2px solid #eee; color: #5a4a3a; font-weight: 600; font-size: 0.9rem;
             position: sticky; top: 0; z-index: 2;
+            white-space: nowrap;
         }
         .admin-table td {
-            padding: 15px; border-bottom: 1px solid #f0f0f0; color: #333; vertical-align: middle; font-size: 0.9rem;
+            padding: 15px; border-bottom: 1px solid #f0f0f0; 
+            color: #333; vertical-align: middle; font-size: 0.9rem;
         }
         .admin-table tbody tr:hover { background-color: #f9f9f9; }
 
+        /* --- AJUSTES ALINEACIÓN TABLA 7 COLUMNAS --- */
+        /* Columna TOTAL (Penúltima) */
+        .admin-table th:nth-last-child(2),
+        .admin-table td:nth-last-child(2) {
+            text-align: right;
+            padding-right: 30px;
+            width: 120px;
+        }
+        /* Columna ACCIONES (Última) */
+        .admin-table th:last-child,
+        .admin-table td:last-child {
+            text-align: center;
+            width: 100px;
+        }
+
         /* Links de acción pequeños */
         .admin-btn-sm {
-            padding: 5px 10px; background: #fff; border: 1px solid #ccc;
-            border-radius: 4px; cursor: pointer; font-size: 0.8rem; color: #333; text-decoration: none;
+            padding: 6px 12px; background: #fff; border: 1px solid #ccc;
+            border-radius: 6px; cursor: pointer; font-size: 0.8rem; color: #555; text-decoration: none;
+            display: inline-flex; align-items: center; justify-content: center;
         }
-        .admin-btn-sm:hover { background: #eee; }
+        .admin-btn-sm:hover { background: #eee; color: #333; }
 
         /* --- MODALES --- */
         .modal-overlay {
@@ -236,7 +255,7 @@
             width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; color: #333;
         }
 
-        /* Chart Selector (Botones tipo Pill) */
+        /* Chart Selector */
         .chart-type-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .chart-type-btn {
             padding: 6px 14px; border: 1px solid #ddd; background: #fff; border-radius: 20px; cursor: pointer; font-size: 0.85rem; color: #555; transition: .2s;
@@ -244,6 +263,8 @@
         .chart-type-btn:hover, .chart-type-btn.active {
             background: #e8d5b5; color: #2c241b; border-color: #d4a017; font-weight: 600;
         }
+
+        .item-foto { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
 
         /* Z-Indexes específicos */
         #pedidos-list-modal, #clientes-list-modal, #report-options-modal { z-index: 2010; }
@@ -272,21 +293,9 @@
                 
                 <div class="menu-sep"></div>
                 
-                <a class="menu-link" href="./config_admin.html">
-                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58z"/></svg>
-                    <span>Configuración</span>
-                </a>
-                <a class="menu-link" href="/src/login.html">
-                    <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
-                    <span>Salir</span>
-                </a>
-                <a class="menu-link" href="http://localhost:5000/">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
-                    <span>CRUD</span>
-                </a>
-                <a class="menu-link icon-reportes" href="../src/main.html">
-                    <span>Volver al Inicio</span>
-                </a>
+                <a class="menu-link" href="./config_admin.html"><span>Configuración</span></a>
+                <a class="menu-link" href="/src/login.html"><span>Salir</span></a>
+                <a class="menu-link" href="../src/main.html"><span>Volver al Inicio</span></a>
             </nav>
         </aside>
 
@@ -296,7 +305,6 @@
                 <div class="topbar-title-group">
                     <button class="sidebar-toggle" id="sidebarToggle">☰</button>
                     <h1>Reportes</h1>
-                    
                     <select id="admin-sucursal-selector" name="sucursal">
                         <option value="all" selected>Todas las sucursales</option>
                     </select>
@@ -360,14 +368,12 @@
                                     <th>Correo electrónico</th>
                                     <th>Teléfono</th>
                                     <th>Fecha</th>
-                                    <th>Estado Pago</th>
-                                    <th>Estado Pedido</th>
                                     <th>Total</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="pedidos-recientes-tbody">
-                                <tr><td colspan="9" style="text-align:center; padding:20px; color:#777;">Sin datos</td></tr>
+                                <tr><td colspan="7" style="text-align:center; padding:20px; color:#777;">Sin datos</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -466,8 +472,7 @@
                                     <th>Precio Unit.</th>
                                 </tr>
                             </thead>
-                            <tbody id="detalle-items-tbody">
-                            </tbody>
+                            <tbody id="detalle-items-tbody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -484,8 +489,7 @@
             <div class="modal-body">
                 <div class="table-wrap">
                     <table class="admin-table">
-                        <thead id="clientes-modal-thead">
-                        </thead>
+                        <thead id="clientes-modal-thead"></thead>
                         <tbody id="clientes-modal-tbody">
                             <tr><td colspan="3" class="no-data">Cargando...</td></tr>
                         </tbody>
@@ -522,8 +526,7 @@
                                     <th>Ver</th>
                                 </tr>
                             </thead>
-                            <tbody id="cliente-pedidos-tbody">
-                            </tbody>
+                            <tbody id="cliente-pedidos-tbody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -604,8 +607,7 @@
                                     <th>Precio Unit.</th>
                                 </tr>
                             </thead>
-                            <tbody id="recent-detalle-items-tbody">
-                                </tbody>
+                            <tbody id="recent-detalle-items-tbody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -614,6 +616,6 @@
     </div>
 
     <script type="module" src="../Public/js/colores.js"></script>
-    <script type="module" src="../Public/js/reportes_admin.js?v=1.1"></script>
+    <script type="module" src="../Public/js/reportes_admin.js?v=1.2"></script>
 </body>
 </html>
