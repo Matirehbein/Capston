@@ -157,14 +157,53 @@ function formatHorario(horario_json) {
   let html = "<div class='branch-horario'>";
 
   for (const dia in horario_json) {
+    let valor = horario_json[dia];
+
+    // Si está cerrado
+    if (typeof valor === "string" && valor.toLowerCase().includes("cerrado")) {
+      html += `
+        <div class="horario-row">
+          <span class="dia">${capitalizar(dia)}</span>
+          <span class="hora horario-cerrado">Cerrado</span>
+        </div>
+      `;
+      continue;
+    }
+
+    // Normalizar formato hora
+    const [inicio, fin] = valor.split("-").map(h => normalizarHora(h));
+
     html += `
       <div class="horario-row">
-        <span class="dia">${dia.charAt(0).toUpperCase() + dia.slice(1)}</span>
-        <span class="hora">${horario_json[dia]}</span>
+        <span class="dia">${capitalizar(dia)}</span>
+        <span class="hora">${inicio} - ${fin}</span>
       </div>
     `;
   }
 
   html += "</div>";
   return html;
+}
+
+/* ============================= */
+/* FUNCIONES DE APOYO            */
+/* ============================= */
+
+function normalizarHora(hora) {
+  if (!hora) return "00:00";
+
+  // Si viene solo como "9" → "09:00"
+  if (!hora.includes(":")) {
+    return hora.padStart(2, "0") + ":00";
+  }
+
+  let [h, m] = hora.split(":");
+  h = h.padStart(2, "0");
+  m = m.padStart(2, "0");
+
+  return `${h}:${m}`;
+}
+
+function capitalizar(texto) {
+  return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
 }
