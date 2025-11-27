@@ -1513,6 +1513,83 @@ def crud_cupones():
         if cur: cur.close()
         if conn: return_db_connection(conn)
         
+        
+# --- RUTA PARA OBTENER CUPONES (CORREGIDA) ---
+@app.route('/api/admin/cupones', methods=['GET'])
+def admin_get_cupones():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Obtenemos el filtro de sucursal de la URL (ej: ?sucursal_id=1)
+        sucursal_id = request.args.get('sucursal_id')
+        
+        # Si es "all" o None, lo dejamos como None para SQL
+        if sucursal_id == 'all' or not sucursal_id:
+            sucursal_id = None
+
+        query = """
+            SELECT 
+                c.id_cupon,
+                c.codigo_cupon as codigo,
+                c.nombre_cupon as nombre_promocion,
+                c.descripcion,
+                
+                CASE 
+                    WHEN c.descuento_pct_cupon > 0 THEN 'porcentaje'
+                    ELSE 'fijo'
+                END as tipo_descuento,
+                
+                CASE 
+                    WHEN c.descuento_pct_cupon > 0 THEN c.descuento_pct_cupon
+                    ELSE c.valor_fijo
+                END as valor_descuento,
+
+                c.usos_max as limite_uso,
+                c.fecha_inicio,
+                c.fecha_fin,
+                
+                CASE 
+                    WHEN c.vigente_bool = true THEN 'activo'
+                    ELSE 'finalizado'
+                END as estado,
+
+                -- AQUÍ ESTÁ LA MAGIA DEL FILTRO:
+                -- Contamos pedidos pagados ('aprobado').
+                -- Si sucursal_id es NULL (seleccionamos 'Todas'), la parte "OR %s IS NULL" hace que ignore el filtro de sucursal.
+                -- Si sucursal_id tiene valor, filtra por p.id_sucursal.
+                (
+                    SELECT COUNT(*) 
+                    FROM pedido p
+                    JOIN pago pg ON p.id_pedido = pg.id_pedido
+                    WHERE p.id_cupon = c.id_cupon 
+                    AND pg.estado_pago = 'aprobado'
+                    AND (p.id_sucursal = %s OR %s IS NULL)
+                ) as usos_actuales
+
+            FROM cupon c
+            ORDER BY c.id_cupon DESC;
+        """
+
+        # Pasamos el sucursal_id dos veces (uno para la comparación, otro para el IS NULL)
+        cur.execute(query, (sucursal_id, sucursal_id))
+        rows = cur.fetchall()
+        
+        cupones = []
+        if cur.description:
+            columns = [desc[0] for desc in cur.description]
+            for row in rows:
+                cupon = dict(zip(columns, row))
+                cupones.append(cupon)
+
+        cur.close()
+        conn.close()
+        
+        return jsonify(cupones), 200
+
+    except Exception as e:
+        print(f"Error al obtener cupones: {e}")
+        return jsonify({'error': str(e)}), 500
 # ===========================
 # Agregar Cupon de Descuento
 # ===========================

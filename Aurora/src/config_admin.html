@@ -4,109 +4,292 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Aurora | Configuración</title>
+  
   <link rel="stylesheet" href="../Public/Css/style.css" />
+
+  <style>
+    /* =========================================
+       ESTILOS UNIFICADOS (Diseño Panel Admin)
+       ========================================= */
+
+    :root {
+        --sidebar-width: 260px;
+        --header-height: 60px;
+        --primary-gold: #d4a017;
+        --bg-dark: #1a1a1a;
+        --bg-header: #2c241b; /* Café oscuro */
+        --bg-light: #f8f9fa;
+        --text-muted: #aaa;
+    }
+
+    body {
+        margin: 0; padding: 0;
+        font-family: 'Segoe UI', sans-serif;
+        background-color: var(--bg-light);
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .admin-layout {
+        display: flex;
+        width: 100%;
+        height: 100vh;
+    }
+
+    /* --- SIDEBAR --- */
+    .admin-sidebar {
+        width: var(--sidebar-width);
+        flex-shrink: 0;
+        height: 100vh;
+        overflow-y: auto;
+        background-color: var(--bg-dark);
+        color: #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        z-index: 100;
+    }
+
+    .brand {
+        height: var(--header-height);
+        display: flex; align-items: center; padding: 0 20px;
+        color: #e8d5b5; font-weight: bold; font-size: 1.1rem;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+    .brand-dot {
+        width: 8px; height: 8px; background: #e8d5b5; border-radius: 50%; margin-right: 10px;
+    }
+
+    .menu { flex: 1; padding: 20px 0; }
+
+    .menu-link {
+        display: flex; align-items: center; gap: 10px;
+        padding: 12px 20px; color: var(--text-muted); text-decoration: none;
+        font-size: 0.95rem; border-left: 3px solid transparent; transition: 0.2s;
+    }
+    .menu-link:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
+    
+    .menu-link.active {
+        background-color: rgba(255,255,255,0.1); color: #fff; border-left: 3px solid var(--primary-gold);
+    }
+    
+    .menu-link svg { width: 20px; height: 20px; fill: currentColor; opacity: 0.7; }
+    .menu-link.active svg { fill: var(--primary-gold); opacity: 1; }
+    
+    .menu-sep { height: 1px; background: #333; margin: 10px 20px; }
+
+    /* --- MAIN CONTENT --- */
+    .admin-main {
+        flex: 1; display: flex; flex-direction: column;
+        overflow: hidden; background-color: var(--bg-light);
+    }
+
+    /* --- TOPBAR --- */
+    .admin-topbar {
+        height: var(--header-height);
+        background-color: var(--bg-header);
+        border-bottom: 1px solid #333;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 25px; color: #fff; flex-shrink: 0;
+    }
+    .topbar-title-group { display: flex; align-items: center; gap: 20px; }
+    .topbar-title-group h1 { margin: 0; font-size: 1.1rem; color: #e8d5b5; font-weight: 600; }
+    
+    .sidebar-toggle { background: none; border: none; color: #e8d5b5; font-size: 1.5rem; cursor: pointer; margin-right: 15px; }
+
+    .admin-actions { display: flex; align-items: center; gap: 15px; }
+    .admin-user { font-size: 0.9rem; opacity: 0.8; display: flex; align-items: center; gap: 5px; }
+    .user-dot { width: 8px; height: 8px; background: #28a745; border-radius: 50%; }
+
+    /* --- CONTENIDO CONFIGURACIÓN --- */
+    .content-scroll {
+        flex: 1; overflow-y: auto; padding: 25px;
+    }
+
+    .setting-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border: 1px solid #eee;
+        padding: 25px;
+        margin-bottom: 20px;
+        max-width: 800px;
+    }
+
+    .setting-card h2 {
+        margin-top: 0;
+        color: #333;
+        font-size: 1.2rem;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+
+    .muted { color: #777; font-size: 0.9rem; }
+
+    /* --- THEME GRID (Selector de Temas) --- */
+    .theme-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .theme-option {
+        display: flex; flex-direction: column; gap: 10px;
+        padding: 15px;
+        border: 2px solid #eee;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    /* Ocultar el radio button nativo */
+    .theme-option input[type="radio"] {
+        position: absolute; opacity: 0; pointer-events: none;
+    }
+
+    /* Estado Hover y Checked */
+    .theme-option:hover { border-color: #ccc; transform: translateY(-2px); }
+    .theme-option:has(input:checked) {
+        border-color: var(--primary-gold);
+        background-color: #fffbf0;
+    }
+
+    .theme-option strong { color: #333; display: block; }
+    
+    .swatches { display: flex; gap: 5px; margin-top: 5px; }
+    .dot {
+        width: 18px; height: 18px; border-radius: 50%;
+        border: 1px solid #ddd; display: inline-block;
+    }
+
+  </style>
 </head>
 <body>
   <div class="admin-layout">
-    <!-- Sidebar de navegación -->
-        <aside class="admin-sidebar" id="adminSidebar">
-            <div class="brand"><span class="brand-dot"></span><span>AURORA</span></div>
-            <nav class="menu">
-                <a class="menu-link" href="./main_menu.html"><span>Panel</span></a>
-                <a class="menu-link" href="./pedidos.html"><span>Pedidos</span></a>
-                <a class="menu-link" href="./productos_admin.html"><span>Productos</span></a>
-                <a class="menu-link" href="./clientes_admin.html"><span>Clientes</span></a>
-                <a class="menu-link" href="./reportes_admin.html"><span>Reportes</span></a>
-                <div class="menu-sep"></div>
-                <a class="menu-link active" href="./config_admin.html">
-                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58z"/></svg>
-                    <span>Configuración</span>
-                </a>
-                <a class="menu-link" href="/src/login.html">
-                    <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
-                    <span>Salir</span>
-                </a>
-                <a class="menu-link" href="http://localhost:5000/">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
-                    10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
-                    <span>CRUD</span>
-                </a>
-                <a class="menu-link icon-reportes" href="../src/main.html">
-                    <span>Volver al Inicio</span>
-                </a>
-            </nav>
-        </aside>
+    
+    <aside class="admin-sidebar" id="adminSidebar">
+        <div class="brand"><span class="brand-dot"></span><span>AURORA</span></div>
+        <nav class="menu">
+            <a class="menu-link" href="./main_menu.html"><span>Panel</span></a>
+            <a class="menu-link" href="./pedidos.html"><span>Pedidos</span></a>
+            <a class="menu-link" href="./productos_admin.html"><span>Productos</span></a>
+            <a class="menu-link" href="./clientes_admin.html"><span>Clientes</span></a>
+            <a class="menu-link" href="./reportes_admin.html"><span>Reportes</span></a>
+            <a class="menu-link" href="./cupones_admin.html"><span>Códigos de Descuento</span></a>
+            
+            <div class="menu-sep"></div>
+            
+            <a class="menu-link active" href="./config_admin.html">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58z"/></svg>
+                <span>Configuración</span>
+            </a>
+            <a class="menu-link" href="/src/login.html">
+                <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
+                <span>Salir</span>
+            </a>
+            <a class="menu-link" href="http://localhost:5000/">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
+                <span>CRUD</span>
+            </a>
+            <a class="menu-link icon-reportes" href="../src/main.html">
+                <span>Volver al Inicio</span>
+            </a>
+        </nav>
+    </aside>
 
-    <!-- Contenido principal -->
     <main class="admin-main">
-      <header class="admin-topbar"><h1>Configuración</h1></header>
+        
+        <header class="admin-topbar">
+            <div class="topbar-title-group">
+                <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+                <h1>Configuración</h1>
+            </div>
+            <div class="admin-actions">
+                <div class="admin-user">
+                    <span class="user-dot"></span><span>Admin</span>
+                </div>
+            </div>
+        </header>
 
-      <div class="settings-wrap">
-        <div class="setting-card">
-          <h2 style="margin:0 0 6px">Colores del sitio</h2>
-          <p class="muted" style="margin:0 0 12px">
-            cambio de color de la pagina 
-          </p>
+        <div class="content-scroll">
+            <div class="setting-card">
+                <h2>Colores del sitio</h2>
+                <p class="muted">Selecciona el tema visual para personalizar tu experiencia en el panel.</p>
 
-          <div class="theme-grid" data-theme-picker>
-            <!-- Tema Aurora -->
-            <label class="theme-option">
-              <input type="radio" name="theme" value="aurora" />
-              <div>
-                <strong>Color Base</strong><br>
-                <span class="muted">Predeterminado</span>
-              </div>
-              <div class="swatches">
-                <span class="dot" style="background:#FAFFF2"></span>
-                <span class="dot" style="background:#C7AA5B"></span>
-                <span class="dot" style="background:#1B1613"></span>
-              </div>
-            </label>
+                <div class="theme-grid" data-theme-picker>
+                    
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="aurora" checked />
+                        <div>
+                            <strong>Aurora</strong><br>
+                            <span class="muted">Predeterminado</span>
+                        </div>
+                        <div class="swatches">
+                            <span class="dot" style="background:#FAFFF2"></span>
+                            <span class="dot" style="background:#C7AA5B"></span>
+                            <span class="dot" style="background:#1B1613"></span>
+                        </div>
+                    </label>
 
-             <!-- Tema Olive -->
-              <label class="theme-option">
-              <input type="radio" name="theme" value="olive" />
-              <div>
-               <strong>Olive</strong><br>
-                <span class="muted">Natural y elegante</span>
-              </div>
-              <div class="swatches">
-                <span class="dot" style="background:#fafaf5"></span> <!-- fondo claro -->
-                <span class="dot" style="background:#a3b18a"></span> <!-- acento -->
-                <span class="dot" style="background:#344e41"></span> <!-- oscuro -->
-              </div>
-            </label>
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="olive" />
+                        <div>
+                            <strong>Olive</strong><br>
+                            <span class="muted">Natural y elegante</span>
+                        </div>
+                        <div class="swatches">
+                            <span class="dot" style="background:#fafaf5"></span>
+                            <span class="dot" style="background:#a3b18a"></span>
+                            <span class="dot" style="background:#344e41"></span>
+                        </div>
+                    </label>
 
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="noir" />
+                        <div>
+                            <strong>Noir</strong><br>
+                            <span class="muted">Oscuro y elegante</span>
+                        </div>
+                        <div class="swatches">
+                            <span class="dot" style="background:#18181b"></span>
+                            <span class="dot" style="background:#27272a"></span>
+                            <span class="dot" style="background:#c084fc"></span>
+                        </div>
+                    </label>
 
-            <!-- Tema Noir -->
-            <label class="theme-option">
-              <input type="radio" name="theme" value="noir" />
-              <div><strong>Noir</strong><br><span class="muted">Oscuro y elegante</span></div>
-              <div class="swatches">
-                <span class="dot" style="background:#18181b"></span>
-                <span class="dot" style="background:#27272a"></span>
-                <span class="dot" style="background:#c084fc"></span>
-              </div>
-            </label>
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="ocean" />
+                        <div>
+                            <strong>Ocean</strong><br>
+                            <span class="muted">Limpio y moderno</span>
+                        </div>
+                        <div class="swatches">
+                            <span class="dot" style="background:#0e1722"></span>
+                            <span class="dot" style="background:#4ea3ff"></span>
+                            <span class="dot" style="background:#eff5fb"></span>
+                        </div>
+                    </label>
 
-            <!-- Tema Ocean -->
-            <label class="theme-option">
-              <input type="radio" name="theme" value="ocean" />
-              <div><strong>Ocean</strong><br><span class="muted">Limpio y moderno</span></div>
-              <div class="swatches">
-                <span class="dot" style="background:#0e1722"></span>
-                <span class="dot" style="background:#4ea3ff"></span>
-                <span class="dot" style="background:#eff5fb"></span>
-              </div>
-            </label>
-          </div>
+                </div>
+            </div>
         </div>
-      </div>
     </main>
   </div>
 
-  <!-- Script global del tema -->
   <script type="module" src="../Public/js/colores.js"></script>
   <script type="module" src="../Public/js/geolocation.js"></script>
+  
+  <script>
+      // Script simple para el toggle del sidebar
+      const sidebarToggle = document.getElementById("sidebarToggle");
+      const sidebar = document.getElementById("adminSidebar");
+      if(sidebarToggle && sidebar) {
+          sidebarToggle.addEventListener("click", () => {
+              sidebar.classList.toggle("collapsed");
+          });
+      }
+  </script>
 </body>
 </html>

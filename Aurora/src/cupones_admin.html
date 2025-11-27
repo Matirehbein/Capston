@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Aurora | Gestión de Cupones</title>
     
-    <link rel="stylesheet" href="/Public/Css/style.css"/>
+    <link rel="stylesheet" href="../Public/Css/style.css"/>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -383,11 +383,10 @@
                         <th>Uso</th>
                         <th>Vigencia</th>
                         <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
+                        </tr>
                 </thead>
                 <tbody id="tablaCuponesBody">
-                    <tr><td colspan="8" style="text-align: center; padding: 20px;">Cargando datos...</td></tr>
+                    <tr><td colspan="7" style="text-align: center; padding: 20px;">Cargando datos...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -397,93 +396,70 @@
     </main>
   </div>
 
-  <div class="modal-overlay" id="modalUso">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modalTitulo">Detalle de Uso</h2>
-            <button class="modal-close-btn" onclick="cerrarModal()">✕</button>
-        </div>
-
-        <div class="modal-body">
-            <div style="margin-bottom: 20px;">
-                <h3 class="modal-section-title">Filtros</h3>
-                <p style="margin: 0 0 10px 0; color: #555;">Filtrar historial por sucursal:</p>
-                <select id="modalSucursalFilter" class="simple-select" style="width: 100%;">
-                    <option value="all">Todas las sucursales</option>
-                </select>
-            </div>
-
-            <h3 class="modal-section-title">Historial</h3>
-            <table class="admin-table" style="border: 1px solid #eee;">
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Cliente</th>
-                        <th>Sucursal</th>
-                        <th>Pedido</th>
-                        <th>Monto</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaUsoBody">
-                </tbody>
-            </table>
-        </div>
-    </div>
-  </div>
-
   <script type="module" src="../Public/js/colores.js"></script>
 
   <script>
     // --- LÓGICA JAVASCRIPT ---
+    const API_URL = "http://localhost:5000"; 
     
-    // Mock Data
-    const sucursalesData = [
-        { id: 1, nombre: "Aurora Centro" },
-        { id: 2, nombre: "Aurora Norte" },
-        { id: 3, nombre: "Web Online" }
-    ];
-
-    const cuponesData = [
-        { id: 6, codigo: "HOLAAUR", nombre: "Promo Usuarios Nuevos", desc: "Compras > $10.000", tipo: "pct", valor: 50, usos: 15, max: 100, inicio: "2025-11-26", fin: "2025-12-27", estado: "activo" },
-        { id: 5, codigo: "AURORA25", nombre: "Descuento Primavera", desc: "Solo usuarios nuevos", tipo: "pct", valor: 20, usos: 45, max: 100, inicio: "2025-11-27", fin: "2025-12-27", estado: "activo" },
-        { id: 3, codigo: "HOLAMUNDO", nombre: "Flash Sale", desc: "Todo tienda", tipo: "fijo", valor: 5000, usos: 100, max: 100, inicio: "2025-11-01", fin: "2025-11-25", estado: "finalizado" },
-        { id: 2, codigo: "VERANO25", nombre: "Adelanto Verano", desc: "Trajes de baño", tipo: "pct", valor: 10, usos: 2, max: 50, inicio: "2025-12-01", fin: "2026-01-01", estado: "pausado" }
-    ];
-
-    const historialUsoData = [
-        { cupon_id: 6, fecha: "26-11-2025 14:30", cliente: "Tomas Figueroa", sucursal_id: 1, pedido_id: 228, total: 271470 },
-        { cupon_id: 6, fecha: "26-11-2025 15:00", cliente: "Vicente Morales", sucursal_id: 1, pedido_id: 229, total: 15000 },
-        { cupon_id: 5, fecha: "26-11-2025 10:15", cliente: "Matias Hernandez", sucursal_id: 2, pedido_id: 203, total: 47594 },
-        { cupon_id: 3, fecha: "20-11-2025 09:00", cliente: "Ana Perez", sucursal_id: 3, pedido_id: 180, total: 50000 },
-        { cupon_id: 5, fecha: "26-11-2025 11:20", cliente: "Juan Soto", sucursal_id: 1, pedido_id: 206, total: 41638 }
-    ];
-
+    // Variable global para guardar los datos traídos de la BD
+    let allCupones = [];
     let chartInstance = null;
 
     document.addEventListener('DOMContentLoaded', () => {
-        try {
-            cargarSucursales();
-            renderTabla(cuponesData);
-            actualizarKPIs(cuponesData);
-            renderChart(cuponesData);
-        } catch (error) {
-            console.error("Error en script:", error);
+        // Inicializar toggle sidebar
+        const sidebarToggle = document.getElementById("sidebarToggle");
+        const sidebar = document.getElementById("adminSidebar");
+        if(sidebarToggle && sidebar) {
+            sidebarToggle.addEventListener("click", () => sidebar.classList.toggle("collapsed"));
         }
+
+        cargarSucursales();
+        cargarCuponesReales(); // <--- Aquí llamamos a la función que conecta con la BD
     });
 
+    // Carga de sucursales (por ahora mock, pero se puede conectar a API)
     function cargarSucursales() {
         const select = document.getElementById('sucursalFilter');
-        const modalSelect = document.getElementById('modalSucursalFilter');
-        
+        const sucursalesData = [
+            { id: 1, nombre: "Aurora Centro" },
+            { id: 2, nombre: "Aurora Norte" },
+            { id: 3, nombre: "Web Online" }
+        ];
         sucursalesData.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.id;
             opt.textContent = s.nombre;
             select.appendChild(opt);
-
-            const opt2 = opt.cloneNode(true);
-            modalSelect.appendChild(opt2);
         });
+    }
+
+    // --- FUNCIÓN CLAVE: TRAER DATOS DE LA BD ---
+    async function cargarCuponesReales() {
+        const tbody = document.getElementById('tablaCuponesBody');
+        
+        try {
+            // Hacemos la petición al backend para obtener los cupones reales y sus usos reales
+            // Asumimos que el backend devuelve un JSON con la lista de cupones y un campo 'usos' calculado
+            const response = await fetch(`${API_URL}/api/admin/cupones`, {
+                method: 'GET',
+                credentials: 'include' 
+            });
+
+            if (!response.ok) throw new Error("Error al obtener cupones de la base de datos");
+
+            const data = await response.json();
+            allCupones = data; // Guardamos los datos reales
+
+            renderTabla(allCupones);
+            actualizarKPIs(allCupones);
+            renderChart(allCupones);
+
+        } catch (error) {
+            console.error("Error:", error);
+            // Si falla la conexión, mostramos un mensaje en la tabla
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red; padding:20px;">Error de conexión: ${error.message}</td></tr>`;
+        }
     }
 
     function renderTabla(data) {
@@ -491,41 +467,65 @@
         tbody.innerHTML = '';
 
         if(data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">No se encontraron cupones.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No se encontraron cupones.</td></tr>';
             return;
         }
 
         data.forEach(c => {
-            const valorFmt = c.tipo === 'pct' ? `${c.valor}%` : `$${c.valor.toLocaleString()}`;
-            const pctUso = Math.round((c.usos / c.max) * 100);
+            // Mapeo de datos: Ajusta los nombres de las propiedades según tu base de datos
+            // Por ejemplo, si en tu BD es 'nombre_promocion', úsalo aquí.
+            const nombre = c.nombre_promocion || c.nombre || 'Sin nombre';
+            const descripcion = c.descripcion || '';
+            const id = c.id_cupon || c.id;
             
+            // Formateo de descuento
+            let valorFmt = '';
+            if (c.tipo_descuento === 'porcentaje' || c.tipo === 'pct') {
+                valorFmt = `${parseInt(c.valor_descuento || c.valor)}% OFF`;
+            } else {
+                valorFmt = `$${parseInt(c.valor_descuento || c.valor).toLocaleString()} OFF`;
+            }
+            
+            // Uso Real (Debe venir del backend ya contado)
+            const usosReales = c.usos_actuales || c.usos || 0; 
+            const maxUso = c.limite_uso || c.max || 100;
+            const pctBarra = maxUso > 0 ? Math.min(100, Math.round((usosReales / maxUso) * 100)) : 0;
+            
+            // Colores según estado
+            let badgeClass = 'status-pausado'; 
+            const estadoLower = (c.estado || '').toLowerCase();
+            if(estadoLower === 'activo') badgeClass = 'status-activo';
+            if(estadoLower === 'finalizado' || estadoLower === 'inactivo') badgeClass = 'status-finalizado';
+
+            // Fechas
+            const inicio = c.fecha_inicio ? new Date(c.fecha_inicio).toLocaleDateString() : 'N/A';
+            const fin = c.fecha_fin ? new Date(c.fecha_fin).toLocaleDateString() : 'N/A';
+
+            // Barra de progreso
             const progressBar = `
                 <div style="display:flex; align-items:center; gap:8px;">
                     <div style="flex:1; height:6px; background:#eee; border-radius:3px; overflow:hidden;">
-                        <div style="width:${pctUso}%; background:#d4a017; height:100%;"></div>
+                        <div style="width:${pctBarra}%; background:#d4a017; height:100%;"></div>
                     </div>
-                    <span style="font-size:0.8rem; color:#777;">${c.usos}/${c.max}</span>
+                    <span style="font-size:0.8rem; color:#777;">${usosReales}/${maxUso}</span>
                 </div>
             `;
 
+            // Construcción de la fila (SIN ACCIONES)
             const row = `
                 <tr>
-                    <td>#${c.id}</td>
+                    <td>#${id}</td>
                     <td style="font-weight:bold; color:#333;">${c.codigo}</td>
                     <td>
-                        <div style="font-weight:600; color:#333;">${c.nombre}</div>
-                        <div style="font-size:0.85rem; color:#777;">${c.desc}</div>
+                        <div style="font-weight:600; color:#333;">${nombre}</div>
+                        <div style="font-size:0.85rem; color:#777;">${descripcion}</div>
                     </td>
-                    <td style="color:#d4a017; font-weight:bold;">${valorFmt} OFF</td>
+                    <td style="color:#d4a017; font-weight:bold;">${valorFmt}</td>
                     <td style="min-width:120px;">${progressBar}</td>
                     <td style="font-size:0.85rem;">
-                        ${c.inicio} <br> ${c.fin}
+                        ${inicio} <br> ${fin}
                     </td>
-                    <td><span class="status-badge status-${c.estado}">${c.estado.toUpperCase()}</span></td>
-                    <td>
-                        <button class="btn-action" onclick="verUso(${c.id})">Ver Uso</button>
-                        <a href="http://localhost:5000/cupones" target="_blank" class="btn-action">Editar</a>
-                    </td>
+                    <td><span class="status-badge ${badgeClass}">${c.estado || 'Desconocido'}</span></td>
                 </tr>
             `;
             tbody.innerHTML += row;
@@ -535,10 +535,10 @@
     function actualizarKPIs(data) {
         document.getElementById('kpiTotal').innerText = data.length;
         
-        const totalUsos = data.reduce((acc, curr) => acc + curr.usos, 0);
+        const totalUsos = data.reduce((acc, curr) => acc + (curr.usos_actuales || curr.usos || 0), 0);
         document.getElementById('kpiCanjes').innerText = totalUsos;
 
-        const totalMax = data.reduce((acc, curr) => acc + curr.max, 0);
+        const totalMax = data.reduce((acc, curr) => acc + (curr.limite_uso || curr.max || 0), 0);
         const tasa = totalMax > 0 ? ((totalUsos / totalMax) * 100).toFixed(1) : 0;
         document.getElementById('kpiTasa').innerText = tasa + "%";
     }
@@ -546,7 +546,7 @@
     function renderChart(data) {
         const ctx = document.getElementById('cuponesChart').getContext('2d');
         const labels = data.map(c => c.codigo);
-        const dataUsos = data.map(c => c.usos);
+        const dataUsos = data.map(c => c.usos_actuales || c.usos || 0);
 
         if (chartInstance) chartInstance.destroy();
 
@@ -555,7 +555,7 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Cantidad de Usos',
+                    label: 'Canjes Reales',
                     data: dataUsos,
                     backgroundColor: 'rgba(212, 160, 23, 0.6)',
                     borderColor: 'rgba(212, 160, 23, 1)',
@@ -577,72 +577,23 @@
         });
     }
 
-    // Se expone al objeto window para que el HTML pueda llamar la funcion
+    // Filtros
     window.filtrarEstado = function(estado, btn) {
         document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
         if (estado === 'todos') {
-            renderTabla(cuponesData);
+            renderTabla(allCupones);
         } else {
-            const filtrados = cuponesData.filter(c => c.estado === estado);
+            const filtrados = allCupones.filter(c => (c.estado || '').toLowerCase() === estado);
             renderTabla(filtrados);
         }
     }
 
     window.actualizarDashboard = function() {
+        // Aquí iría la lógica para filtrar por sucursal si el backend lo soporta
         const sucursalId = document.getElementById('sucursalFilter').value;
-        if (sucursalId === 'all') {
-            renderChart(cuponesData);
-        } else {
-            const dataFiltrada = cuponesData.map(c => {
-                const usosEnSucursal = historialUsoData.filter(h => h.cupon_id === c.id && h.sucursal_id == sucursalId).length;
-                return { ...c, usos: usosEnSucursal };
-            });
-            renderChart(dataFiltrada);
-        }
-    }
-
-    // --- MODAL ---
-    window.verUso = function(cuponId) {
-        const cupon = cuponesData.find(c => c.id === cuponId);
-        document.getElementById('modalTitulo').innerText = `Uso del Cupón: ${cupon.codigo}`;
-        
-        const tbody = document.getElementById('tablaUsoBody');
-        tbody.innerHTML = '';
-
-        const usos = historialUsoData.filter(h => h.cupon_id === cuponId);
-
-        if (usos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No registra usos aún.</td></tr>';
-        } else {
-            usos.forEach(u => {
-                const suc = sucursalesData.find(s => s.id === u.sucursal_id)?.nombre || 'Desconocida';
-                const row = `
-                    <tr>
-                        <td>${u.fecha}</td>
-                        <td><b>${u.cliente}</b></td>
-                        <td>${suc}</td>
-                        <td style="color:#d4a017; font-weight:bold;">#${u.pedido_id}</td>
-                        <td>$${u.total.toLocaleString()}</td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        }
-
-        document.getElementById('modalUso').style.display = 'flex';
-    }
-
-    window.cerrarModal = function() {
-        document.getElementById('modalUso').style.display = 'none';
-    }
-
-    window.onclick = function(event) {
-        const modal = document.getElementById('modalUso');
-        if (event.target == modal) {
-            modal.style.display = "none";
-        }
+        console.log("Filtro por sucursal:", sucursalId);
     }
   </script>
 </body>
