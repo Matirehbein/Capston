@@ -2,290 +2,219 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Aurora | Gestión de Cupones</title>
     
     <link rel="stylesheet" href="../Public/Css/style.css"/>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* =========================================
-           ESTILOS IDÉNTICOS A PRODUCTOS_ADMIN.HTML
+           ESTILOS UNIFICADOS (Idéntico a Productos/Reportes)
            ========================================= */
 
-        /* Variables del tema (Copiadas de Productos) */
         :root {
             --sidebar-width: 260px;
             --header-height: 60px;
             --primary-gold: #d4a017;
             --bg-dark: #1a1a1a;
-            --bg-header: #2c241b; /* Café oscuro */
+            --bg-header: #2c241b;
             --bg-light: #f8f9fa;
             --text-muted: #aaa;
         }
 
         body {
+            margin: 0; padding: 0;
+            font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg-light);
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            margin: 0;
-            overflow: hidden;
+            height: 100vh; /* Altura total de la ventana */
+            overflow: hidden; /* Evita doble scroll en el body */
         }
 
-        /* Layout Flex */
         .admin-layout {
             display: flex;
             width: 100%;
-            height: 100vh;
+            height: 100%; /* Ocupa toda la altura del body */
         }
 
-        /* Sidebar Oscura */
+        /* --- SIDEBAR --- */
         .admin-sidebar {
             width: var(--sidebar-width);
+            flex-shrink: 0;
+            height: 100%; /* Altura completa */
+            overflow-y: auto;
             background-color: var(--bg-dark);
             color: #e0e0e0;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            height: 100%;
-            overflow-y: auto;
+            display: flex; flex-direction: column;
+            z-index: 100;
         }
 
         .brand {
             height: var(--header-height);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            letter-spacing: 1px;
-            color: #e8d5b5;
+            display: flex; align-items: center; padding: 0 20px;
+            color: #e8d5b5; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px;
+            flex-shrink: 0; /* No se encoge */
         }
-        .brand-dot {
-            width: 8px; height: 8px; background: #e8d5b5;
-            border-radius: 50%; margin-right: 10px;
-        }
+        .brand-dot { width: 8px; height: 8px; background: #e8d5b5; border-radius: 50%; margin-right: 10px; }
 
-        .menu { flex: 1; padding: 20px 0; }
+        .menu { flex: 1; padding: 20px 0; overflow-y: auto; /* Menú scrolleable si es muy largo */ }
 
         .menu-link {
-            display: flex;
-            align-items: center;
-            padding: 12px 20px;
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: 0.2s;
-            font-size: 0.95rem;
-            gap: 10px;
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 20px; color: var(--text-muted); text-decoration: none;
+            font-size: 0.95rem; border-left: 3px solid transparent; transition: 0.2s;
         }
-        .menu-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
-        
+        .menu-link:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
         .menu-link.active {
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            border-left: 3px solid var(--primary-gold);
+            background-color: rgba(255,255,255,0.1); color: #fff; border-left: 3px solid var(--primary-gold);
         }
-        
         .menu-link svg { width: 20px; height: 20px; fill: currentColor; opacity: 0.7; }
         .menu-link.active svg { fill: var(--primary-gold); opacity: 1; }
-        
-        .menu-sep { height: 1px; background: #333; margin: 10px 20px; }
 
-        /* Main Content */
+        .menu-sep { height: 1px; background: #333; margin: 10px 20px; flex-shrink: 0; }
+
+        /* --- MAIN CONTENT (Área Principal) --- */
         .admin-main {
-            flex: 1;
+            flex: 1; /* Ocupa el resto del ancho */
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            height: 100%; /* Altura completa */
+            overflow: hidden; /* El scroll lo manejará el hijo directo */
             background-color: var(--bg-light);
         }
 
-        /* Topbar Oscura (Igual a Productos) */
+        /* --- TOPBAR --- */
         .admin-topbar {
             height: var(--header-height);
             background-color: var(--bg-header);
             border-bottom: 1px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 25px;
-            color: #fff;
-            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 25px; color: #fff;
+            flex-shrink: 0; /* Altura fija, no se encoge */
         }
-        .admin-topbar h1 { font-size: 1.1rem; margin: 0; color: #e8d5b5; }
+        .topbar-title-group { display: flex; align-items: center; gap: 20px; }
+        .topbar-title-group h1 { margin: 0; font-size: 1.1rem; color: #e8d5b5; font-weight: 600; }
+        
+        .sidebar-toggle { background: none; border: none; color: #e8d5b5; font-size: 1.5rem; cursor: pointer; margin-right: 15px; }
 
         .admin-actions { display: flex; align-items: center; gap: 15px; }
         .admin-user { font-size: 0.9rem; opacity: 0.8; display: flex; align-items: center; gap: 5px; }
         .user-dot { width: 8px; height: 8px; background: #28a745; border-radius: 50%; }
 
-        /* Subtop (Filtros) - Igual a Productos */
+        /* --- SUBTOP (FILTROS) --- */
         .admin-subtop {
             padding: 20px 25px 10px 25px;
             background-color: #fff;
             border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between; /* Para separar filtros del select de sucursal */
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 10px;
+            flex-shrink: 0; /* Altura según contenido, no se encoge */
         }
-        
-        .filter-row { 
-            display: flex; 
-            gap: 10px; 
-            flex-wrap: nowrap;
-        }
+        .filter-row { display: flex; gap: 10px; flex-wrap: nowrap; overflow-x: auto; }
         
         .pill {
-            padding: 6px 14px;
-            border-radius: 20px;
-            border: 1px solid #ddd;
-            background: #fff;
-            color: #555;
-            cursor: pointer;
-            font-size: 0.9rem;
-            white-space: nowrap;
-            transition: 0.2s;
+            padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: #fff; color: #555;
+            cursor: pointer; font-size: 0.9rem; white-space: nowrap; transition: 0.2s;
         }
         .pill:hover, .pill.active {
-            background-color: #e8d5b5;
-            color: #2c241b;
-            border-color: #d4a017;
-            font-weight: 600;
+            background-color: #e8d5b5; color: #2c241b; border-color: #d4a017; font-weight: 600;
         }
+        .simple-select { padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd; color: #555; font-size: 0.9rem; }
 
-        /* Select estilo "Productos" */
-        .simple-select {
-            padding: 6px 12px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            color: #555;
-            font-size: 0.9rem;
-        }
-
-        /* Scroll Area para contenido extra (KPIs + Tabla) */
-        .content-scroll {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
+        /* --- CONTENT SCROLL (Contenedor Scrolleable Principal) --- */
+        .content-scroll { 
+            flex: 1; /* Ocupa todo el espacio restante verticalmente */
+            overflow-y: auto; /* Habilita el scroll vertical AQUÍ */
+            display: flex; 
             flex-direction: column;
+            padding-bottom: 40px; /* Espacio al final para que no quede pegado */
         }
 
-        /* KPIs (Adaptados visualmente para encajar con el tema) */
+        /* --- KPIs --- */
         .kpi-section {
             padding: 20px 25px 0 25px;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
+            flex-shrink: 0; /* No se encoge */
         }
-
         .kpi-card {
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border-left: 4px solid #e8d5b5; /* Dorado suave */
+            background: #fff; padding: 20px; border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #ccc;
         }
+        #kpi-total-card { border-left-color: #0d6efd; }
+        #kpi-usos-card { border-left-color: #ffc107; }
+        #kpi-tasa-card { border-left-color: #198754; }
+
         .kpi-title { font-size: 0.85rem; color: #777; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
         .kpi-val { font-size: 1.8rem; font-weight: 700; color: #333; margin-top: 5px; display: block; }
 
-        /* Chart Section */
-        .chart-section {
-            padding: 20px 25px;
-        }
+        /* --- CHART --- */
+        .chart-section { padding: 20px 25px; flex-shrink: 0; }
         .chart-box {
+            background: #fff; padding: 20px; border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; height: 280px;
+        }
+
+        /* --- TABLA (Estilo Card) --- */
+        .table-wrap {
+            margin: 0 25px 25px 25px;
             background: #fff;
-            padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             border: 1px solid #eee;
-            height: 250px;
+            /* La tabla crecerá lo que necesite */
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Contenedor interno para el scroll horizontal de la tabla si es necesario */
+        .table-responsive {
+            overflow-x: auto;
+            width: 100%;
         }
 
-        /* Tabla (Idéntica a Productos) */
-        .table-wrap {
-            padding: 0 25px 25px 25px;
-        }
         .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border-radius: 8px;
-            overflow: hidden;
+            width: 100%; 
+            border-collapse: collapse; 
+            min-width: 900px; /* Ancho mínimo para asegurar legibilidad */
         }
+        
         .admin-table th {
-            background-color: #fcf8f3; /* Beige suave de Productos */
-            text-align: left;
-            padding: 12px 15px;
-            border-bottom: 2px solid #eee;
-            color: #5a4a3a;
-            font-weight: 600;
+            background-color: #fcf8f3; 
+            text-align: left; 
+            padding: 15px;
+            border-bottom: 2px solid #eee; 
+            color: #5a4a3a; 
+            font-weight: 600; 
             font-size: 0.9rem;
+            white-space: nowrap;
+            position: sticky; /* Títulos fijos al scrollear la tabla (opcional) */
+            top: 0;
+            z-index: 10;
         }
+        
         .admin-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #f0f0f0;
-            color: #333;
-            vertical-align: middle;
+            padding: 15px; 
+            border-bottom: 1px solid #f0f0f0; 
+            color: #333; 
+            vertical-align: middle; 
             font-size: 0.9rem;
         }
+        
+        .admin-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
         .admin-table tbody tr:hover { background-color: #f9f9f9; }
 
         /* Badges */
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; display: inline-block; min-width: 80px; text-align: center; }
         .status-activo { background: #d4edda; color: #155724; }
         .status-finalizado { background: #f8d7da; color: #721c24; }
         .status-pausado { background: #fff3cd; color: #856404; }
-
-        .btn-action {
-            padding: 5px 10px;
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            color: #333;
-            text-decoration: none;
-            margin-right: 5px;
-        }
-        .btn-action:hover { background: #eee; }
-
-        /* Modal (Estilo Productos) */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none; justify-content: center; align-items: center;
-            z-index: 2000;
-        }
-        .modal-content {
-            background: #fff;
-            width: 800px; max-width: 90%; max-height: 85vh;
-            border-radius: 8px;
-            display: flex; flex-direction: column;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-        .modal-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid #eee;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .modal-header h2 { margin: 0; font-size: 1.3rem; color: #333; }
-        .modal-close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #777; }
-        
-        .modal-body { padding: 20px; overflow-y: auto; }
-        
-        .modal-section-title {
-            color: var(--primary-gold);
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
-            margin-top: 0; margin-bottom: 15px;
-            font-size: 1.1rem;
-        }
 
     </style>
 </head>
@@ -305,21 +234,10 @@
             
             <div class="menu-sep"></div>
             
-            <a class="menu-link" href="./config_admin.html">
-                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58z"/></svg>
-                <span>Configuración</span>
-            </a>
-            <a class="menu-link" href="/src/login.html">
-                <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
-                <span>Salir</span>
-            </a>
-            <a class="menu-link" href="http://localhost:5000/">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
-                <span>CRUD</span>
-            </a>
-            <a class="menu-link icon-reportes" href="../src/main.html">
-                <span>Volver al Inicio</span>
-            </a>
+            <a class="menu-link" href="./config_admin.html"><span>Configuración</span></a>
+            <a class="menu-link" href="/src/login.html"><span>Salir</span></a>
+            <a class="menu-link" href="http://localhost:5000/"><span>CRUD</span></a>
+            <a class="menu-link icon-reportes" href="../src/main.html"><span>Volver al Inicio</span></a>
         </nav>
     </aside>
 
@@ -329,10 +247,8 @@
         <button class="sidebar-toggle" id="sidebarToggle" style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; margin-right:15px;">☰</button>
         <h1>Cupones de Descuento</h1>
 
-        <div class="admin-actions" style="display: flex; align-items: center; gap: 15px;">
-          <div class="admin-user" style="display: flex; align-items: center; gap: 5px; font-size: 0.9rem;">
-            <span class="user-dot"></span><span>Admin</span>
-          </div>
+        <div class="admin-actions">
+          <div class="admin-user"><span class="user-dot"></span><span>Admin</span></div>
         </div>
       </header>
 
@@ -352,15 +268,15 @@
       <div class="content-scroll">
         
         <div class="kpi-section">
-            <div class="kpi-card">
+            <div class="kpi-card" id="kpi-total-card">
                 <span class="kpi-title">Cupones Totales</span>
                 <span class="kpi-val" id="kpiTotal">0</span>
             </div>
-            <div class="kpi-card">
-                <span class="kpi-title">Total Canjes</span>
+            <div class="kpi-card" id="kpi-usos-card">
+                <span class="kpi-title">Total Canjes (Reales)</span>
                 <span class="kpi-val" id="kpiCanjes">0</span>
             </div>
-            <div class="kpi-card">
+            <div class="kpi-card" id="kpi-tasa-card">
                 <span class="kpi-title">Tasa Efectividad</span>
                 <span class="kpi-val" id="kpiTasa">0%</span>
             </div>
@@ -373,22 +289,24 @@
         </div>
 
         <div class="table-wrap">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Código</th>
-                        <th>Nombre / Regla</th>
-                        <th>Descuento</th>
-                        <th>Uso</th>
-                        <th>Vigencia</th>
-                        <th>Estado</th>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Código</th>
+                            <th>Nombre / Regla</th>
+                            <th>Descuento</th>
+                            <th style="width: 180px;">Uso (Pagados)</th>
+                            <th>Vigencia</th>
+                            <th>Estado</th>
                         </tr>
-                </thead>
-                <tbody id="tablaCuponesBody">
-                    <tr><td colspan="7" style="text-align: center; padding: 20px;">Cargando datos...</td></tr>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody id="tablaCuponesBody">
+                        <tr><td colspan="7" style="text-align: center; padding: 20px;">Cargando datos reales...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
       </div>
@@ -399,57 +317,65 @@
   <script type="module" src="../Public/js/colores.js"></script>
 
   <script>
-    // --- LÓGICA JAVASCRIPT ---
+    // --- LÓGICA JAVASCRIPT (SIN CAMBIOS, SOLO COPIADA) ---
     const API_URL = "http://localhost:5000"; 
     
-    // Variable global para guardar los datos traídos de la BD
-    let allCupones = [];
+    let allCupones = []; 
     let chartInstance = null;
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Inicializar toggle sidebar
         const sidebarToggle = document.getElementById("sidebarToggle");
         const sidebar = document.getElementById("adminSidebar");
         if(sidebarToggle && sidebar) {
             sidebarToggle.addEventListener("click", () => sidebar.classList.toggle("collapsed"));
         }
 
-        cargarSucursales();
-        cargarCuponesReales(); // <--- Aquí llamamos a la función que conecta con la BD
+        cargarSucursalesReales();
+        cargarCuponesReales('all');
     });
 
-    // Carga de sucursales (por ahora mock, pero se puede conectar a API)
-    function cargarSucursales() {
+    async function cargarSucursalesReales() {
         const select = document.getElementById('sucursalFilter');
-        const sucursalesData = [
-            { id: 1, nombre: "Aurora Centro" },
-            { id: 2, nombre: "Aurora Norte" },
-            { id: 3, nombre: "Web Online" }
-        ];
-        sucursalesData.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.id;
-            opt.textContent = s.nombre;
-            select.appendChild(opt);
-        });
+        try {
+            const response = await fetch(`${API_URL}/api/sucursales_con_coords`); 
+            if (!response.ok) throw new Error("Error cargando sucursales");
+            
+            const sucursales = await response.json();
+            
+            select.innerHTML = '<option value="all">Todas las Sucursales</option>';
+            
+            sucursales.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id_sucursal; 
+                opt.textContent = s.nombre_sucursal; 
+                select.appendChild(opt);
+            });
+
+        } catch (error) {
+            console.error("Error al cargar sucursales:", error);
+            select.innerHTML = '<option value="all">Todas las Sucursales (Error)</option>';
+        }
     }
 
-    // --- FUNCIÓN CLAVE: TRAER DATOS DE LA BD ---
-    async function cargarCuponesReales() {
+    async function cargarCuponesReales(sucursalId = 'all') {
         const tbody = document.getElementById('tablaCuponesBody');
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">Cargando datos...</td></tr>';
         
         try {
-            // Hacemos la petición al backend para obtener los cupones reales y sus usos reales
-            // Asumimos que el backend devuelve un JSON con la lista de cupones y un campo 'usos' calculado
-            const response = await fetch(`${API_URL}/api/admin/cupones`, {
+            const url = new URL(`${API_URL}/api/admin/cupones`);
+            if (sucursalId && sucursalId !== 'all') {
+                url.searchParams.append('sucursal_id', sucursalId);
+            }
+
+            const response = await fetch(url, {
                 method: 'GET',
                 credentials: 'include' 
             });
 
-            if (!response.ok) throw new Error("Error al obtener cupones de la base de datos");
+            if (!response.ok) throw new Error("Error al obtener cupones");
 
             const data = await response.json();
-            allCupones = data; // Guardamos los datos reales
+            allCupones = data; 
 
             renderTabla(allCupones);
             actualizarKPIs(allCupones);
@@ -457,7 +383,6 @@
 
         } catch (error) {
             console.error("Error:", error);
-            // Si falla la conexión, mostramos un mensaje en la tabla
             tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red; padding:20px;">Error de conexión: ${error.message}</td></tr>`;
         }
     }
@@ -472,13 +397,10 @@
         }
 
         data.forEach(c => {
-            // Mapeo de datos: Ajusta los nombres de las propiedades según tu base de datos
-            // Por ejemplo, si en tu BD es 'nombre_promocion', úsalo aquí.
-            const nombre = c.nombre_promocion || c.nombre || 'Sin nombre';
+            const nombre = c.nombre_promocion || c.nombre_cupon || c.nombre || 'Sin nombre';
             const descripcion = c.descripcion || '';
             const id = c.id_cupon || c.id;
             
-            // Formateo de descuento
             let valorFmt = '';
             if (c.tipo_descuento === 'porcentaje' || c.tipo === 'pct') {
                 valorFmt = `${parseInt(c.valor_descuento || c.valor)}% OFF`;
@@ -486,46 +408,41 @@
                 valorFmt = `$${parseInt(c.valor_descuento || c.valor).toLocaleString()} OFF`;
             }
             
-            // Uso Real (Debe venir del backend ya contado)
-            const usosReales = c.usos_actuales || c.usos || 0; 
-            const maxUso = c.limite_uso || c.max || 100;
+            const usosReales = c.usos_actuales || 0; 
+            const maxUso = c.limite_uso || c.usos_max || 100;
             const pctBarra = maxUso > 0 ? Math.min(100, Math.round((usosReales / maxUso) * 100)) : 0;
             
-            // Colores según estado
             let badgeClass = 'status-pausado'; 
             const estadoLower = (c.estado || '').toLowerCase();
             if(estadoLower === 'activo') badgeClass = 'status-activo';
             if(estadoLower === 'finalizado' || estadoLower === 'inactivo') badgeClass = 'status-finalizado';
 
-            // Fechas
-            const inicio = c.fecha_inicio ? new Date(c.fecha_inicio).toLocaleDateString() : 'N/A';
-            const fin = c.fecha_fin ? new Date(c.fecha_fin).toLocaleDateString() : 'N/A';
+            const inicio = c.fecha_inicio ? new Date(c.fecha_inicio).toLocaleDateString('es-CL') : 'N/A';
+            const fin = c.fecha_fin ? new Date(c.fecha_fin).toLocaleDateString('es-CL') : 'N/A';
 
-            // Barra de progreso
             const progressBar = `
-                <div style="display:flex; align-items:center; gap:8px;">
+                <div style="display:flex; align-items:center; gap:8px; width: 100%;">
                     <div style="flex:1; height:6px; background:#eee; border-radius:3px; overflow:hidden;">
                         <div style="width:${pctBarra}%; background:#d4a017; height:100%;"></div>
                     </div>
-                    <span style="font-size:0.8rem; color:#777;">${usosReales}/${maxUso}</span>
+                    <span style="font-size:0.8rem; color:#777; min-width: 45px; text-align: right;">${usosReales}/${maxUso}</span>
                 </div>
             `;
 
-            // Construcción de la fila (SIN ACCIONES)
             const row = `
                 <tr>
                     <td>#${id}</td>
-                    <td style="font-weight:bold; color:#333;">${c.codigo}</td>
+                    <td style="font-weight:bold; color:#333;">${c.codigo || c.codigo_cupon}</td>
                     <td>
                         <div style="font-weight:600; color:#333;">${nombre}</div>
-                        <div style="font-size:0.85rem; color:#777;">${descripcion}</div>
+                        <div style="font-size:0.85rem; color:#777; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${descripcion}</div>
                     </td>
                     <td style="color:#d4a017; font-weight:bold;">${valorFmt}</td>
-                    <td style="min-width:120px;">${progressBar}</td>
+                    <td style="min-width:140px;">${progressBar}</td>
                     <td style="font-size:0.85rem;">
                         ${inicio} <br> ${fin}
                     </td>
-                    <td><span class="status-badge ${badgeClass}">${c.estado || 'Desconocido'}</span></td>
+                    <td><span class="status-badge ${badgeClass}">${c.estado || 'Desc'}</span></td>
                 </tr>
             `;
             tbody.innerHTML += row;
@@ -534,19 +451,17 @@
 
     function actualizarKPIs(data) {
         document.getElementById('kpiTotal').innerText = data.length;
-        
-        const totalUsos = data.reduce((acc, curr) => acc + (curr.usos_actuales || curr.usos || 0), 0);
+        const totalUsos = data.reduce((acc, curr) => acc + (curr.usos_actuales || 0), 0);
         document.getElementById('kpiCanjes').innerText = totalUsos;
-
-        const totalMax = data.reduce((acc, curr) => acc + (curr.limite_uso || curr.max || 0), 0);
+        const totalMax = data.reduce((acc, curr) => acc + (curr.limite_uso || curr.usos_max || 0), 0);
         const tasa = totalMax > 0 ? ((totalUsos / totalMax) * 100).toFixed(1) : 0;
         document.getElementById('kpiTasa').innerText = tasa + "%";
     }
 
     function renderChart(data) {
         const ctx = document.getElementById('cuponesChart').getContext('2d');
-        const labels = data.map(c => c.codigo);
-        const dataUsos = data.map(c => c.usos_actuales || c.usos || 0);
+        const labels = data.map(c => c.codigo || c.codigo_cupon);
+        const dataUsos = data.map(c => c.usos_actuales || 0);
 
         if (chartInstance) chartInstance.destroy();
 
@@ -555,7 +470,7 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Canjes Reales',
+                    label: 'Canjes Reales (Pagados)',
                     data: dataUsos,
                     backgroundColor: 'rgba(212, 160, 23, 0.6)',
                     borderColor: 'rgba(212, 160, 23, 1)',
@@ -568,7 +483,7 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: 'Rendimiento de Cupones (Usos)' }
+                    title: { display: true, text: 'Uso de Cupones (Pedidos Pagados)' }
                 },
                 scales: {
                     y: { beginAtZero: true }
@@ -577,7 +492,6 @@
         });
     }
 
-    // Filtros
     window.filtrarEstado = function(estado, btn) {
         document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -591,9 +505,8 @@
     }
 
     window.actualizarDashboard = function() {
-        // Aquí iría la lógica para filtrar por sucursal si el backend lo soporta
         const sucursalId = document.getElementById('sucursalFilter').value;
-        console.log("Filtro por sucursal:", sucursalId);
+        cargarCuponesReales(sucursalId);
     }
   </script>
 </body>

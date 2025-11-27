@@ -1517,79 +1517,106 @@ def crud_cupones():
 # --- RUTA PARA OBTENER CUPONES (CORREGIDA) ---
 @app.route('/api/admin/cupones', methods=['GET'])
 def admin_get_cupones():
+    conn = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Obtenemos el filtro de sucursal de la URL (ej: ?sucursal_id=1)
+        # 1. Filtro de sucursal (opcional)
         sucursal_id = request.args.get('sucursal_id')
-        
-        # Si es "all" o None, lo dejamos como None para SQL
         if sucursal_id == 'all' or not sucursal_id:
             sucursal_id = None
 
-        query = """
-            SELECT 
-                c.id_cupon,
-                c.codigo_cupon as codigo,
-                c.nombre_cupon as nombre_promocion,
-                c.descripcion,
-                
-                CASE 
-                    WHEN c.descuento_pct_cupon > 0 THEN 'porcentaje'
-                    ELSE 'fijo'
-                END as tipo_descuento,
-                
-                CASE 
-                    WHEN c.descuento_pct_cupon > 0 THEN c.descuento_pct_cupon
-                    ELSE c.valor_fijo
-                END as valor_descuento,
-
-                c.usos_max as limite_uso,
-                c.fecha_inicio,
-                c.fecha_fin,
-                
-                CASE 
-                    WHEN c.vigente_bool = true THEN 'activo'
-                    ELSE 'finalizado'
-                END as estado,
-
-                -- AQUÍ ESTÁ LA MAGIA DEL FILTRO:
-                -- Contamos pedidos pagados ('aprobado').
-                -- Si sucursal_id es NULL (seleccionamos 'Todas'), la parte "OR %s IS NULL" hace que ignore el filtro de sucursal.
-                -- Si sucursal_id tiene valor, filtra por p.id_sucursal.
-                (
-                    SELECT COUNT(*) 
-                    FROM pedido p
-                    JOIN pago pg ON p.id_pedido = pg.id_pedido
-                    WHERE p.id_cupon = c.id_cupon 
-                    AND pg.estado_pago = 'aprobado'
-                    AND (p.id_sucursal = %s OR %s IS NULL)
-                ) as usos_actuales
-
-            FROM cupon c
-            ORDER BY c.id_cupon DESC;
-        """
-
-        # Pasamos el sucursal_id dos veces (uno para la comparación, otro para el IS NULL)
-        cur.execute(query, (sucursal_id, sucursal_id))
+        # 2. Traemos TODOS los datos del cupón tal cual están en la BD
+        # Usamos SELECT * para evitar errores de nombres de columna
+        cur.execute("SELECT * FROM cupon ORDER BY id_cupon DESC")
         rows = cur.fetchall()
         
-        cupones = []
-        if cur.description:
-            columns = [desc[0] for desc in cur.description]
-            for row in rows:
-                cupon = dict(zip(columns, row))
-                cupones.append(cupon)
+        # Obtenemos los nombres de las columnas que devolvió la BD
+        # Esto nos permite ver si viene como "Nombre_cupon" o "nombre_cupon"
+        colnames = [desc[0] for desc in cur.description]
+        
+        cupones_final = []
+
+        for row in rows:
+            # Convertimos la fila a un diccionario Python
+            c = dict(zip(colnames, row))
+            
+            # 3. Calcular USOS REALES (Solo pedidos PAGADOS/APROBADOS)
+            # Si hay filtro de sucursal, lo aplicamos aquí
+            sql_count = """
+                SELECT COUNT(*) 
+                FROM pedido p
+                JOIN pago pg ON p.id_pedido = pg.id_pedido
+                WHERE p.id_cupon = %s 
+                AND pg.estado_pago = 'aprobado'
+            """
+            params = [c['id_cupon']]
+
+            if sucursal_id:
+                sql_count += " AND p.id_sucursal = %s"
+                params.append(sucursal_id)
+
+            cur.execute(sql_count, tuple(params))
+            usos_reales = cur.fetchone()[0]
+
+            # 4. Mapeo seguro (Python busca la llave ignorando si es mayúscula/minúscula si usamos .get)
+            # Buscamos las columnas clave con sus posibles nombres
+            
+            # Nombre del cupón
+            nombre = c.get('Nombre_cupon') or c.get('nombre_cupon') or c.get('nombre') or 'Sin Nombre'
+            
+            # Código
+            codigo = c.get('codigo_cupon') or c.get('codigo') or 'SIN-CODIGO'
+            
+            # Descuento (Tu BD tiene descuento_pct_cupon y valor_fijo)
+            pct = c.get('descuento_pct_cupon')
+            fijo = c.get('valor_fijo')
+            
+            tipo = 'fijo'
+            valor = 0
+            
+            if pct and float(pct) > 0:
+                tipo = 'porcentaje'
+                valor = pct
+            elif fijo and float(fijo) > 0:
+                tipo = 'fijo'
+                valor = fijo
+
+            # Estado
+            es_vigente = c.get('vigente_bool')
+            estado = 'activo' if es_vigente else 'finalizado'
+            
+            # Limite
+            limite = c.get('usos_max') or 100
+
+            # Construimos el objeto final para el HTML
+            cupon_obj = {
+                'id_cupon': c.get('id_cupon'),
+                'codigo': codigo,
+                'nombre_promocion': nombre,
+                'descripcion': c.get('descripcion'),
+                'tipo_descuento': tipo,
+                'valor_descuento': valor,
+                'limite_uso': limite,
+                'usos_actuales': usos_reales, # <--- EL DATO QUE PEDISTE
+                'fecha_inicio': c.get('fecha_inicio'),
+                'fecha_fin': c.get('fecha_fin'),
+                'estado': estado
+            }
+            cupones_final.append(cupon_obj)
 
         cur.close()
-        conn.close()
-        
-        return jsonify(cupones), 200
+        return jsonify(cupones_final), 200
 
     except Exception as e:
-        print(f"Error al obtener cupones: {e}")
+        # Imprimir error detallado en la consola de Python (donde corres flask)
+        print("🔴 ERROR EN API CUPONES:")
+        print(e)
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 # ===========================
 # Agregar Cupon de Descuento
 # ===========================
@@ -3246,6 +3273,73 @@ def get_reporte_kpi_pedidos():
     finally:
         if cur: cur.close()
         if conn: return_db_connection(conn)
+
+# En tu app.py
+
+# --- RUTA PARA LISTA DE NUEVOS CLIENTES (MODAL) ---
+@app.route('/api/admin/reportes/lista_nuevos_clientes', methods=['GET'])
+def lista_nuevos_clientes():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Obtener parámetros
+        periodo = request.args.get('periodo', 'mes') # hoy, semana, mes
+        sucursal_id = request.args.get('sucursal_id')
+
+        # Consulta Base: Ajusta los nombres de columnas si son diferentes en tu BD
+        # Asumo que tu tabla se llama 'usuario' y tiene 'rol' para filtrar solo clientes
+        query = """
+            SELECT 
+                id_usuario, 
+                nombre_usuario, 
+                apellido_paterno, 
+                email_usuario, 
+                creado_en 
+            FROM usuario 
+            WHERE 1=1
+        """
+        
+        # Si tienes una columna 'rol', descomenta la siguiente línea:
+        # query += " AND rol = 'cliente'"
+
+        # --- Lógica de Filtros de Tiempo (PostgreSQL) ---
+        if periodo == 'hoy':
+            # Compara la fecha de creación con la fecha de hoy
+            query += " AND creado_en::date = CURRENT_DATE"
+        elif periodo == 'semana':
+            # Desde el lunes de la semana actual
+            query += " AND creado_en >= date_trunc('week', CURRENT_DATE)"
+        elif periodo == 'mes':
+            # Desde el 1ro del mes actual
+            query += " AND creado_en >= date_trunc('month', CURRENT_DATE)"
+
+        # Nota: Generalmente los clientes son globales. 
+        # Si tu tabla 'usuario' tiene 'id_sucursal', puedes descomentar esto:
+        # if sucursal_id and sucursal_id != 'all':
+        #    query += f" AND id_sucursal = {sucursal_id}"
+
+        query += " ORDER BY creado_en DESC"
+
+        cur.execute(query)
+        rows = cur.fetchall()
+        
+        # Convertir a JSON
+        clientes = []
+        if cur.description:
+            columns = [desc[0] for desc in cur.description]
+            for row in rows:
+                cliente = dict(zip(columns, row))
+                clientes.append(cliente)
+
+        cur.close()
+        conn.close()
+        
+        return jsonify(clientes), 200
+
+    except Exception as e:
+        print(f"Error en lista_nuevos_clientes: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/admin/reportes/lista_pedidos_mes', methods=['GET'])
 @admin_required
