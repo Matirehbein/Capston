@@ -352,25 +352,20 @@
                         <span class="kpi-trend positive" id="kpi-clientes-trend">—</span>
                     </div>
                 </section>
+<!-- Filtros -->
+<div class="growth-filters">
+  <button data-range="daily" class="active">Diario</button>
+  <button data-range="weekly">Semanal</button>
+  <button data-range="monthly">Mensual</button>
+</div>
 
-                <section class="quick-grid">
-                    <a href="./pedidos.html" class="quick-card">
-                        <h4>Gestionar pedidos</h4>
-                        <p>Aprueba, prepara y despacha.</p>
-                    </a>
-                    <a href="http://localhost:5000/productos" class="quick-card">
-                        <h4>Nuevo producto</h4>
-                        <p>Crea y publica en un paso.</p>
-                    </a>
-                    <a href="./reportes_admin.html" class="quick-card">
-                        <h4>Ver reportes</h4>
-                        <p>Ventas, clientes y márgenes.</p>
-                    </a>
-                    <a href="./config_admin.html" class="quick-card">
-                        <h4>Configuración</h4>
-                        <p>Pagos, envíos y branding.</p>
-                    </a>
-                </section>
+<!-- Gráfico -->
+<div class="big-chart-container">
+  <canvas id="growthChart"></canvas>
+</div>
+
+    
+</div>
             </div>
         </main>
     </div>
@@ -615,7 +610,11 @@
             </div>
         </div>
     </div>
+<!-- 1. Librería Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- 2. Tu JS del panel -->
+<script src="../Public/js/panel_grafico.js"></script>
     <script type="module" src="../Public/js/colores.js"></script> 
     <script type="module" src="../Public/js/dashboard.js?v=1.2"></script>
 </body>
