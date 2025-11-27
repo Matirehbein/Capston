@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Aurora | Sucursales</title>
   <link rel="stylesheet" href="../Public/Css/style.css" />
+  <link 
+    rel="stylesheet" 
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script 
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
+
 </head>
 <body>
     <header>
@@ -83,39 +91,23 @@
         En <strong>Aurora</strong> contamos con distintas sucursales para que siempre tengas una cerca de ti.  
         Visítanos y vive la experiencia Aurora en persona.
       </p>
+      <div class="branches-grid" id="branchesGrid">
+        <!-- Las sucursales se cargan desde la BD por JS -->
+      </div>
 
-      <div class="branches-grid">
-        <div class="branch-card">
-          <h2>Sucursal Santiago Centro</h2>
-          <p>Av. Principal 1234, Santiago</p>
-          <p><strong>Horario:</strong> Lunes a Sábado, 10:00 - 20:00</p>
-          <p><strong>Tel:</strong> +56 2 2345 6789</p>
-        </div>
+    </div>
+    
+    <div class="map-wrapper">
+      <h2 class="map-title">Ubicación de Nuestras Sucursales</h2>
 
-        <div class="branch-card">
-          <h2>Sucursal Providencia</h2>
-          <p>Av. Providencia 456, Santiago</p>
-          <p><strong>Horario:</strong> Lunes a Sábado, 10:00 - 20:00</p>
-          <p><strong>Tel:</strong> +56 2 2234 5678</p>
-        </div>
-
-        <div class="branch-card">
-          <h2>Sucursal Viña del Mar</h2>
-          <p>Av. Libertad 789, Viña del Mar</p>
-          <p><strong>Horario:</strong> Lunes a Sábado, 10:00 - 20:00</p>
-          <p><strong>Tel:</strong> +56 32 234 5678</p>
-        </div>
-
-        <div class="branch-card">
-          <h2>Sucursal Concepción</h2>
-          <p>Av. O’Higgins 321, Concepción</p>
-          <p><strong>Horario:</strong> Lunes a Sábado, 10:00 - 20:00</p>
-          <p><strong>Tel:</strong> +56 41 234 5678</p>
-        </div>
+        <div class="map-container">
+          <div id="map"></div>
       </div>
     </div>
-  </main>
 
+
+  </main>
+  
 <!-- Footer -->
   <footer class="footer">
     <div class="container">
@@ -211,6 +203,7 @@
   <script type="module" src="/Public/Js/navigation.js"></script>
   <script type="module" src="/Public/Js/geolocation.js"></script>
   <script type="module" src="/Public/Js/colores.js"></script> 
+  <script type="module" src="/Public/Js/maps.js"></script>
 
 </body>
 </html>
