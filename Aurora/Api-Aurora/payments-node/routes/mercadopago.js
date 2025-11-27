@@ -9,7 +9,7 @@ const client = new MercadoPagoConfig({
 
 // Tu URL de ngrok (¡está correcta!)
 // 👇 Quitamos el .html para evitar que el servidor haga redirecciones y pierda los datos
-const FINAL_URL = 'https://unscandalously-unannexable-astrid.ngrok-free.dev/src/resultado';
+const FINAL_URL = 'https://janiece-unincited-openhandedly.ngrok-free.devo';
 const looksUrl = u => /^https?:\/\//i.test(u);
 
 router.post('/create', async (req, res) => {
