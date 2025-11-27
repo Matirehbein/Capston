@@ -5,162 +5,373 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Aurora | Clientes</title>
   <link rel="stylesheet" href="../Public/Css/style.css" />
+
+  <style>
+    /* Variables del tema */
+    :root {
+        --sidebar-width: 260px;
+        --header-height: 60px;
+        --primary-gold: #d4a017;
+        --bg-dark: #1a1a1a;
+        --bg-header: #2c241b;
+        --bg-light: #f8f9fa;
+        --text-muted: #aaa;
+    }
+
+    body {
+        background-color: var(--bg-light);
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        margin: 0;
+        overflow: hidden;
+    }
+
+    /* Layout Flex */
+    .admin-layout {
+        display: flex;
+        width: 100%;
+        height: 100vh;
+    }
+
+    /* Sidebar Oscura */
+    .admin-sidebar {
+        width: var(--sidebar-width);
+        background-color: var(--bg-dark);
+        color: #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    .brand {
+        height: var(--header-height);
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        letter-spacing: 1px;
+        color: #e8d5b5;
+    }
+    .brand-dot {
+        width: 8px; height: 8px; background: #e8d5b5;
+        border-radius: 50%; margin-right: 10px;
+    }
+
+    .menu { flex: 1; padding: 20px 0; }
+
+    .menu-link {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: 0.2s;
+        font-size: 0.95rem;
+        gap: 10px;
+    }
+    .menu-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    
+    .menu-link.active {
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        border-left: 3px solid var(--primary-gold);
+    }
+    
+    .menu-link svg { width: 20px; height: 20px; fill: currentColor; opacity: 0.7; }
+    .menu-link.active svg { fill: var(--primary-gold); opacity: 1; }
+    
+    .menu-sep { height: 1px; background: #333; margin: 10px 20px; }
+
+    /* Main Content */
+    .admin-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background-color: var(--bg-light);
+    }
+
+    /* Topbar Oscura */
+    .admin-topbar {
+        height: var(--header-height);
+        background-color: var(--bg-header);
+        border-bottom: 1px solid #333;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 25px;
+        color: #fff;
+        flex-shrink: 0;
+    }
+    .sidebar-toggle { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; margin-right: 15px; }
+
+    .admin-actions { display: flex; align-items: center; gap: 15px; }
+    
+    .admin-search {
+        padding: 6px 12px;
+        border-radius: 20px;
+        border: none;
+        outline: none;
+        background: #fff;
+        width: 250px;
+    }
+    .admin-user { font-size: 0.9rem; opacity: 0.8; display: flex; align-items: center; gap: 5px; }
+    .user-dot { width: 8px; height: 8px; background: #28a745; border-radius: 50%; }
+
+    /* Sección Principal */
+    .admin-section {
+        flex: 1;
+        overflow-y: auto;
+        padding: 25px;
+    }
+    .admin-section h2 {
+        margin-top: 0;
+        color: #333;
+        font-size: 1.5rem;
+        border-bottom: 2px solid #e8d5b5;
+        padding-bottom: 10px;
+        display: inline-block;
+        margin-bottom: 20px;
+    }
+
+    /* Tabla */
+    .table-wrap {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        overflow-x: auto;
+    }
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 800px;
+    }
+    .admin-table th {
+        background-color: #fcf8f3; /* Fondo suave beige */
+        text-align: left;
+        padding: 12px 15px;
+        border-bottom: 2px solid #eee;
+        color: #5a4a3a;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .admin-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #f0f0f0;
+        color: #333;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    .admin-table tbody tr:hover { background-color: #f9f9f9; }
+    .no-data { text-align: center; color: #777; padding: 20px; }
+
+    /* Modales (Overlay y Content) */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: none; justify-content: center; align-items: center;
+        z-index: 2000;
+    }
+    .modal-content {
+        background: #fff;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        width: 90%;
+        display: flex; flex-direction: column;
+    }
+    
+    .modal-header {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px;
+    }
+    .modal-header h2 { margin: 0; color: #333; font-size: 1.4rem; }
+    .modal-close { background: none; border: none; font-size: 2rem; cursor: pointer; color: #777; line-height: 1; }
+    .modal-close:hover { color: #000; }
+
+    .modal-body { flex: 1; }
+
+    /* Estilos Detalle Cliente */
+    .pedido-detail-section h4 { 
+        color: var(--primary-gold); 
+        border-bottom: 1px solid #eee; 
+        padding-bottom: 5px; 
+        margin-bottom: 10px;
+        margin-top: 0;
+    }
+    .pedido-detail-section p { margin: 5px 0; font-size: 0.95rem; }
+    .pedido-detail-section strong { display: inline-block; min-width: 100px; color: #555; }
+
+    /* Botón Ver (Acción) */
+    .btn-ver {
+        padding: 5px 10px;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        color: #333;
+    }
+    .btn-ver:hover { background-color: #eee; }
+
+    /* Grid Detalle Pedido */
+    .pedido-detail-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; }
+    .item-foto { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
+
+  </style>
 </head>
 
 <body>
   <div class="admin-layout">
-    <!-- Sidebar (no lo toco) -->
-        <aside class="admin-sidebar" id="adminSidebar">
-            <div class="brand"><span class="brand-dot"></span><span>AURORA</span></div>
-            <nav class="menu">
-                <a class="menu-link" href="./main_menu.html"><span>Panel</span></a>
-                <a class="menu-link" href="./pedidos.html"><span>Pedidos</span></a>
-                <a class="menu-link" href="./productos_admin.html"><span>Productos</span></a>
-                <a class="menu-link active" href="./clientes_admin.html"><span>Clientes</span></a>
-                <a class="menu-link" href="./reportes_admin.html"><span>Reportes</span></a>
-                <div class="menu-sep"></div>
-                <a class="menu-link" href="./config_admin.html">
-                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58z"/></svg>
-                    <span>Configuración</span>
-                </a>
-                <a class="menu-link" href="/src/login.html">
-                    <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
-                    <span>Salir</span>
-                </a>
-                <a class="menu-link" href="http://localhost:5000/">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
-                    10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
-                    <span>CRUD</span>
-                </a>
-                <a class="menu-link icon-reportes" href="../src/main.html">
-                    <span>Volver al Inicio</span>
-                </a>
-            </nav>
-        </aside>
-
-  <main class="admin-main">
-  <header class="admin-topbar">
-    <button class="sidebar-toggle" id="sidebarToggle">☰</button>
-
-
-    <div class="admin-actions">
-      <input class="admin-search" type="search" id="clientes-search"
-             placeholder="Buscar por nombre o email…" />
-      <div class="admin-user"><span class="user-dot"></span><span>Admin</span></div>
-    </div>
-  </header>
-
-  <!-- Tabla de clientes -->
-  <section class="admin-section">
-    <h2>Clientes </h2>
     
-    <div class="table-wrap" style="margin-top: 10px;">
-      <table class="admin-table">
-        <thead id="clientes-page-thead"></thead>
-        <tbody id="clientes-page-tbody">
-          <tr>
-            <td colspan="3" class="no-data">Cargando clientes...</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-</main>
-<!-- Modal detalle cliente -->
-<div class="modal-overlay" id="clientes-detail-modal">
-  <div class="modal-content" style="max-width: 1000px; height: 90vh;">
-    <div class="modal-header">
-      <h2>Historial de: <span id="detalle-cliente-nombre-modal">...</span></h2>
-      <button class="modal-close" id="clientes-detail-close-btn">&times;</button>
-    </div>
-    <div class="modal-body" style="overflow-y: auto;">
-      <div class="pedido-detail-section">
-        <h4>Datos del Cliente</h4>
-        <p><strong>Nombre:</strong> <span id="detalle-cliente-nombre-2">...</span></p>
-        <p><strong>Email:</strong> <span id="detalle-cliente-email-2">...</span></p>
-        <p><strong>Dirección:</strong> <span id="detalle-cliente-direccion-2">...</span></p>
-      </div>
-      <div class="pedido-detail-section">
-        <h4>Historial de Pedidos (<span id="detalle-cliente-total-pedidos">0</span>)</h4>
-        <div class="table-wrap" style="max-height: 400px; overflow-y: auto;">
+    <aside class="admin-sidebar" id="adminSidebar">
+        <div class="brand"><span class="brand-dot"></span><span>AURORA</span></div>
+        <nav class="menu">
+            <a class="menu-link" href="./main_menu.html"><span>Panel</span></a>
+            <a class="menu-link" href="./pedidos.html"><span>Pedidos</span></a>
+            <a class="menu-link" href="./productos_admin.html"><span>Productos</span></a>
+            <a class="menu-link active" href="./clientes_admin.html"><span>Clientes</span></a>
+            <a class="menu-link" href="./reportes_admin.html"><span>Reportes</span></a>
+            <a class="menu-link" href="./cupones_admin.html"><span>Códigos de Descuento</span></a>
+            
+            <div class="menu-sep"></div>
+            
+            <a class="menu-link" href="./config_admin.html">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58z"/></svg>
+                <span>Configuración</span>
+            </a>
+            <a class="menu-link" href="/src/login.html">
+                <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5v3H0v4h10v3zM14 3h10v18H14v-2h8V5h-8V3z"/></svg>
+                <span>Salir</span>
+            </a>
+            <a class="menu-link" href="http://localhost:5000/">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
+                10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
+                <span>CRUD</span>
+            </a>
+            <a class="menu-link icon-reportes" href="../src/main.html">
+                <span>Volver al Inicio</span>
+            </a>
+        </nav>
+    </aside>
+
+    
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <button class="sidebar-toggle" id="sidebarToggle" style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; margin-right:15px;">☰</button>
+        <h1>Clientes</h1>
+
+        <div class="admin-actions" style="display: flex; align-items: center; gap: 15px;">
+          <input class="admin-search" type="search" id="searchInput" placeholder="Buscar por nombre o SKU…" />
+          <div class="admin-user" style="display: flex; align-items: center; gap: 5px; font-size: 0.9rem;">
+            <span class="user-dot"></span><span>Admin</span>
+          </div>
+        </div>
+
+      </header>
+
+      <section class="admin-section">
+        <h2>Clientes</h2>
+        
+        <div class="table-wrap" style="margin-top: 10px;">
           <table class="admin-table">
-            <thead>
+            <thead id="clientes-page-thead">
+                </thead>
+            <tbody id="clientes-page-tbody">
               <tr>
-                <th>ID Pedido</th>
-                <th>Fecha</th>
-                <th>Sucursal</th>
-                <th>Productos (preview)</th>
-                <th>Total</th>
-                <th>Ver</th>
-                
+                <td colspan="5" class="no-data">Cargando clientes...</td>
               </tr>
-            </thead>
-            <tbody id="cliente-pedidos-tbody"></tbody>
+            </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   </div>
-</div>
 
-<!-- Modal: Detalle del Pedido del Cliente (solo datos del pedido) -->
-<div class="modal-overlay" id="cliente-pedido-detail-modal">
-  <div class="modal-content" style="max-width: 900px; height: 90vh;">
-    <div class="modal-header">
-      <h2>Detalle del Pedido: #<span id="cliente-detalle-pedido-id">...</span></h2>
-      <button class="modal-close" id="cliente-pedido-detail-close-btn">&times;</button>
-    </div>
-
-    <div class="modal-body" style="overflow-y: auto;">
-
-      <!-- DATOS DEL PEDIDO -->
-      <div class="pedido-detail-grid">
+  <div class="modal-overlay" id="clientes-detail-modal">
+    <div class="modal-content" style="max-width: 1000px; height: 90vh;">
+      <div class="modal-header">
+        <h2>Historial de: <span id="detalle-cliente-nombre-modal">...</span></h2>
+        <button class="modal-close" id="clientes-detail-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow-y: auto;">
         <div class="pedido-detail-section">
-          <h4>Datos del Pedido</h4>
-          <p><strong>ID Pedido:</strong> <span id="cliente-detalle-pedido-id-2">...</span></p>
-          <p><strong>Fecha:</strong> <span id="cliente-detalle-pedido-fecha">...</span></p>
-          <p><strong>Total Pagado:</strong> <span id="cliente-detalle-pedido-total">...</span></p>
-          <p><strong>Método Pago:</strong> <span id="cliente-detalle-pedido-metodo">...</span></p>
-          <p><strong>Estado:</strong> <span id="cliente-detalle-pedido-estado">...</span></p>
-          <p><strong>ID Transacción:</strong> <span id="cliente-detalle-pedido-transaccion">...</span></p>
+          <h4>Datos del Cliente</h4>
+          <p><strong>Nombre:</strong> <span id="detalle-cliente-nombre-2">...</span></p>
+          <p><strong>Email:</strong> <span id="detalle-cliente-email-2">...</span></p>
+          <p><strong>Dirección:</strong> <span id="detalle-cliente-direccion-2">...</span></p>
         </div>
-      </div>
-
-      <!-- ITEMS COMPRADOS -->
-      <div class="pedido-detail-section">
-        <h4>Items Comprados</h4>
-        <div class="table-wrap">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Foto</th>
-                <th>Producto</th>
-                <th>SKU</th>
-                <th>Talla</th>
-                <th>Color</th>
-                <th>Cantidad</th>
-                <th>Precio Unit.</th>
-              </tr>
-            </thead>
-            <tbody id="cliente-detalle-items-tbody"></tbody>
-          </table>
+        <div class="pedido-detail-section">
+          <h4>Historial de Pedidos (<span id="detalle-cliente-total-pedidos">0</span>)</h4>
+          <div class="table-wrap" style="max-height: 400px; overflow-y: auto; box-shadow: none; border: 1px solid #eee;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID Pedido</th>
+                  <th>Fecha</th>
+                  <th>Sucursal</th>
+                  <th>Productos (preview)</th>
+                  <th>Total</th>
+                  <th>Ver</th>
+                </tr>
+              </thead>
+              <tbody id="cliente-pedidos-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
+  <div class="modal-overlay" id="cliente-pedido-detail-modal">
+    <div class="modal-content" style="max-width: 900px; height: 90vh;">
+      <div class="modal-header">
+        <h2>Detalle del Pedido: #<span id="cliente-detalle-pedido-id">...</span></h2>
+        <button class="modal-close" id="cliente-pedido-detail-close-btn">&times;</button>
+      </div>
 
+      <div class="modal-body" style="overflow-y: auto;">
 
+        <div class="pedido-detail-grid">
+          <div class="pedido-detail-section">
+            <h4>Datos del Pedido</h4>
+            <p><strong>ID Pedido:</strong> <span id="cliente-detalle-pedido-id-2">...</span></p>
+            <p><strong>Fecha:</strong> <span id="cliente-detalle-pedido-fecha">...</span></p>
+            <p><strong>Total Pagado:</strong> <span id="cliente-detalle-pedido-total">...</span></p>
+            <p><strong>Método Pago:</strong> <span id="cliente-detalle-pedido-metodo">...</span></p>
+            <p><strong>Estado:</strong> <span id="cliente-detalle-pedido-estado">...</span></p>
+            <p><strong>ID Transacción:</strong> <span id="cliente-detalle-pedido-transaccion">...</span></p>
+          </div>
+        </div>
 
-
-
+        <div class="pedido-detail-section">
+          <h4>Items Comprados</h4>
+          <div class="table-wrap" style="box-shadow: none; border: 1px solid #eee;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Foto</th>
+                  <th>Producto</th>
+                  <th>SKU</th>
+                  <th>Talla</th>
+                  <th>Color</th>
+                  <th>Cantidad</th>
+                  <th>Precio Unit.</th>
+                </tr>
+              </thead>
+              <tbody id="cliente-detalle-items-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="../Public/js/clientes_panel.js"></script>
-    <script type="module" src="../Public/js/colores.js"></script>
+  <script type="module" src="../Public/js/colores.js"></script>
   <script type="module" src="../Public/js/geolocation.js"></script>
 
-  
 </body>
 </html>
-

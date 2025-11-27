@@ -5,313 +5,271 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Aurora | Admin</title>
     <link rel="stylesheet" href="/Public/Css/style.css"/>
-    <!-- Chart.js para el gráfico -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- --- ▼▼▼ ESTILOS PARA EL PANEL ▼▼▼ --- -->
     <style>
-        .admin-main {
-            width: 100%;
+        /* Variables de diseño */
+        :root {
+            --sidebar-width: 260px;
+            --header-height: 60px;
+            --primary-gold: #d4a017;
+            --bg-dark: #1a1a1a;
+            --bg-header: #2c241b;
+            --bg-light: #f8f9fa;
         }
-        /* Estilos para Tarjetas KPI */
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-light);
+            height: 100vh;
+            overflow: hidden; /* Evita scroll doble */
+        }
+
+        /* Layout Principal (Solución al espacio en blanco) */
+        .admin-layout {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* --- SIDEBAR (Estilo Cupones) --- */
+        .admin-sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-dark);
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .brand {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            color: #e8d5b5;
+        }
+        .brand-dot {
+            width: 8px; height: 8px; background: #e8d5b5;
+            border-radius: 50%; margin-right: 10px;
+        }
+
+        .menu { flex: 1; padding: 20px 0; }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #aaa;
+            text-decoration: none;
+            transition: 0.2s;
+            font-size: 0.95rem;
+            gap: 10px;
+        }
+        .menu-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        
+        .menu-link.active {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border-left: 3px solid var(--primary-gold);
+        }
+        
+        /* Ajuste para tus iconos SVG existentes en el menú */
+        .menu-link svg { width: 20px; height: 20px; fill: currentColor; opacity: 0.7; }
+        .menu-link.active svg { fill: var(--primary-gold); opacity: 1; }
+        
+        .menu-sep { height: 1px; background: #333; margin: 10px 20px; }
+
+        /* --- MAIN CONTENT --- */
+        .admin-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: var(--bg-light);
+        }
+
+        /* --- TOPBAR (Estilo Cupones) --- */
+        .admin-topbar {
+            height: var(--header-height);
+            background-color: var(--bg-header);
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .topbar-title-group { display: flex; align-items: center; gap: 20px; }
+        .topbar-title-group h1 { font-size: 1.1rem; margin: 0; color: #e8d5b5; }
+
+        /* Select de Sucursal en el Header */
+        #admin-sucursal-selector {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .admin-actions { display: flex; align-items: center; gap: 15px; }
+        .admin-search {
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: none;
+            outline: none;
+            background: #fff;
+            width: 200px;
+        }
+        .admin-user { font-size: 0.9rem; opacity: 0.8; display: flex; align-items: center; gap: 5px; }
+        .user-dot { width: 8px; height: 8px; background: #28a745; border-radius: 50%; }
+
+        /* --- CONTENIDO DASHBOARD --- */
+        /* Usamos content-scroll para manejar el scroll interno */
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 25px;
+        }
+
+        /* Tarjetas KPI */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
         .kpi-card {
-            background-color: var(--card-bg, #fff);
-            border: 1px solid var(--border-color, #e0e0e0);
+            background-color: #fff;
             border-radius: 8px;
             padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid transparent; /* Acento de color */
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
         }
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Colores específicos para KPIs */
+        #kpi-ventas-hoy-card { border-left-color: #198754; }
+        #kpi-pedidos-pendientes-card { border-left-color: #dc3545; }
+        #kpi-bajo-stock-card { border-left-color: #ffc107; }
+        #kpi-nuevos-clientes-card { border-left-color: #0d6efd; }
+
         .kpi-card h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-color-muted, #555);
-            margin-bottom: 8px;
+            font-size: 0.9rem; font-weight: 600; color: #777;
+            margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px;
         }
         .kpi-number {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: var(--text-color, #111);
-            margin-bottom: 5px;
-            line-height: 1.1;
+            font-size: 2rem; font-weight: 700; color: #333;
+            margin: 0; line-height: 1.2;
         }
-        .kpi-sub {
-            font-size: 0.9rem;
-            color: var(--text-color-muted, #777);
+        .kpi-trend {
+            font-size: 0.85rem; font-weight: 600; margin-top: 5px; display: inline-block;
         }
-        .kpi-trend { font-weight: 600; }
         .kpi-trend.positive { color: #198754; }
         .kpi-trend.negative { color: #dc3545; }
         .kpi-trend.neutral { color: #6c757d; }
-        .kpi-trend.warn { color: #ffc107; } /* Para bajo stock */
+        .kpi-trend.warn { color: #d63384; }
 
-        /* Tarjetas KPI cliqueables */
-        #kpi-ventas-hoy-card,
-        #kpi-pedidos-pendientes-card,
-        #kpi-bajo-stock-card,
-        #kpi-nuevos-clientes-card {
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        /* Accesos Rápidos (Quick Grid) */
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
         }
-        #kpi-ventas-hoy-card:hover,
-        #kpi-pedidos-pendientes-card:hover,
-        #kpi-bajo-stock-card:hover,
-        #kpi-nuevos-clientes-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        }
-
-        /* --- ▼▼▼ ESTILOS PARA EL FILTRO DE SUCURSAL ▼▼▼ --- */
-        .topbar-title-group {
-            display: flex;
-            align-items: center;
-            gap: 20px; 
-            flex-grow: 1; /* Para que ocupe espacio */
-        }
-        .topbar-title-group h1 {
-            margin-bottom: 0; /* Alinea el H1 con el select */
-        }
-
-        #admin-sucursal-selector {
-            font-size: 0.9rem;
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color, #ddd);
-            background-color: var(--card-bg, #fff);
-            color: var(--text-color, #333);
-            font-weight: 500;
-            max-width: 250px; /* Límite de ancho */
-        }
-        
-        [data-theme="noir"] #admin-sucursal-selector,
-        [data-theme="ocean"] #admin-sucursal-selector {
-            background-color: var(--card-bg, #2a2a2e);
-            color: var(--text-color, #f1f1f1);
-            border-color: var(--border-color, #444);
-        }
-        /* --- ▲▲▲ FIN ESTILOS FILTRO ▲▲▲ --- */
-
-
-        /* Estilos para Modales (Overlay) */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-            z-index: 1040; /* Nivel base para modales */
-        }
-        .modal-overlay.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-        .modal-content-wrapper {
-            background-color: var(--card-bg, #fff);
-            color: var(--text-color, #333);
-            padding: 2rem;
+        .quick-card {
+            background: #e8d5b5; /* Beige dorado */
+            color: #3e2b15;
+            padding: 20px;
             border-radius: 8px;
-            width: 90%;
-            max-width: 900px;
-            height: 90vh;
-            max-height: 700px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            text-decoration: none;
+            transition: 0.2s;
             display: flex;
             flex-direction: column;
-            transform: scale(0.95);
-            transition: transform 0.3s ease;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
-        .modal-overlay.visible .modal-content-wrapper {
-            transform: scale(1);
+        .quick-card:hover {
+            background: var(--primary-gold);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+        .quick-card h4 { margin: 0 0 5px 0; font-size: 1.1rem; font-weight: 700; }
+        .quick-card p { margin: 0; font-size: 0.9rem; opacity: 0.9; }
+
+        /* --- ESTILOS MODALES Y TABLAS (Manteniendo tu funcionalidad) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 1040;
+        }
+        .modal-overlay.visible { opacity: 1; visibility: visible; }
+
+        .modal-content-wrapper {
+            background: #fff;
+            color: #333;
+            padding: 25px;
+            border-radius: 8px;
+            width: 90%; max-width: 900px;
+            height: auto; max-height: 90vh;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column;
         }
         .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color, #eee);
-            padding-bottom: 1rem;
-            margin-bottom: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px;
         }
-        .modal-header h2 { margin: 0; font-size: 1.5rem; }
-        .modal-close {
-            font-size: 2rem; font-weight: 300; line-height: 1;
-            background: none; border: none; color: var(--text-color, #333);
-            cursor: pointer; opacity: 0.7;
-        }
-        .modal-close:hover { opacity: 1; }
-        .modal-body {
-            flex-grow: 1;
-            overflow-y: auto;
-            min-height: 0;
-        }
-        
-        /* --- ▼▼▼ Z-INDEXES CORREGIDOS ▼▼▼ --- */
-        #sales-chart-modal,
-        #stock-categoria-modal,
-        #clientes-list-modal { /* Modales Nivel 1 */
-             z-index: 1050; 
-        }
-        
-        #stock-producto-modal,
-        #clientes-detail-modal { /* Modales Nivel 2 */
-             z-index: 1060; 
-        }
+        .modal-header h2 { margin: 0; font-size: 1.4rem; }
+        .modal-close { font-size: 2rem; background: none; border: none; cursor: pointer; color: #555; }
+        .modal-body { flex-grow: 1; overflow-y: auto; }
 
-        #pedidos-detail-modal { /* Modal Nivel 3 (el más alto) */
-             z-index: 1070; 
-        }
-        /* --- ▲▲▲ FIN Z-INDEXES ▲▲▲ --- */
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-            margin-bottom: 2rem;
-        }
-        
-        .list-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        .list-header h4 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0;
-        }
-        
-        /* Estilos para la tabla y foto */
-        .table-wrap { overflow-y: auto; }
-        .admin-table { 
-            width: 100%; 
-            border-collapse: collapse;
-        }
-        .admin-table th, .admin-table td {
-            padding: 0.75rem;
-            vertical-align: middle;
-            border-bottom: 1px solid var(--border-color, #eee);
-        }
-        .admin-table th {
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: var(--text-color-muted, #555);
-            text-align: left;
-        }
-        .admin-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-        [data-theme="noir"] .admin-table th {
-             color: var(--text-color-muted, #aaa);
-        }
+        /* Tablas */
+        .table-wrap { overflow-x: auto; }
+        .admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .admin-table th { background: #fcf8f3; text-align: left; padding: 12px; border-bottom: 2px solid #eee; color: #5a4a3a; font-weight: 600; }
+        .admin-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; color: #333; vertical-align: middle; }
+        .admin-table tbody tr:hover { background: #fafafa; }
 
-        .item-foto {
-            width: 45px;
-            height: 45px;
-            object-fit: cover;
-            border-radius: 6px;
-            border: 1px solid var(--border-color, #eee);
-        }
-        [data-theme="noir"] .item-foto {
-            border-color: #444;
-        }
-
-        .sale-detail-link,
-        .stock-categoria-link,
-        .cliente-detail-link { /* <-- AÑADIDO */
-            color: var(--primary-color, #0d6efd);
-            font-weight: 500;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .sale-detail-link:hover,
-        .stock-categoria-link:hover,
-        .cliente-detail-link:hover { /* <-- AÑADIDO */
-             text-decoration: underline; 
-        }
-        
-        /* Grid de detalle en Modal 2 */
-        .pedido-detail-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .pedido-detail-section h4 {
-            font-size: 1.1rem;
-            color: var(--primary-color, #0d6efd);
-            border-bottom: 1px solid var(--border-color, #eee);
-            padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .pedido-detail-section p { margin: 0.5rem 0; font-size: 0.9rem; }
-        .pedido-detail-section p strong {
-            display: inline-block;
-            min-width: 100px;
-            color: var(--text-color-muted, #6c757d);
-        }
-
-        /* Estilos para select y form-control (Bootstrap-like) */
+        /* Elementos de formulario y botones dentro de modales */
         .form-select {
-            display: block;
-            width: 100%;
-            padding: .375rem 2.25rem .375rem .75rem;
-            font-size: 1rem;
-            font-weight: 400;
-            line-height: 1.5;
-            color: var(--text-color, #212529);
-            background-color: var(--card-bg, #fff);
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right .75rem center;
-            background-size: 16px 12px;
-            border: 1px solid var(--border-color, #ced4da);
-            border-radius: .375rem;
-            appearance: none;
+            display: block; width: 100%; padding: 8px;
+            font-size: 1rem; border: 1px solid #ddd; border-radius: 4px;
+            background-color: #fff;
         }
-        [data-theme="noir"] .form-select {
-            color: var(--text-color, #f1f1f1);
-            background-color: var(--sidebar-bg, #3a3a3f);
-            border-color: #555;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f1f1f1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-        }
-
-        /* --- ▼▼▼ NUEVOS ESTILOS PARA STOCK Y CLIENTES ▼▼▼ --- */
-        .text-danger { color: #dc3545 !important; }
-        .text-warning { color: #ffc107 !important; }
-        .text-success { color: #198754 !important; }
-        .fw-bold { font-weight: 700 !important; }
-
-        .modal-back-btn {
-            background: none;
-            border: none;
-            color: var(--primary-color, #0d6efd);
-            font-weight: 500;
-            font-size: 1rem;
-            cursor: pointer;
-            padding: 0;
-        }
-        .modal-back-btn:hover {
-            text-decoration: underline;
-        }
+        .chart-container { position: relative; height: 300px; width: 100%; margin-bottom: 20px; }
         
-        [data-theme="noir"] .sale-detail-link,
-        [data-theme="noir"] .cliente-detail-link,
-        [data-theme="noir"] .modal-back-btn,
-        [data-theme="noir"] .stock-categoria-link { 
-            color: #58a6ff;
-        }
-        /* --- ▲▲▲ FIN NUEVOS ESTILOS ▲▲▲ --- */
+        .modal-back-btn { background: none; border: none; color: var(--primary-gold); font-weight: 600; cursor: pointer; margin-right: 10px; font-size: 1rem; }
+        .modal-back-btn:hover { text-decoration: underline; }
+
+        /* Detalles Pedido */
+        .pedido-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .pedido-detail-section h4 { font-size: 1.1rem; color: var(--primary-gold); border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px; }
+        .pedido-detail-section p { margin: 5px 0; font-size: 0.9rem; }
+        .item-foto { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
+
+        /* Z-Indexes para modales superpuestos */
+        #sales-chart-modal, #stock-categoria-modal, #clientes-list-modal { z-index: 1050; }
+        #stock-producto-modal, #clientes-detail-modal { z-index: 1060; }
+        #pedidos-detail-modal { z-index: 1070; }
 
     </style>
-    <!-- --- ▲▲▲ FIN ESTILOS ▲▲▲ --- -->
-
 </head>
 <body>
 
@@ -324,7 +282,10 @@
                 <a class="menu-link" href="./productos_admin.html"><span>Productos</span></a>
                 <a class="menu-link" href="./clientes_admin.html"><span>Clientes</span></a>
                 <a class="menu-link" href="./reportes_admin.html"><span>Reportes</span></a>
+                <a class="menu-link" href="./cupones_admin.html"><span>Códigos de Descuento</span></a>
+                
                 <div class="menu-sep"></div>
+                
                 <a class="menu-link" href="./config_admin.html">
                     <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.027 7.027 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.7a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.62.22l2.39-.96c.5.4 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.62.94l2.39.96c.23.09.49 0 .62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58z"/></svg>
                     <span>Configuración</span>
@@ -334,8 +295,7 @@
                     <span>Salir</span>
                 </a>
                 <a class="menu-link" href="http://localhost:5000/">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
-                    10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.83.48-5.48-1.51-5.93-4.34-.1-.64.36-1.23 1-1.23h1.08c.46 0 .86.31.97.75.32 1.27 1.55 2.18 2.97 1.93 1.19-.2 2.09-1.18 2.19-2.38.12-1.4-.93-2.58-2.31-2.58h-1.45c-.55 0-1-.45-1-1v-1.62c0-.55.45-1 1-1h1.5c2.48 0 4.5 2.02 4.5 4.5 0 2.62-1.96 4.79-4.5 5.17v1.8c0 .58-.47 1.05-1.05 1.05h-.9c-.58 0-1.05-.47-1.05-1.05v-1.8z"/></svg>
                     <span>CRUD</span>
                 </a>
                 <a class="menu-link icon-reportes" href="../src/main.html">
@@ -345,16 +305,14 @@
         </aside>
 
         <main class="admin-main">
-            <!-- --- TOPBAR CON FILTRO --- -->
             <header class="admin-topbar">
-                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir/cerrar menú">☰</button>
+                <button class="sidebar-toggle" id="sidebarToggle" style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; margin-right:15px;">☰</button>
                 
                 <div class="topbar-title-group">
                     <h1>Panel de administración</h1>
-                    <select id="admin-sucursal-selector" name="sucursal">
+                    <select id="admin-sucursal-selector" name="sucursal" style="margin-left: 20px;">
                         <option value="all" selected>Todas las sucursales</option>
-                        <!-- Opciones se cargarán por JS -->
-                    </select>
+                        </select>
                 </div>
 
                 <div class="admin-actions">
@@ -366,61 +324,57 @@
                 </div>
             </header>
 
-            <section class="kpi-grid">
-                <!-- Tarjeta "Ventas hoy" -->
-                <div class="kpi-card" id="kpi-ventas-hoy-card" title="Ver detalle de ventas">
-                    <h3>Ventas hoy</h3>
-                    <p class="kpi-number">
-                        <span id="kpi-ventas">—</span> 
-                    </p>
-                    <span class="kpi-trend neutral" id="kpi-ventas-trend">—</span>
-                </div>
+            <div class="content-scroll">
+                <section class="kpi-grid">
+                    <div class="kpi-card" id="kpi-ventas-hoy-card" title="Ver detalle de ventas">
+                        <h3>Ventas hoy</h3>
+                        <p class="kpi-number">
+                            <span id="kpi-ventas">—</span> 
+                        </p>
+                        <span class="kpi-trend neutral" id="kpi-ventas-trend">—</span>
+                    </div>
 
-                <!-- Tarjeta "Pedidos pendientes" -->
-                <div class="kpi-card" id="kpi-pedidos-pendientes-card" title="Ver pedidos pendientes">
-                    <h3>Pedidos pendientes</h3>
-                    <p class="kpi-number"><span id="kpi-pendientes">—</span></p>
-                    <span class="kpi-trend warn" id="kpi-pendientes-sub">—</span>
-                </div>
+                    <div class="kpi-card" id="kpi-pedidos-pendientes-card" title="Ver pedidos pendientes">
+                        <h3>Pedidos pendientes</h3>
+                        <p class="kpi-number"><span id="kpi-pendientes">—</span></p>
+                        <span class="kpi-trend warn" id="kpi-pendientes-sub">—</span>
+                    </div>
 
-                <!-- Tarjeta "Bajo stock" -->
-                <div class="kpi-card" id="kpi-bajo-stock-card" title="Ver detalle de stock">
-                    <h3>Productos con bajo stock</h3>
-                    <p class="kpi-number"><span id="kpi-bajostock">—</span></p>
-                    <span class="kpi-trend warn" id="kpi-bajostock-note">—</span>
-                </div>
+                    <div class="kpi-card" id="kpi-bajo-stock-card" title="Ver detalle de stock">
+                        <h3>Productos con bajo stock</h3>
+                        <p class="kpi-number"><span id="kpi-bajostock">—</span></p>
+                        <span class="kpi-trend warn" id="kpi-bajostock-note">—</span>
+                    </div>
 
-                <!-- --- ▼▼▼ TARJETA "NUEVOS CLIENTES" (CON IDs) ▼▼▼ --- -->
-                <div class="kpi-card" id="kpi-nuevos-clientes-card" title="Ver detalle de nuevos clientes">
-                    <h3>Nuevos clientes</h3>
-                    <p class="kpi-number"><span id="kpi-clientes">—</span></p>
-                    <span class="kpi-trend up" id="kpi-clientes-trend">—</span>
-                </div>
-                <!-- --- ▲▲▲ FIN TARJETA ▲▲▲ --- -->
-            </section>
+                    <div class="kpi-card" id="kpi-nuevos-clientes-card" title="Ver detalle de nuevos clientes">
+                        <h3>Nuevos clientes</h3>
+                        <p class="kpi-number"><span id="kpi-clientes">—</span></p>
+                        <span class="kpi-trend positive" id="kpi-clientes-trend">—</span>
+                    </div>
+                </section>
 
-            <section class="quick-grid">
-                <a href="./pedidos.html" class="quick-card">
-                    <h4>Gestionar pedidos</h4>
-                    <p>Aprueba, prepara y despacha.</p>
-                </a>
-                <a href="http://localhost:5000/productos" class="quick-card">
-                    <h4>Nuevo producto</h4>
-                    <p>Crea y publica en un paso.</p>
-                </a>
-                <a href="./reportes_admin.html" class="quick-card">
-                    <h4>Ver reportes</h4>
-                    <p>Ventas, clientes y márgenes.</p>
-                </a>
-                <a href="./config_admin.html" class="quick-card">
-                    <h4>Configuración</h4>
-                    <p>Pagos, envíos y branding.</p>
-                </a>
-            </section>
+                <section class="quick-grid">
+                    <a href="./pedidos.html" class="quick-card">
+                        <h4>Gestionar pedidos</h4>
+                        <p>Aprueba, prepara y despacha.</p>
+                    </a>
+                    <a href="http://localhost:5000/productos" class="quick-card">
+                        <h4>Nuevo producto</h4>
+                        <p>Crea y publica en un paso.</p>
+                    </a>
+                    <a href="./reportes_admin.html" class="quick-card">
+                        <h4>Ver reportes</h4>
+                        <p>Ventas, clientes y márgenes.</p>
+                    </a>
+                    <a href="./config_admin.html" class="quick-card">
+                        <h4>Configuración</h4>
+                        <p>Pagos, envíos y branding.</p>
+                    </a>
+                </section>
+            </div>
         </main>
     </div>
 
-    <!-- --- MODAL 1: VENTAS HOY --- -->
     <div class="modal-overlay" id="sales-chart-modal">
         <div class="modal-content-wrapper">
             <div class="modal-header">
@@ -429,12 +383,12 @@
             </div>
             <div class="modal-body">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h4 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Comparativa de Ventas</h4>
+                    <h4 style="font-size: 1.1rem; font-weight: 600; margin: 0;">Comparativa de Ventas</h4>
                     <div style="width: 200px;">
                         <select class="form-select" id="sales-comparison-filter">
                             <option value="ayer" selected>Hoy vs. Ayer</option>
-                            <option value="semana">Hoy vs. Semana Actual (acum.)</option>
-                            <option value="mes">Hoy vs. Mes Actual (acum.)</option>
+                            <option value="semana">Hoy vs. Semana Actual</option>
+                            <option value="mes">Hoy vs. Mes Actual</option>
                         </select>
                     </div>
                 </div>
@@ -442,31 +396,29 @@
                     <canvas id="salesChartCanvas"></canvas>
                 </div>
                 
-                <div class="list-header">
-                    <h4>Ventas de Hoy</h4>
-                </div>
-                <div class="table-wrap" style="max-height: 250px; overflow-y: auto;">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>ID Venta</th>
-                                <th>Cliente</th>
-                                <th>Detalle (Preview)</th>
-                                <th>Hora</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sales-list-tbody">
-                            <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
-                        </tbody>
-                    </table>
+                <div style="margin-top: 20px;">
+                    <h4 style="font-size: 1.1rem; margin-bottom: 10px;">Listado de Ventas de Hoy</h4>
+                    <div class="table-wrap" style="max-height: 200px; overflow-y: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Venta</th>
+                                    <th>Cliente</th>
+                                    <th>Detalle (Preview)</th>
+                                    <th>Hora</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sales-list-tbody">
+                                <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-
-    <!-- --- MODAL 2: DETALLE DE PEDIDO --- -->
     <div class="modal-overlay" id="pedidos-detail-modal">
         <div class="modal-content-wrapper" style="max-width: 900px;">
             <div class="modal-header">
@@ -511,8 +463,7 @@
                                     <th>Precio Unit.</th>
                                 </tr>
                             </thead>
-                            <tbody id="detalle-items-tbody">
-                            </tbody>
+                            <tbody id="detalle-items-tbody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -520,15 +471,14 @@
         </div>
     </div>
 
-    <!-- --- MODAL 1: BAJO STOCK (Categorías) --- -->
     <div class="modal-overlay" id="stock-categoria-modal">
-        <div class="modal-content-wrapper" style="max-width: 600px; height: auto; max-height: 80vh;">
+        <div class="modal-content-wrapper" style="max-width: 600px;">
             <div class="modal-header">
                 <h2>Stock por Categoría</h2>
                 <button class="modal-close" id="stock-categoria-close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="kpi-sub">Mostrando categorías que tienen productos con 20 unidades o menos.</p>
+                <p style="margin-bottom: 15px; color: #666;">Categorías con productos bajos en stock (≤ 20 un.):</p>
                 <div class="table-wrap">
                     <table class="admin-table">
                         <thead>
@@ -537,23 +487,23 @@
                                 <th>Productos con Bajo Stock</th>
                             </tr>
                         </thead>
-                        <tbody id="stock-categoria-tbody">
-                        </tbody>
+                        <tbody id="stock-categoria-tbody"></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- --- MODAL 2: BAJO STOCK (Productos) --- -->
     <div class="modal-overlay" id="stock-producto-modal">
-        <div class="modal-content-wrapper" style="max-width: 700px; height: 90vh;">
+        <div class="modal-content-wrapper" style="max-width: 700px;">
             <div class="modal-header">
-                <button class="modal-back-btn" id="stock-producto-back-btn">← Volver a Categorías</button>
+                <div>
+                    <button class="modal-back-btn" id="stock-producto-back-btn">← Volver</button>
+                    <span id="stock-producto-titulo" style="font-size: 1.2rem; font-weight: 600;">Productos</span>
+                </div>
                 <button class="modal-close" id="stock-producto-close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <h3 id="stock-producto-titulo" style="margin-top: 0; font-weight: 600;">Productos en ...</h3>
                 <div class="table-wrap">
                     <table class="admin-table">
                         <thead>
@@ -563,23 +513,21 @@
                                 <th>Stock Total</th>
                             </tr>
                         </thead>
-                        <tbody id="stock-producto-tbody">
-                        </tbody>
+                        <tbody id="stock-producto-tbody"></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- --- ▼▼▼ MODAL 1: NUEVOS CLIENTES (Lista) ▼▼▼ --- -->
     <div class="modal-overlay" id="clientes-list-modal">
-        <div class="modal-content-wrapper" style="max-width: 800px; height: 90vh;">
+        <div class="modal-content-wrapper" style="max-width: 800px;">
             <div class="modal-header">
                 <h2>Nuevos Clientes</h2>
                 <button class="modal-close" id="clientes-list-close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
                     <label for="clientes-periodo-filter" style="margin-right: 10px; font-weight: 500;">Mostrar:</label>
                     <select class="form-select" id="clientes-periodo-filter" style="width: 200px;">
                         <option value="hoy" selected>Hoy</option>
@@ -596,59 +544,51 @@
                                 <th>Fecha Registro</th>
                             </tr>
                         </thead>
-                        <tbody id="clientes-list-tbody">
-                            <!-- Contenido se carga por JS -->
-                        </tbody>
+                        <tbody id="clientes-list-tbody"></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
-    <!-- --- ▲▲▲ FIN MODAL 1 ▲▲▲ --- -->
 
-    <!-- --- ▼▼▼ MODAL 2: DETALLE CLIENTE (Historial) ▼▼▼ --- -->
     <div class="modal-overlay" id="clientes-detail-modal">
-        <div class="modal-content-wrapper" style="max-width: 1000px; height: 90vh;">
+        <div class="modal-content-wrapper" style="max-width: 1000px;">
             <div class="modal-header">
-                <h2>Historial de: <span id="detail-cliente-nombre-modal">...</span></h2>
-                <button class="modal-back-btn" id="clientes-detail-back-btn">← Volver a la lista</button>
+                <div>
+                    <button class="modal-back-btn" id="clientes-detail-back-btn">← Volver</button>
+                    <span style="font-size: 1.2rem; font-weight: 600;">Historial Cliente</span>
+                </div>
                 <button class="modal-close" id="clientes-detail-close-btn">&times;</button>
             </div>
-            <div class="modal-body" style="overflow-y: auto;">
-                
-                <div class="pedido-detail-section">
-                    <h4>Datos del Cliente</h4>
+            <div class="modal-body">
+                <div class="pedido-detail-section" style="margin-bottom: 20px;">
+                    <h4 style="margin-top:0;">Datos Personales</h4>
                     <p><strong>Nombre:</strong> <span id="detail-cliente-nombre-2">...</span></p>
                     <p><strong>Email:</strong> <span id="detail-cliente-email-2">...</span></p>
                     <p><strong>Dirección:</strong> <span id="detail-cliente-direccion-2">...</span></p>
                 </div>
-
                 <div class="pedido-detail-section">
                     <h4>Historial de Pedidos (<span id="detail-cliente-total-pedidos">0</span>)</h4>
-                    <div class="table-wrap" style="max-height: 400px; overflow-y: auto;">
+                    <div class="table-wrap" style="max-height: 300px; overflow-y: auto;">
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th>ID Pedido</th>
+                                    <th>ID</th>
                                     <th>Fecha</th>
                                     <th>Sucursal</th>
-                                    <th>Productos (preview)</th>
+                                    <th>Resumen</th>
                                     <th>Total</th>
-                                    <th>Ver</th>
+                                    <th>Acción</th>
                                 </tr>
                             </thead>
-                            <tbody id="cliente-pedidos-tbody">
-                                <!-- Pedidos se cargan por JS -->
-                            </tbody>
+                            <tbody id="cliente-pedidos-tbody"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- --- ▲▲▲ FIN MODAL 2 ▲▲▲ --- -->
 
-    <!-- --- MODAL: PEDIDOS PENDIENTES --- -->
     <div class="modal-overlay" id="pendientes-list-modal">
         <div class="modal-content-wrapper" style="max-width: 800px;">
             <div class="modal-header">
@@ -660,7 +600,7 @@
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>ID Pedido</th>
+                                <th>ID</th>
                                 <th>Cliente</th>
                                 <th>Fecha</th>
                                 <th>Estado</th>
@@ -676,9 +616,7 @@
         </div>
     </div>
 
-    <!-- El script de colores maneja la lógica del sidebar -->
     <script type="module" src="../Public/js/colores.js"></script> 
-    <!-- Este es el JS nuevo para esta página -->
     <script type="module" src="../Public/js/dashboard.js?v=1.2"></script>
 </body>
 </html>
